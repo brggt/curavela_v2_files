@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Curavela</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div>
+            <h1>Curavela</h1>
+            <p>clearer shifts, calmer care</p>
+          </div>
+        </div>
+
+        <nav class="side-nav" aria-label="Main navigation">
+          <a class="side-nav-link active" href="#schedule-area">
+            <span>▣</span>
+            Schedule
+          </a>
+          <a class="side-nav-link" href="#open-shifts-panel">
+            <span>□</span>
+            Open Shifts
+          </a>
+          <a class="side-nav-link" href="#caregiver-panel">
+            <span>♡</span>
+            Caregivers
+          </a>
+          <a class="side-nav-link" href="#reports-panel">
+            <span>◌</span>
+            Reports
+          </a>
+          <a class="side-nav-link" href="#settings-panel">
+            <span>⚙</span>
+            Settings
+          </a>
+        </nav>
+
+        <div class="sidebar-card adaptive-card">
+          <div class="mini-art"></div>
+          <h2>Adaptive Planner</h2>
+          <p>
+            Smart scheduling that keeps your team covered and your week calm.
+          </p>
+        </div>
+
+        <div class="user-chip">
+          <div class="avatar">B</div>
+          <div>
+            <strong>Brody</strong>
+            <span>Scheduler</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Adaptive scheduling</p>
+            <h2>Your week,<br /><span>adaptively planned.</span></h2>
+            <p>
+              Balance coverage, caregiver limits, open shifts, and schedule
+              warnings in one calm workspace.
+            </p>
+          </div>
+
+          <div class="hero-actions">
+            <select id="schedule-view" aria-label="Schedule view">
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+
+            <div id="week-picker-section" class="date-control">
+              <button
+                id="previous-week-button"
+                type="button"
+                aria-label="Previous week"
+              >
+                ‹
+              </button>
+              <button id="selected-week-display-button" type="button">
+                <span id="selected-week-display">Selected week</span>
+              </button>
+              <button
+                id="next-week-button"
+                type="button"
+                aria-label="Next week"
+              >
+                ›
+              </button>
+              <button id="today-week-button" type="button">Today</button>
+              <input id="week-start-date" class="hidden" type="date" />
+            </div>
+
+            <div id="month-picker-section" class="date-control hidden">
+              <button
+                id="previous-month-button"
+                type="button"
+                aria-label="Previous month"
+              >
+                ‹
+              </button>
+              <button id="selected-month-display-button" type="button">
+                <span id="selected-month-display">Selected month</span>
+              </button>
+              <button
+                id="next-month-button"
+                type="button"
+                aria-label="Next month"
+              >
+                ›
+              </button>
+              <button id="current-month-button" type="button">
+                This Month
+              </button>
+              <input id="month-picker" class="hidden" type="month" />
+            </div>
+
+            <button
+              id="quick-add-shift-button"
+              class="primary-action"
+              type="button"
+            >
+              + Add Shift
+            </button>
+
+            <div class="more-actions">
+              <button
+                id="more-actions-button"
+                class="ghost-button"
+                type="button"
+              >
+                More •••
+              </button>
+
+              <div id="more-actions-menu" class="more-actions-menu hidden">
+                <button id="copy-week-button" type="button">Copy Week</button>
+                <button id="paste-week-button" type="button">Paste Week</button>
+                <button id="clear-week-button" class="danger" type="button">
+                  Clear Week
+                </button>
+                <button id="clear-month-button" class="danger" type="button">
+                  Clear Month
+                </button>
+                <button id="print-schedule-button" type="button">Print</button>
+                <button id="export-data-button" type="button">
+                  Export Backup
+                </button>
+                <button id="import-data-button" type="button">
+                  Import Backup
+                </button>
+              </div>
+            </div>
+            <button
+              id="clear-schedule-button"
+              class="ghost-button danger"
+              type="button"
+            >
+              Clear All
+            </button>
+            <input
+              id="import-data-input"
+              class="hidden"
+              type="file"
+              accept=".json"
+            />
+          </div>
+        </header>
+
+        <section class="stats-strip" aria-label="Schedule summary">
+          <article class="stat-card">
+            <div class="stat-icon blue">♡</div>
+            <div>
+              <p>Caregiver Hours</p>
+              <strong id="total-hours-covered">0 hrs</strong>
+              <span>covered this view</span>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-icon slate">▦</div>
+            <div>
+              <p>Scheduled Needed</p>
+              <strong id="total-hours-needed">0 hrs</strong>
+              <span>total required</span>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-icon orange">□</div>
+            <div>
+              <p>Open Shifts</p>
+              <strong id="open-shifts-count">0</strong>
+              <span id="open-hours">0 hrs</span>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-icon danger">△</div>
+            <div>
+              <p>Warnings</p>
+              <strong id="warning-count">0</strong>
+              <span>review needed</span>
+            </div>
+          </article>
+
+          <article class="coverage-card">
+            <div class="coverage-ring">
+              <span id="coverage-percent">0%</span>
+            </div>
+            <div class="coverage-track">
+              <div id="coverage-progress-fill"></div>
+            </div>
+            <p>Coverage</p>
+          </article>
+        </section>
+
+        <section id="schedule-area" class="schedule-card">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Care Map</p>
+              <h2 id="schedule-title">Weekly Schedule</h2>
+              <p id="week-label">Selected week</p>
+            </div>
+
+            <div class="schedule-tools">
+              <label>
+                Week starts
+                <select id="week-start">
+                  <option>Sunday</option>
+                  <option>Monday</option>
+                  <option>Tuesday</option>
+                  <option>Wednesday</option>
+                  <option>Thursday</option>
+                  <option>Friday</option>
+                  <option>Saturday</option>
+                </select>
+              </label>
+
+              <label>
+                Shift style
+                <select id="shift-style">
+                  <option value="three">3 shifts</option>
+                  <option value="two">2 shifts</option>
+                  <option value="one">1 shift</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div id="schedule"></div>
+
+          <div class="legend">
+            <span><i class="dot scheduled"></i> Scheduled</span>
+            <span><i class="dot open"></i> Open shift</span>
+            <span><i class="dot warning"></i> Warning</span>
+            <span><i class="dash"></i> Unavailable / empty</span>
+          </div>
+        </section>
+
+        <section class="dashboard-grid">
+          <article id="caregiver-panel" class="panel-card">
+            <div class="section-header compact">
+              <div>
+                <h3>Caregivers</h3>
+                <p>Add people and set max weekly hours.</p>
+              </div>
+            </div>
+
+            <ul id="caregiver-list" class="clean-list"></ul>
+
+            <div class="inline-form">
+              <input
+                id="caregiver-name"
+                type="text"
+                placeholder="Add caregiver name"
+              />
+              <button id="add-caregiver-button" type="button">Add</button>
+            </div>
+          </article>
+
+          <article id="hours-panel" class="panel-card">
+            <div class="section-header compact">
+              <div>
+                <h3>Caregiver Hours</h3>
+                <p>Warnings appear when someone nears their limit.</p>
+              </div>
+            </div>
+
+            <ul id="caregiver-hours-list" class="clean-list"></ul>
+          </article>
+
+          <article id="open-shifts-panel" class="panel-card">
+            <div class="section-header compact">
+              <div>
+                <h3>Open Shifts</h3>
+                <p>Unfilled shifts that still need coverage.</p>
+              </div>
+            </div>
+
+            <div class="available-shifts-body">
+              <ul id="available-shifts-list" class="clean-list"></ul>
+            </div>
+          </article>
+
+          <article id="warnings-panel" class="panel-card warning-panel">
+            <div class="section-header compact">
+              <div>
+                <h3>Schedule Warnings</h3>
+                <p>Conflicts, open shifts, and hour limits.</p>
+              </div>
+            </div>
+
+            <ul id="schedule-warnings-list" class="clean-list"></ul>
+          </article>
+
+          <article id="settings-panel" class="panel-card wide">
+            <div class="section-header compact">
+              <div>
+                <h3>Shift Settings</h3>
+                <p>Edit default shift times and add custom shifts.</p>
+              </div>
+            </div>
+
+            <div id="shift-time-list" class="shift-time-list"></div>
+
+            <div id="custom-shift-section" class="custom-shift-box hidden">
+              <div class="inline-form">
+                <input
+                  id="custom-shift-name"
+                  type="text"
+                  placeholder="Custom shift name"
+                />
+                <button id="add-shift-button" type="button">Add Shift</button>
+              </div>
+              <ul id="shift-list" class="clean-list"></ul>
+            </div>
+          </article>
+
+          <article id="reports-panel" class="panel-card wide">
+            <div class="section-header compact">
+              <div>
+                <h3>Schedule Notes</h3>
+                <p>Keep reminders visible for the selected schedule.</p>
+              </div>
+            </div>
+
+            <textarea
+              id="schedule-note"
+              rows="4"
+              placeholder="Add notes for this week..."
+            ></textarea>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <aside class="available-shifts-toast is-minimized">
+      <div class="toast-header">
+        <strong>Open Shifts</strong>
+        <span id="toast-open-shifts-count">0</span>
+        <button id="minimize-available-shifts-button" type="button">+</button>
+      </div>
+      <div class="available-shifts-body">
+        <ul class="clean-list"></ul>
+      </div>
+    </aside>
+
+    <div id="edit-time-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 id="edit-time-title">Edit Shift Time</h3>
+            <p id="edit-time-subtitle">Choose a start and end time.</p>
+          </div>
+          <button id="close-edit-time-button" type="button">×</button>
+        </div>
+
+        <div class="time-grid">
+          <label>
+            Start hour
+            <select id="edit-start-hour"></select>
+          </label>
+          <label>
+            Start minute
+            <select id="edit-start-minute"></select>
+          </label>
+          <label>
+            Start period
+            <select id="edit-start-period">
+              <option>AM</option>
+              <option>PM</option>
+            </select>
+          </label>
+          <label>
+            End hour
+            <select id="edit-end-hour"></select>
+          </label>
+          <label>
+            End minute
+            <select id="edit-end-minute"></select>
+          </label>
+          <label>
+            End period
+            <select id="edit-end-period">
+              <option>AM</option>
+              <option>PM</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            id="cancel-edit-time-button"
+            class="ghost-button"
+            type="button"
+          >
+            Cancel
+          </button>
+          <button id="save-edit-time-button" type="button">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
