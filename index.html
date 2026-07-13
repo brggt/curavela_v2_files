@@ -265,6 +265,30 @@
             </div>
           </div>
 
+          <details
+            id="schedule-warning-strip"
+            class="schedule-warning-strip hidden"
+          >
+            <summary>
+              <span class="schedule-warning-icon">△</span>
+
+              <div class="schedule-warning-copy">
+                <strong id="schedule-warning-summary">
+                  Schedule warning
+                </strong>
+
+                <span> Review caregiver scheduling rules </span>
+              </div>
+
+              <span class="schedule-warning-chevron">⌄</span>
+            </summary>
+
+            <ul
+              id="schedule-warning-details"
+              class="schedule-warning-details"
+            ></ul>
+          </details>
+
           <div id="schedule"></div>
 
           <div class="legend">
@@ -318,17 +342,6 @@
             <div class="available-shifts-body">
               <ul id="available-shifts-list" class="clean-list"></ul>
             </div>
-          </article>
-
-          <article id="warnings-panel" class="panel-card warning-panel">
-            <div class="section-header compact">
-              <div>
-                <h3>Schedule Warnings</h3>
-                <p>Conflicts, open shifts, and hour limits.</p>
-              </div>
-            </div>
-
-            <ul id="schedule-warnings-list" class="clean-list"></ul>
           </article>
 
           <article id="settings-panel" class="panel-card wide">
@@ -435,6 +448,97 @@
             Cancel
           </button>
           <button id="save-edit-time-button" type="button">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="caregiver-rules-modal" class="modal-backdrop hidden">
+      <div class="modal-card caregiver-rules-modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 id="caregiver-rules-title">Caregiver Rules</h3>
+
+            <p id="caregiver-rules-subtitle">
+              Set simple scheduling preferences.
+            </p>
+          </div>
+
+          <button
+            id="close-caregiver-rules-button"
+            type="button"
+            aria-label="Close caregiver rules"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="caregiver-rules-form">
+          <section class="rule-section">
+            <div>
+              <strong>Available days</strong>
+              <p>Uncheck any day this caregiver cannot work.</p>
+            </div>
+
+            <div id="caregiver-rule-days" class="rule-choice-grid"></div>
+          </section>
+
+          <section class="rule-section">
+            <div>
+              <strong>Allowed shifts</strong>
+              <p>Leave all unchecked to allow every shift.</p>
+            </div>
+
+            <div id="caregiver-rule-shifts" class="rule-choice-grid"></div>
+          </section>
+
+          <section class="rule-section rule-number-section">
+            <label for="caregiver-max-consecutive-days">
+              <strong>Maximum consecutive days</strong>
+
+              <span> Use 0 when there is no limit. </span>
+            </label>
+
+            <input
+              id="caregiver-max-consecutive-days"
+              type="number"
+              min="0"
+              max="31"
+              value="0"
+            />
+          </section>
+
+          <label class="rule-toggle">
+            <input id="caregiver-needs-two-days-off" type="checkbox" />
+
+            <span>
+              <strong>Needs two consecutive days off</strong>
+              <small> Warn when the selected week has no two-day break. </small>
+            </span>
+          </label>
+
+          <label class="rule-note">
+            <strong>Scheduling note</strong>
+
+            <textarea
+              id="caregiver-rule-note"
+              rows="3"
+              placeholder="Example: mornings only during school weeks"
+            ></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            id="cancel-caregiver-rules-button"
+            class="ghost-button"
+            type="button"
+          >
+            Cancel
+          </button>
+
+          <button id="save-caregiver-rules-button" type="button">
+            Save Rules
+          </button>
         </div>
       </div>
     </div>

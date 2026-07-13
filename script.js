@@ -2271,7 +2271,6 @@ function setAppView(viewName) {
   if (viewName === "open-shifts") {
     dashboardGrid.classList.remove("app-view-hidden");
     openShiftsPanel.classList.remove("app-view-hidden");
-    warningsPanel.classList.remove("app-view-hidden");
   }
 
   if (viewName === "caregivers") {

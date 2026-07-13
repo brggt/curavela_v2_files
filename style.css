@@ -2164,3 +2164,210 @@ select {
 .side-nav-link {
   cursor: pointer;
 }
+
+/* minimal caregiver schedule warnings */
+
+.schedule-warning-strip {
+  margin-bottom: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 122, 69, 0.24);
+  border-radius: 15px;
+  background: #fffaf7;
+}
+
+.schedule-warning-strip summary {
+  min-height: 58px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.schedule-warning-strip summary::-webkit-details-marker {
+  display: none;
+}
+
+.schedule-warning-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: #b84b20;
+  background: var(--orange-soft);
+  font-weight: 900;
+}
+
+.schedule-warning-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.schedule-warning-copy strong,
+.schedule-warning-copy span {
+  display: block;
+}
+
+.schedule-warning-copy strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.schedule-warning-copy span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.schedule-warning-chevron {
+  color: var(--orange);
+  transition: transform 0.18s ease;
+}
+
+.schedule-warning-strip[open] .schedule-warning-chevron {
+  transform: rotate(180deg);
+}
+
+.schedule-warning-details {
+  margin: 0;
+  padding: 0 14px 12px 58px;
+  display: grid;
+  gap: 6px;
+  list-style: none;
+}
+
+.schedule-warning-details li {
+  color: #8d4a2b;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* caregiver rules modal */
+
+.caregiver-rules-modal-card {
+  width: min(650px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.caregiver-rules-form {
+  display: grid;
+  gap: 14px;
+}
+
+.rule-section,
+.rule-toggle,
+.rule-note {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fbfdff;
+}
+
+.rule-section strong,
+.rule-note strong {
+  font-size: 13px;
+}
+
+.rule-section p {
+  margin: 3px 0 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.rule-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.rule-choice {
+  min-height: 38px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: white;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rule-choice input,
+.rule-toggle input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--blue);
+}
+
+.rule-number-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rule-number-section label strong,
+.rule-number-section label span {
+  display: block;
+}
+
+.rule-number-section label span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+#caregiver-max-consecutive-days {
+  width: 80px;
+}
+
+.rule-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.rule-toggle strong,
+.rule-toggle small {
+  display: block;
+}
+
+.rule-toggle small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.rule-note {
+  display: grid;
+  gap: 8px;
+}
+
+.rule-note textarea {
+  min-height: 80px;
+}
+
+#close-caregiver-rules-button {
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 24px;
+}
+
+@media (max-width: 600px) {
+  .rule-choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rule-number-section {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
