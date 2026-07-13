@@ -71,6 +71,21 @@ const exportDataButton = document.querySelector("#export-data-button");
 const importDataButton = document.querySelector("#import-data-button");
 const importDataInput = document.querySelector("#import-data-input");
 
+const mainContent = document.querySelector(".main-content");
+const heroSection = document.querySelector(".hero");
+const statsStrip = document.querySelector(".stats-strip");
+const scheduleArea = document.querySelector("#schedule-area");
+const dashboardGrid = document.querySelector(".dashboard-grid");
+
+const caregiverPanel = document.querySelector("#caregiver-panel");
+const hoursPanel = document.querySelector("#hours-panel");
+const openShiftsPanel = document.querySelector("#open-shifts-panel");
+const warningsPanel = document.querySelector("#warnings-panel");
+const reportsPanel = document.querySelector("#reports-panel");
+const settingsPanel = document.querySelector("#settings-panel");
+
+const sideNavLinks = document.querySelectorAll(".side-nav-link");
+
 const printScheduleButton = document.querySelector("#print-schedule-button");
 
 const copyWeekButton = document.querySelector("#copy-week-button");
@@ -122,17 +137,11 @@ const closeEditTimeButton = document.querySelector("#close-edit-time-button");
 const cancelEditTimeButton = document.querySelector("#cancel-edit-time-button");
 const saveEditTimeButton = document.querySelector("#save-edit-time-button");
 
-const quickAddShiftButton = document.querySelector(
-  "#quick-add-shift-button",
-);
+const quickAddShiftButton = document.querySelector("#quick-add-shift-button");
 
-const moreActionsButton = document.querySelector(
-  "#more-actions-button",
-);
+const moreActionsButton = document.querySelector("#more-actions-button");
 
-const moreActionsMenu = document.querySelector(
-  "#more-actions-menu",
-);
+const moreActionsMenu = document.querySelector("#more-actions-menu");
 
 let availableShiftsScrollInterval;
 
@@ -141,15 +150,9 @@ function getSavedItem(newKey, oldKey) {
 }
 
 function saveData() {
-  localStorage.setItem(
-    "curavelaCustomShifts",
-    JSON.stringify(customShifts),
-  );
+  localStorage.setItem("curavelaCustomShifts", JSON.stringify(customShifts));
 
-  localStorage.setItem(
-    "curavelaCaregivers",
-    JSON.stringify(caregivers),
-  );
+  localStorage.setItem("curavelaCaregivers", JSON.stringify(caregivers));
 
   localStorage.setItem(
     "curavelaCaregiverMaxHours",
@@ -161,45 +164,24 @@ function saveData() {
     JSON.stringify(scheduleAssignments),
   );
 
-  localStorage.setItem(
-    "curavelaScheduleNote",
-    scheduleNote,
-  );
+  localStorage.setItem("curavelaScheduleNote", scheduleNote);
 
-  localStorage.setItem(
-    "curavelaShiftTimes",
-    JSON.stringify(shiftTimes),
-  );
+  localStorage.setItem("curavelaShiftTimes", JSON.stringify(shiftTimes));
 
   localStorage.setItem(
     "curavelaShiftTimeOverrides",
     JSON.stringify(shiftTimeOverrides),
   );
 
-  localStorage.setItem(
-    "curavelaScheduleView",
-    scheduleViewSelect.value,
-  );
+  localStorage.setItem("curavelaScheduleView", scheduleViewSelect.value);
 
-  localStorage.setItem(
-    "curavelaShiftStyle",
-    shiftStyleSelect.value,
-  );
+  localStorage.setItem("curavelaShiftStyle", shiftStyleSelect.value);
 
-  localStorage.setItem(
-    "curavelaWeekStart",
-    weekStartSelect.value,
-  );
+  localStorage.setItem("curavelaWeekStart", weekStartSelect.value);
 
-  localStorage.setItem(
-    "curavelaMonth",
-    monthPicker.value,
-  );
+  localStorage.setItem("curavelaMonth", monthPicker.value);
 
-  localStorage.setItem(
-    "curavelaWeekStartDate",
-    weekStartDateInput.value,
-  );
+  localStorage.setItem("curavelaWeekStartDate", weekStartDateInput.value);
 }
 
 function loadData() {
@@ -246,15 +228,11 @@ function loadData() {
   }
 
   if (savedCaregiverMaxHours) {
-    caregiverMaxHours = JSON.parse(
-      savedCaregiverMaxHours,
-    );
+    caregiverMaxHours = JSON.parse(savedCaregiverMaxHours);
   }
 
   if (savedAssignments) {
-    scheduleAssignments = JSON.parse(
-      savedAssignments,
-    );
+    scheduleAssignments = JSON.parse(savedAssignments);
   }
 
   if (savedScheduleNote) {
@@ -269,9 +247,7 @@ function loadData() {
   }
 
   if (savedShiftTimeOverrides) {
-    shiftTimeOverrides = JSON.parse(
-      savedShiftTimeOverrides,
-    );
+    shiftTimeOverrides = JSON.parse(savedShiftTimeOverrides);
   }
 
   const savedScheduleView = getSavedItem(
@@ -289,10 +265,7 @@ function loadData() {
     "kindshiftWeekStart",
   );
 
-  const savedMonth = getSavedItem(
-    "curavelaMonth",
-    "kindshiftMonth",
-  );
+  const savedMonth = getSavedItem("curavelaMonth", "kindshiftMonth");
 
   const savedWeekStartDate = getSavedItem(
     "curavelaWeekStartDate",
@@ -339,29 +312,18 @@ function exportCuravelaData() {
     weekStartDate: weekStartDateInput.value,
   };
 
-  const backupText = JSON.stringify(
-    backupData,
-    null,
-    2,
-  );
+  const backupText = JSON.stringify(backupData, null, 2);
 
-  const backupBlob = new Blob(
-    [backupText],
-    {
-      type: "application/json",
-    },
-  );
+  const backupBlob = new Blob([backupText], {
+    type: "application/json",
+  });
 
-  const backupUrl = URL.createObjectURL(
-    backupBlob,
-  );
+  const backupUrl = URL.createObjectURL(backupBlob);
 
-  const downloadLink =
-    document.createElement("a");
+  const downloadLink = document.createElement("a");
 
   downloadLink.href = backupUrl;
-  downloadLink.download =
-    "curavela-backup.json";
+  downloadLink.download = "curavela-backup.json";
 
   downloadLink.click();
 
@@ -371,89 +333,62 @@ function exportCuravelaData() {
 function importCuravelaData(file) {
   const reader = new FileReader();
 
-  reader.addEventListener(
-    "load",
-    function () {
-      try {
-        const backupData = JSON.parse(
-          reader.result,
-        );
+  reader.addEventListener("load", function () {
+    try {
+      const backupData = JSON.parse(reader.result);
 
-        customShifts =
-          backupData.customShifts ||
-          customShifts;
+      customShifts = backupData.customShifts || customShifts;
 
-        caregivers =
-          backupData.caregivers ||
-          caregivers;
+      caregivers = backupData.caregivers || caregivers;
 
-        caregiverMaxHours =
-          backupData.caregiverMaxHours ||
-          caregiverMaxHours;
+      caregiverMaxHours = backupData.caregiverMaxHours || caregiverMaxHours;
 
-        scheduleAssignments =
-          backupData.scheduleAssignments ||
-          {};
+      scheduleAssignments = backupData.scheduleAssignments || {};
 
-        scheduleNote =
-          backupData.scheduleNote ||
-          "";
+      scheduleNote = backupData.scheduleNote || "";
 
-        shiftTimes = {
-          ...shiftTimes,
-          ...(backupData.shiftTimes || {}),
-        };
+      shiftTimes = {
+        ...shiftTimes,
+        ...(backupData.shiftTimes || {}),
+      };
 
-        shiftTimeOverrides =
-          backupData.shiftTimeOverrides ||
-          {};
+      shiftTimeOverrides = backupData.shiftTimeOverrides || {};
 
-        if (backupData.scheduleView) {
-          scheduleViewSelect.value =
-            backupData.scheduleView;
-        }
-
-        if (backupData.shiftStyle) {
-          shiftStyleSelect.value =
-            backupData.shiftStyle;
-        }
-
-        if (backupData.weekStart) {
-          weekStartSelect.value =
-            backupData.weekStart;
-        }
-
-        if (backupData.month) {
-          monthPicker.value =
-            backupData.month;
-        }
-
-        if (backupData.weekStartDate) {
-          weekStartDateInput.value =
-            backupData.weekStartDate;
-        }
-
-        scheduleNoteInput.value =
-          scheduleNote;
-
-        saveData();
-        updateCustomShiftVisibility();
-        updatePickerVisibility();
-        renderShiftList();
-        renderCaregiverList();
-        renderShiftTimeList();
-        renderSchedule();
-
-        alert(
-          "Backup imported successfully.",
-        );
-      } catch (error) {
-        alert(
-          "That backup file could not be imported.",
-        );
+      if (backupData.scheduleView) {
+        scheduleViewSelect.value = backupData.scheduleView;
       }
-    },
-  );
+
+      if (backupData.shiftStyle) {
+        shiftStyleSelect.value = backupData.shiftStyle;
+      }
+
+      if (backupData.weekStart) {
+        weekStartSelect.value = backupData.weekStart;
+      }
+
+      if (backupData.month) {
+        monthPicker.value = backupData.month;
+      }
+
+      if (backupData.weekStartDate) {
+        weekStartDateInput.value = backupData.weekStartDate;
+      }
+
+      scheduleNoteInput.value = scheduleNote;
+
+      saveData();
+      updateCustomShiftVisibility();
+      updatePickerVisibility();
+      renderShiftList();
+      renderCaregiverList();
+      renderShiftTimeList();
+      renderSchedule();
+
+      alert("Backup imported successfully.");
+    } catch (error) {
+      alert("That backup file could not be imported.");
+    }
+  });
 
   reader.readAsText(file);
 }
@@ -463,13 +398,9 @@ function getTodayDateValue() {
 
   const year = today.getFullYear();
 
-  const month = String(
-    today.getMonth() + 1,
-  ).padStart(2, "0");
+  const month = String(today.getMonth() + 1).padStart(2, "0");
 
-  const day = String(
-    today.getDate(),
-  ).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
@@ -479,9 +410,7 @@ function getTodayMonthValue() {
 
   const year = today.getFullYear();
 
-  const month = String(
-    today.getMonth() + 1,
-  ).padStart(2, "0");
+  const month = String(today.getMonth() + 1).padStart(2, "0");
 
   return `${year}-${month}`;
 }
@@ -489,13 +418,9 @@ function getTodayMonthValue() {
 function getDateKey(date) {
   const year = date.getFullYear();
 
-  const month = String(
-    date.getMonth() + 1,
-  ).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
 
-  const day = String(
-    date.getDate(),
-  ).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
@@ -511,97 +436,58 @@ function getAppDayIndex(date) {
 }
 
 function getOrderedWeekDays() {
-  const startIndex =
-    allWeekDays.indexOf(
-      weekStartSelect.value,
-    );
+  const startIndex = allWeekDays.indexOf(weekStartSelect.value);
 
-  const firstPart =
-    allWeekDays.slice(startIndex);
+  const firstPart = allWeekDays.slice(startIndex);
 
-  const secondPart =
-    allWeekDays.slice(0, startIndex);
+  const secondPart = allWeekDays.slice(0, startIndex);
 
   return firstPart.concat(secondPart);
 }
 
 function getDaysInSelectedWeek() {
-  const selectedDate =
-    weekStartDateInput.value ||
-    getTodayDateValue();
+  const selectedDate = weekStartDateInput.value || getTodayDateValue();
 
-  const [year, month, day] =
-    selectedDate
-      .split("-")
-      .map(Number);
+  const [year, month, day] = selectedDate.split("-").map(Number);
 
-  const chosenDate = new Date(
-    year,
-    month - 1,
-    day,
-  );
+  const chosenDate = new Date(year, month - 1, day);
 
-  const selectedStartDayIndex =
-    allWeekDays.indexOf(
-      weekStartSelect.value,
-    );
+  const selectedStartDayIndex = allWeekDays.indexOf(weekStartSelect.value);
 
-  const chosenDayIndex =
-    getAppDayIndex(chosenDate);
+  const chosenDayIndex = getAppDayIndex(chosenDate);
 
-  let daysToSubtract =
-    chosenDayIndex -
-    selectedStartDayIndex;
+  let daysToSubtract = chosenDayIndex - selectedStartDayIndex;
 
   if (daysToSubtract < 0) {
     daysToSubtract += 7;
   }
 
-  const startDate =
-    new Date(chosenDate);
+  const startDate = new Date(chosenDate);
 
-  startDate.setDate(
-    chosenDate.getDate() -
-      daysToSubtract,
-  );
+  startDate.setDate(chosenDate.getDate() - daysToSubtract);
 
   const days = [];
 
   for (let i = 0; i < 7; i++) {
-    const currentDate =
-      new Date(startDate);
+    const currentDate = new Date(startDate);
 
-    currentDate.setDate(
-      startDate.getDate() + i,
-    );
+    currentDate.setDate(startDate.getDate() + i);
 
     days.push({
-      label:
-        currentDate.toLocaleDateString(
-          "en-US",
-          {
-            weekday: "long",
-            month: "short",
-            day: "numeric",
-          },
-        ),
+      label: currentDate.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      }),
 
-      shortLabel:
-        currentDate.toLocaleDateString(
-          "en-US",
-          {
-            weekday: "short",
-          },
-        ),
+      shortLabel: currentDate.toLocaleDateString("en-US", {
+        weekday: "short",
+      }),
 
-      dateLabel:
-        currentDate.toLocaleDateString(
-          "en-US",
-          {
-            month: "short",
-            day: "numeric",
-          },
-        ),
+      dateLabel: currentDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
 
       key: getDateKey(currentDate),
       date: currentDate,
@@ -612,41 +498,23 @@ function getDaysInSelectedWeek() {
 }
 
 function getDaysInSelectedMonth() {
-  const selectedMonth =
-    monthPicker.value ||
-    getTodayMonthValue();
+  const selectedMonth = monthPicker.value || getTodayMonthValue();
 
-  const [year, month] =
-    selectedMonth
-      .split("-")
-      .map(Number);
+  const [year, month] = selectedMonth.split("-").map(Number);
 
   const days = [];
 
-  const lastDayOfMonth =
-    new Date(year, month, 0).getDate();
+  const lastDayOfMonth = new Date(year, month, 0).getDate();
 
-  for (
-    let dayNumber = 1;
-    dayNumber <= lastDayOfMonth;
-    dayNumber++
-  ) {
-    const date = new Date(
-      year,
-      month - 1,
-      dayNumber,
-    );
+  for (let dayNumber = 1; dayNumber <= lastDayOfMonth; dayNumber++) {
+    const date = new Date(year, month - 1, dayNumber);
 
     days.push({
-      label:
-        date.toLocaleDateString(
-          "en-US",
-          {
-            weekday: "long",
-            month: "short",
-            day: "numeric",
-          },
-        ),
+      label: date.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      }),
 
       key: getDateKey(date),
       date,
@@ -656,31 +524,16 @@ function getDaysInSelectedMonth() {
   return days;
 }
 
-function changeSelectedWeekByDays(
-  dayAmount,
-) {
-  const currentValue =
-    weekStartDateInput.value ||
-    getTodayDateValue();
+function changeSelectedWeekByDays(dayAmount) {
+  const currentValue = weekStartDateInput.value || getTodayDateValue();
 
-  const [year, month, day] =
-    currentValue
-      .split("-")
-      .map(Number);
+  const [year, month, day] = currentValue.split("-").map(Number);
 
-  const currentDate = new Date(
-    year,
-    month - 1,
-    day,
-  );
+  const currentDate = new Date(year, month - 1, day);
 
-  currentDate.setDate(
-    currentDate.getDate() +
-      dayAmount,
-  );
+  currentDate.setDate(currentDate.getDate() + dayAmount);
 
-  weekStartDateInput.value =
-    getDateKey(currentDate);
+  weekStartDateInput.value = getDateKey(currentDate);
 
   saveData();
   updateWeekDisplay();
@@ -692,19 +545,13 @@ function updateWeekDisplay() {
     return;
   }
 
-  const days =
-    getDaysInSelectedWeek();
+  const days = getDaysInSelectedWeek();
 
-  const firstDay =
-    days[0].dateLabel;
+  const firstDay = days[0].dateLabel;
 
-  const lastDay =
-    days[
-      days.length - 1
-    ].dateLabel;
+  const lastDay = days[days.length - 1].dateLabel;
 
-  selectedWeekDisplay.textContent =
-    `${firstDay} – ${lastDay}`;
+  selectedWeekDisplay.textContent = `${firstDay} – ${lastDay}`;
 }
 
 function updateMonthDisplay() {
@@ -712,71 +559,40 @@ function updateMonthDisplay() {
     return;
   }
 
-  const selectedMonth =
-    monthPicker.value ||
-    getTodayMonthValue();
+  const selectedMonth = monthPicker.value || getTodayMonthValue();
 
-  const [year, month] =
-    selectedMonth
-      .split("-")
-      .map(Number);
+  const [year, month] = selectedMonth.split("-").map(Number);
 
-  selectedMonthDisplay.textContent =
-    new Date(
-      year,
-      month - 1,
-    ).toLocaleDateString(
-      "en-US",
-      {
-        month: "long",
-        year: "numeric",
-      },
-    );
-}
-
-function changeSelectedMonthByMonths(
-  monthAmount,
-) {
-  const currentValue =
-    monthPicker.value ||
-    getTodayMonthValue();
-
-  const [year, month] =
-    currentValue
-      .split("-")
-      .map(Number);
-
-  const currentDate = new Date(
+  selectedMonthDisplay.textContent = new Date(
     year,
     month - 1,
-    1,
-  );
+  ).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+}
 
-  currentDate.setMonth(
-    currentDate.getMonth() +
-      monthAmount,
-  );
+function changeSelectedMonthByMonths(monthAmount) {
+  const currentValue = monthPicker.value || getTodayMonthValue();
 
-  const newYear =
-    currentDate.getFullYear();
+  const [year, month] = currentValue.split("-").map(Number);
 
-  const newMonth = String(
-    currentDate.getMonth() + 1,
-  ).padStart(2, "0");
+  const currentDate = new Date(year, month - 1, 1);
 
-  monthPicker.value =
-    `${newYear}-${newMonth}`;
+  currentDate.setMonth(currentDate.getMonth() + monthAmount);
+
+  const newYear = currentDate.getFullYear();
+
+  const newMonth = String(currentDate.getMonth() + 1).padStart(2, "0");
+
+  monthPicker.value = `${newYear}-${newMonth}`;
 
   saveData();
   updateMonthDisplay();
   renderSchedule();
 }
 
-function getShiftConfig(
-  shiftName,
-  defaultStart,
-  defaultEnd,
-) {
+function getShiftConfig(shiftName, defaultStart, defaultEnd) {
   if (!shiftTimes[shiftName]) {
     shiftTimes[shiftName] = {
       start: defaultStart,
@@ -786,103 +602,49 @@ function getShiftConfig(
 
   return {
     name: shiftName,
-    start:
-      shiftTimes[shiftName].start,
-    end:
-      shiftTimes[shiftName].end,
+    start: shiftTimes[shiftName].start,
+    end: shiftTimes[shiftName].end,
   };
 }
 
 function getActiveShifts() {
-  const selectedShiftStyle =
-    shiftStyleSelect.value;
+  const selectedShiftStyle = shiftStyleSelect.value;
 
-  if (
-    selectedShiftStyle === "one"
-  ) {
+  if (selectedShiftStyle === "one") {
+    return [getShiftConfig("Full Day", "00:00", "00:00")];
+  }
+
+  if (selectedShiftStyle === "two") {
     return [
-      getShiftConfig(
-        "Full Day",
-        "00:00",
-        "00:00",
-      ),
+      getShiftConfig("Day", "07:00", "19:00"),
+
+      getShiftConfig("Night", "19:00", "07:00"),
     ];
   }
 
-  if (
-    selectedShiftStyle === "two"
-  ) {
+  if (selectedShiftStyle === "three") {
     return [
-      getShiftConfig(
-        "Day",
-        "07:00",
-        "19:00",
-      ),
+      getShiftConfig("Morning", "06:30", "13:00"),
 
-      getShiftConfig(
-        "Night",
-        "19:00",
-        "07:00",
-      ),
+      getShiftConfig("Afternoon", "13:00", "19:00"),
+
+      getShiftConfig("Night", "19:00", "07:00"),
     ];
   }
 
-  if (
-    selectedShiftStyle === "three"
-  ) {
-    return [
-      getShiftConfig(
-        "Morning",
-        "06:30",
-        "13:00",
-      ),
-
-      getShiftConfig(
-        "Afternoon",
-        "13:00",
-        "19:00",
-      ),
-
-      getShiftConfig(
-        "Night",
-        "19:00",
-        "07:00",
-      ),
-    ];
-  }
-
-  return customShifts.map(
-    function (shiftName) {
-      return getShiftConfig(
-        shiftName,
-        "09:00",
-        "17:00",
-      );
-    },
-  );
+  return customShifts.map(function (shiftName) {
+    return getShiftConfig(shiftName, "09:00", "17:00");
+  });
 }
 
-function getShiftOverrideKey(
-  dayKey,
-  shiftName,
-) {
+function getShiftOverrideKey(dayKey, shiftName) {
   return `${dayKey}__${shiftName}`;
 }
 
-function getShiftForDay(
-  dayKey,
-  shift,
-) {
-  const overrideKey =
-    getShiftOverrideKey(
-      dayKey,
-      shift.name,
-    );
+function getShiftForDay(dayKey, shift) {
+  const overrideKey = getShiftOverrideKey(dayKey, shift.name);
 
-  const override =
-    shiftTimeOverrides[
-      overrideKey
-    ];
+  const override = shiftTimeOverrides[overrideKey];
 
   if (override) {
     return {
@@ -900,56 +662,32 @@ function getShiftForDay(
 }
 
 function formatTime(timeValue) {
-  const [
-    hourText,
-    minuteText,
-  ] = timeValue.split(":");
+  const [hourText, minuteText] = timeValue.split(":");
 
   const hour = Number(hourText);
   const minute = minuteText;
 
-  const period =
-    hour >= 12 ? "PM" : "AM";
+  const period = hour >= 12 ? "PM" : "AM";
 
-  const displayHour =
-    hour % 12 === 0
-      ? 12
-      : hour % 12;
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
 
   return `${displayHour}:${minute} ${period}`;
 }
 
 function getShiftHours(shift) {
-  const [
-    startHour,
-    startMinute,
-  ] = shift.start
-    .split(":")
-    .map(Number);
+  const [startHour, startMinute] = shift.start.split(":").map(Number);
 
-  const [
-    endHour,
-    endMinute,
-  ] = shift.end
-    .split(":")
-    .map(Number);
+  const [endHour, endMinute] = shift.end.split(":").map(Number);
 
-  const startMinutes =
-    startHour * 60 +
-    startMinute;
+  const startMinutes = startHour * 60 + startMinute;
 
-  let endMinutes =
-    endHour * 60 +
-    endMinute;
+  let endMinutes = endHour * 60 + endMinute;
 
-  if (
-    endMinutes <= startMinutes
-  ) {
+  if (endMinutes <= startMinutes) {
     endMinutes += 24 * 60;
   }
 
-  const totalMinutes =
-    endMinutes - startMinutes;
+  const totalMinutes = endMinutes - startMinutes;
 
   return totalMinutes / 60;
 }
@@ -962,21 +700,13 @@ function formatHours(hours) {
   return `${hours.toFixed(1)} hrs`;
 }
 
-function buildCaregiverOptions(
-  assignedCaregiver,
-) {
-  let caregiverOptions =
-    `<option value="Open">Open</option>`;
+function buildCaregiverOptions(assignedCaregiver) {
+  let caregiverOptions = `<option value="Open">Open</option>`;
 
-  caregivers.forEach(
-    function (caregiverName) {
-      const selected =
-        caregiverName ===
-        assignedCaregiver
-          ? "selected"
-          : "";
+  caregivers.forEach(function (caregiverName) {
+    const selected = caregiverName === assignedCaregiver ? "selected" : "";
 
-      caregiverOptions += `
+    caregiverOptions += `
         <option
           value="${caregiverName}"
           ${selected}
@@ -984,79 +714,42 @@ function buildCaregiverOptions(
           ${caregiverName}
         </option>
       `;
-    },
-  );
+  });
 
   return caregiverOptions;
 }
 
-function getCaregiverHoursForDays(
-  scheduleDays,
-  activeShifts,
-) {
+function getCaregiverHoursForDays(scheduleDays, activeShifts) {
   const caregiverHours = {};
 
-  caregivers.forEach(
-    function (caregiverName) {
-      caregiverHours[
-        caregiverName
-      ] = 0;
-    },
-  );
+  caregivers.forEach(function (caregiverName) {
+    caregiverHours[caregiverName] = 0;
+  });
 
-  scheduleDays.forEach(
-    function (day) {
-      activeShifts.forEach(
-        function (shift) {
-          const shiftForDay =
-            getShiftForDay(
-              day.key,
-              shift,
-            );
+  scheduleDays.forEach(function (day) {
+    activeShifts.forEach(function (shift) {
+      const shiftForDay = getShiftForDay(day.key, shift);
 
-          const shiftHours =
-            getShiftHours(
-              shiftForDay,
-            );
+      const shiftHours = getShiftHours(shiftForDay);
 
-          const assignmentKey =
-            `${day.key}-${shift.name}`;
+      const assignmentKey = `${day.key}-${shift.name}`;
 
-          const assignedCaregiver =
-            scheduleAssignments[
-              assignmentKey
-            ] || "Open";
+      const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
 
-          if (
-            assignedCaregiver !==
-            "Open"
-          ) {
-            if (
-              !caregiverHours[
-                assignedCaregiver
-              ]
-            ) {
-              caregiverHours[
-                assignedCaregiver
-              ] = 0;
-            }
+      if (assignedCaregiver !== "Open") {
+        if (!caregiverHours[assignedCaregiver]) {
+          caregiverHours[assignedCaregiver] = 0;
+        }
 
-            caregiverHours[
-              assignedCaregiver
-            ] += shiftHours;
-          }
-        },
-      );
-    },
-  );
+        caregiverHours[assignedCaregiver] += shiftHours;
+      }
+    });
+  });
 
   return caregiverHours;
 }
 
-function renderWeeklySchedule(
-  scheduleDays,
-  activeShifts,
-) {
+function renderWeeklySchedule(scheduleDays, activeShifts) {
   scheduleSection.className = "";
   scheduleSection.innerHTML = "";
 
@@ -1071,23 +764,13 @@ function renderWeeklySchedule(
     return;
   }
 
-  const caregiverHours =
-    getCaregiverHoursForDays(
-      scheduleDays,
-      activeShifts,
-    );
+  const caregiverHours = getCaregiverHoursForDays(scheduleDays, activeShifts);
 
-  const careMapGrid =
-    document.createElement("div");
+  const careMapGrid = document.createElement("div");
 
-  careMapGrid.classList.add(
-    "care-map-grid",
-  );
+  careMapGrid.classList.add("care-map-grid");
 
-  careMapGrid.style.setProperty(
-    "--day-count",
-    scheduleDays.length,
-  );
+  careMapGrid.style.setProperty("--day-count", scheduleDays.length);
 
   careMapGrid.innerHTML = `
     <div
@@ -1101,17 +784,12 @@ function renderWeeklySchedule(
     </div>
   `;
 
-  scheduleDays.forEach(
-    function (day) {
-      const dayHeader =
-        document.createElement("div");
+  scheduleDays.forEach(function (day) {
+    const dayHeader = document.createElement("div");
 
-      dayHeader.classList.add(
-        "care-map-cell",
-        "care-map-header",
-      );
+    dayHeader.classList.add("care-map-cell", "care-map-header");
 
-      dayHeader.innerHTML = `
+    dayHeader.innerHTML = `
         <strong>
           ${day.shortLabel}
         </strong>
@@ -1121,29 +799,23 @@ function renderWeeklySchedule(
         </span>
       `;
 
-      careMapGrid.append(
-        dayHeader,
-      );
-    },
-  );
+    careMapGrid.append(dayHeader);
+  });
 
-  caregivers.forEach(
-    function (caregiverName) {
-      const caregiverCell =
-        document.createElement("div");
+  caregivers.forEach(function (caregiverName) {
+    const caregiverCell = document.createElement("div");
 
-      caregiverCell.classList.add(
-        "care-map-cell",
-        "caregiver-cell",
-        "draggable-caregiver",
-      );
+    caregiverCell.classList.add(
+      "care-map-cell",
+      "caregiver-cell",
+      "draggable-caregiver",
+    );
 
-      caregiverCell.draggable = true;
+    caregiverCell.draggable = true;
 
-      caregiverCell.dataset.caregiver =
-        caregiverName;
+    caregiverCell.dataset.caregiver = caregiverName;
 
-      caregiverCell.innerHTML = `
+    caregiverCell.innerHTML = `
         <span
           class="caregiver-drag-handle"
           title="Drag to reorder"
@@ -1152,9 +824,7 @@ function renderWeeklySchedule(
         </span>
 
         <div class="avatar">
-          ${caregiverName
-            .charAt(0)
-            .toUpperCase()}
+          ${caregiverName.charAt(0).toUpperCase()}
         </div>
 
         <div>
@@ -1167,80 +837,42 @@ function renderWeeklySchedule(
           <span
             class="caregiver-meta"
           >
-            ${formatHours(
-              caregiverHours[
-                caregiverName
-              ] || 0,
-            )}
+            ${formatHours(caregiverHours[caregiverName] || 0)}
           </span>
         </div>
       `;
 
-      careMapGrid.append(
-        caregiverCell,
-      );
+    careMapGrid.append(caregiverCell);
 
-      scheduleDays.forEach(
-        function (day) {
-          const dayCell =
-            document.createElement(
-              "div",
-            );
+    scheduleDays.forEach(function (day) {
+      const dayCell = document.createElement("div");
 
-          dayCell.classList.add(
-            "care-map-cell",
-          );
+      dayCell.classList.add("care-map-cell");
 
-          const shiftStack =
-            document.createElement(
-              "div",
-            );
+      const shiftStack = document.createElement("div");
 
-          shiftStack.classList.add(
-            "shift-stack",
-          );
+      shiftStack.classList.add("shift-stack");
 
-          activeShifts.forEach(
-            function (shift) {
-              const assignmentKey =
-                `${day.key}-${shift.name}`;
+      activeShifts.forEach(function (shift) {
+        const assignmentKey = `${day.key}-${shift.name}`;
 
-              const assignedCaregiver =
-                scheduleAssignments[
-                  assignmentKey
-                ] || "Open";
+        const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
 
-              if (
-                assignedCaregiver !==
-                caregiverName
-              ) {
-                return;
-              }
+        if (assignedCaregiver !== caregiverName) {
+          return;
+        }
 
-              const shiftForDay =
-                getShiftForDay(
-                  day.key,
-                  shift,
-                );
+        const shiftForDay = getShiftForDay(day.key, shift);
 
-              const shiftPill =
-                document.createElement(
-                  "div",
-                );
+        const shiftPill = document.createElement("div");
 
-              shiftPill.classList.add(
-                "shift-pill",
-              );
+        shiftPill.classList.add("shift-pill");
 
-              shiftPill.innerHTML = `
+        shiftPill.innerHTML = `
                 <strong>
-                  ${formatTime(
-                    shiftForDay.start,
-                  )}
+                  ${formatTime(shiftForDay.start)}
                   –
-                  ${formatTime(
-                    shiftForDay.end,
-                  )}
+                  ${formatTime(shiftForDay.end)}
                 </strong>
 
                 <span>
@@ -1252,72 +884,40 @@ function renderWeeklySchedule(
                   data-day="${day.key}"
                   data-shift="${shift.name}"
                 >
-                  ${buildCaregiverOptions(
-                    assignedCaregiver,
-                  )}
+                  ${buildCaregiverOptions(assignedCaregiver)}
                 </select>
               `;
 
-              shiftStack.append(
-                shiftPill,
-              );
-            },
-          );
+        shiftStack.append(shiftPill);
+      });
 
-          if (
-            shiftStack.children
-              .length === 0
-          ) {
-            dayCell.innerHTML = `
+      if (shiftStack.children.length === 0) {
+        dayCell.innerHTML = `
               <div class="empty-cell">
                 —
               </div>
             `;
-          } else {
-            dayCell.append(
-              shiftStack,
-            );
-          }
+      } else {
+        dayCell.append(shiftStack);
+      }
 
-          careMapGrid.append(
-            dayCell,
-          );
-        },
-      );
-    },
-  );
+      careMapGrid.append(dayCell);
+    });
+  });
 
-  const totalOpenShifts =
-    scheduleDays.reduce(
-      function (total, day) {
-        const openShiftsForDay =
-          activeShifts.filter(
-            function (shift) {
-              const assignmentKey =
-                `${day.key}-${shift.name}`;
+  const totalOpenShifts = scheduleDays.reduce(function (total, day) {
+    const openShiftsForDay = activeShifts.filter(function (shift) {
+      const assignmentKey = `${day.key}-${shift.name}`;
 
-              const assignedCaregiver =
-                scheduleAssignments[
-                  assignmentKey
-                ] || "Open";
+      const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
 
-              return (
-                assignedCaregiver ===
-                "Open"
-              );
-            },
-          );
+      return assignedCaregiver === "Open";
+    });
 
-        return (
-          total +
-          openShiftsForDay.length
-        );
-      },
-      0,
-    );
+    return total + openShiftsForDay.length;
+  }, 0);
 
-  const openCaregiverCell =
-    document.createElement("div");
+  const openCaregiverCell = document.createElement("div");
 
   openCaregiverCell.classList.add(
     "care-map-cell",
@@ -1337,83 +937,51 @@ function renderWeeklySchedule(
 
       <span class="caregiver-meta">
         ${totalOpenShifts}
-        ${
-          totalOpenShifts === 1
-            ? "shift"
-            : "shifts"
-        }
+        ${totalOpenShifts === 1 ? "shift" : "shifts"}
         need coverage
       </span>
     </div>
   `;
 
-  careMapGrid.append(
-    openCaregiverCell,
-  );
+  careMapGrid.append(openCaregiverCell);
 
-  scheduleDays.forEach(
-    function (day) {
-      const dayCell =
-        document.createElement("div");
+  scheduleDays.forEach(function (day) {
+    const dayCell = document.createElement("div");
 
-      dayCell.classList.add(
-        "care-map-cell",
-        "open-summary-cell",
-      );
+    dayCell.classList.add("care-map-cell", "open-summary-cell");
 
-      const openShiftsForDay =
-        activeShifts.filter(
-          function (shift) {
-            const assignmentKey =
-              `${day.key}-${shift.name}`;
+    const openShiftsForDay = activeShifts.filter(function (shift) {
+      const assignmentKey = `${day.key}-${shift.name}`;
 
-            const assignedCaregiver =
-              scheduleAssignments[
-                assignmentKey
-              ] || "Open";
+      const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
 
-            return (
-              assignedCaregiver ===
-              "Open"
-            );
-          },
-        );
+      return assignedCaregiver === "Open";
+    });
 
-      if (
-        openShiftsForDay.length === 0
-      ) {
-        dayCell.innerHTML = `
+    if (openShiftsForDay.length === 0) {
+      dayCell.innerHTML = `
           <div class="open-day-covered">
             <span>✓</span>
             Covered
           </div>
         `;
 
-        careMapGrid.append(dayCell);
+      careMapGrid.append(dayCell);
 
-        return;
-      }
+      return;
+    }
 
-      const openShiftNames =
-        openShiftsForDay
-          .map(
-            function (shift) {
-              return shift.name;
-            },
-          )
-          .join(" · ");
+    const openShiftNames = openShiftsForDay
+      .map(function (shift) {
+        return shift.name;
+      })
+      .join(" · ");
 
-      const openShiftRows =
-        openShiftsForDay
-          .map(
-            function (shift) {
-              const shiftForDay =
-                getShiftForDay(
-                  day.key,
-                  shift,
-                );
+    const openShiftRows = openShiftsForDay
+      .map(function (shift) {
+        const shiftForDay = getShiftForDay(day.key, shift);
 
-              return `
+        return `
                 <div
                   class="open-mini-shift"
                 >
@@ -1427,13 +995,9 @@ function renderWeeklySchedule(
                     </strong>
 
                     <span>
-                      ${formatTime(
-                        shiftForDay.start,
-                      )}
+                      ${formatTime(shiftForDay.start)}
                       –
-                      ${formatTime(
-                        shiftForDay.end,
-                      )}
+                      ${formatTime(shiftForDay.end)}
                     </span>
                   </div>
 
@@ -1444,17 +1008,14 @@ function renderWeeklySchedule(
                     data-day="${day.key}"
                     data-shift="${shift.name}"
                   >
-                    ${buildCaregiverOptions(
-                      "Open",
-                    )}
+                    ${buildCaregiverOptions("Open")}
                   </select>
                 </div>
               `;
-            },
-          )
-          .join("");
+      })
+      .join("");
 
-      dayCell.innerHTML = `
+    dayCell.innerHTML = `
         <details
           class="open-day-summary"
         >
@@ -1485,135 +1046,77 @@ function renderWeeklySchedule(
         </details>
       `;
 
-      careMapGrid.append(
-        dayCell,
-      );
-    },
-  );
+    careMapGrid.append(dayCell);
+  });
 
-  scheduleSection.append(
-    careMapGrid,
-  );
+  scheduleSection.append(careMapGrid);
 
   attachCaregiverDragListeners();
 }
 
-function renderMonthlySchedule(
-  scheduleDays,
-  activeShifts,
-) {
+function renderMonthlySchedule(scheduleDays, activeShifts) {
   scheduleSection.innerHTML = "";
   scheduleSection.className = "";
 
-  scheduleSection.classList.add(
-    "monthly-schedule-grid",
-  );
+  scheduleSection.classList.add("monthly-schedule-grid");
 
-  const orderedWeekDays =
-    getOrderedWeekDays();
+  const orderedWeekDays = getOrderedWeekDays();
 
-  orderedWeekDays.forEach(
-    function (dayName) {
-      const weekdayHeader =
-        document.createElement("div");
+  orderedWeekDays.forEach(function (dayName) {
+    const weekdayHeader = document.createElement("div");
 
-      weekdayHeader.classList.add(
-        "month-weekday-header",
-      );
+    weekdayHeader.classList.add("month-weekday-header");
 
-      weekdayHeader.textContent =
-        dayName.slice(0, 3);
+    weekdayHeader.textContent = dayName.slice(0, 3);
 
-      scheduleSection.append(
-        weekdayHeader,
-      );
-    },
-  );
+    scheduleSection.append(weekdayHeader);
+  });
 
   if (scheduleDays.length > 0) {
-    const firstDate =
-      scheduleDays[0].date;
+    const firstDate = scheduleDays[0].date;
 
-    const firstDayIndex =
-      getAppDayIndex(firstDate);
+    const firstDayIndex = getAppDayIndex(firstDate);
 
-    const selectedStartIndex =
-      allWeekDays.indexOf(
-        weekStartSelect.value,
-      );
+    const selectedStartIndex = allWeekDays.indexOf(weekStartSelect.value);
 
-    let blankDays =
-      firstDayIndex -
-      selectedStartIndex;
+    let blankDays = firstDayIndex - selectedStartIndex;
 
     if (blankDays < 0) {
       blankDays += 7;
     }
 
-    for (
-      let i = 0;
-      i < blankDays;
-      i++
-    ) {
-      const emptyDay =
-        document.createElement(
-          "div",
-        );
+    for (let i = 0; i < blankDays; i++) {
+      const emptyDay = document.createElement("div");
 
-      emptyDay.classList.add(
-        "month-empty-day",
-      );
+      emptyDay.classList.add("month-empty-day");
 
-      scheduleSection.append(
-        emptyDay,
-      );
+      scheduleSection.append(emptyDay);
     }
   }
 
-  scheduleDays.forEach(
-    function (day) {
-      const dayCard =
-        document.createElement("div");
+  scheduleDays.forEach(function (day) {
+    const dayCard = document.createElement("div");
 
-      dayCard.classList.add(
-        "month-day-card",
-      );
+    dayCard.classList.add("month-day-card");
 
-      const dayNumber =
-        day.date.getDate();
+    const dayNumber = day.date.getDate();
 
-      const weekdayShort =
-        day.date.toLocaleDateString(
-          "en-US",
-          {
-            weekday: "short",
-          },
-        );
+    const weekdayShort = day.date.toLocaleDateString("en-US", {
+      weekday: "short",
+    });
 
-      let shiftRows = "";
+    let shiftRows = "";
 
-      activeShifts.forEach(
-        function (shift) {
-          const assignmentKey =
-            `${day.key}-${shift.name}`;
+    activeShifts.forEach(function (shift) {
+      const assignmentKey = `${day.key}-${shift.name}`;
 
-          const assignedCaregiver =
-            scheduleAssignments[
-              assignmentKey
-            ] || "Open";
+      const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
 
-          const caregiverOptions =
-            buildCaregiverOptions(
-              assignedCaregiver,
-            );
+      const caregiverOptions = buildCaregiverOptions(assignedCaregiver);
 
-          const shiftForDay =
-            getShiftForDay(
-              day.key,
-              shift,
-            );
+      const shiftForDay = getShiftForDay(day.key, shift);
 
-          shiftRows += `
+      shiftRows += `
             <div
               class="month-shift-row"
             >
@@ -1625,9 +1128,7 @@ function renderMonthlySchedule(
                 </span>
 
                 <span>
-                  ${formatTime(
-                    shiftForDay.start,
-                  )}
+                  ${formatTime(shiftForDay.start)}
                 </span>
               </div>
 
@@ -1643,10 +1144,9 @@ function renderMonthlySchedule(
               </select>
             </div>
           `;
-        },
-      );
+    });
 
-      dayCard.innerHTML = `
+    dayCard.innerHTML = `
         <div class="month-day-header">
           <span
             class="month-date-number"
@@ -1666,17 +1166,11 @@ function renderMonthlySchedule(
         </div>
       `;
 
-      scheduleSection.append(
-        dayCard,
-      );
-    },
-  );
+    scheduleSection.append(dayCard);
+  });
 }
 
-function renderCoverageSummary(
-  scheduleDays,
-  activeShifts,
-) {
+function renderCoverageSummary(scheduleDays, activeShifts) {
   let totalHoursNeeded = 0;
   let totalHoursCovered = 0;
   let openHours = 0;
@@ -1685,56 +1179,31 @@ function renderCoverageSummary(
   const warnings = [];
   const caregiverHours = {};
 
-  caregivers.forEach(
-    function (caregiverName) {
-      caregiverHours[
-        caregiverName
-      ] = 0;
-    },
-  );
+  caregivers.forEach(function (caregiverName) {
+    caregiverHours[caregiverName] = 0;
+  });
 
-  availableShiftsList.innerHTML =
-    "";
+  availableShiftsList.innerHTML = "";
 
-  scheduleDays.forEach(
-    function (day) {
-      activeShifts.forEach(
-        function (shift) {
-          const shiftForDay =
-            getShiftForDay(
-              day.key,
-              shift,
-            );
+  scheduleDays.forEach(function (day) {
+    activeShifts.forEach(function (shift) {
+      const shiftForDay = getShiftForDay(day.key, shift);
 
-          const shiftHours =
-            getShiftHours(
-              shiftForDay,
-            );
+      const shiftHours = getShiftHours(shiftForDay);
 
-          const assignmentKey =
-            `${day.key}-${shift.name}`;
+      const assignmentKey = `${day.key}-${shift.name}`;
 
-          const assignedCaregiver =
-            scheduleAssignments[
-              assignmentKey
-            ] || "Open";
+      const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
 
-          totalHoursNeeded +=
-            shiftHours;
+      totalHoursNeeded += shiftHours;
 
-          if (
-            assignedCaregiver ===
-            "Open"
-          ) {
-            openHours += shiftHours;
-            openShiftsCount += 1;
+      if (assignedCaregiver === "Open") {
+        openHours += shiftHours;
+        openShiftsCount += 1;
 
-            const availableShiftItem =
-              document.createElement(
-                "li",
-              );
+        const availableShiftItem = document.createElement("li");
 
-            availableShiftItem.innerHTML = `
+        availableShiftItem.innerHTML = `
               <strong>
                 ${day.label}
               </strong>
@@ -1742,226 +1211,130 @@ function renderCoverageSummary(
 
               ${shift.name}
               ·
-              ${formatTime(
-                shiftForDay.start,
-              )}
+              ${formatTime(shiftForDay.start)}
               –
-              ${formatTime(
-                shiftForDay.end,
-              )}
+              ${formatTime(shiftForDay.end)}
               ·
-              ${formatHours(
-                shiftHours,
-              )}
+              ${formatHours(shiftHours)}
             `;
 
-            availableShiftsList.append(
-              availableShiftItem,
-            );
-          } else {
-            totalHoursCovered +=
-              shiftHours;
+        availableShiftsList.append(availableShiftItem);
+      } else {
+        totalHoursCovered += shiftHours;
 
-            if (
-              !caregiverHours[
-                assignedCaregiver
-              ]
-            ) {
-              caregiverHours[
-                assignedCaregiver
-              ] = 0;
-            }
+        if (!caregiverHours[assignedCaregiver]) {
+          caregiverHours[assignedCaregiver] = 0;
+        }
 
-            caregiverHours[
-              assignedCaregiver
-            ] += shiftHours;
-          }
-        },
-      );
-    },
-  );
+        caregiverHours[assignedCaregiver] += shiftHours;
+      }
+    });
+  });
 
-  totalHoursNeededElement.textContent =
-    formatHours(totalHoursNeeded);
+  totalHoursNeededElement.textContent = formatHours(totalHoursNeeded);
 
-  totalHoursCoveredElement.textContent =
-    formatHours(totalHoursCovered);
+  totalHoursCoveredElement.textContent = formatHours(totalHoursCovered);
 
-  openHoursElement.textContent =
-    formatHours(openHours);
+  openHoursElement.textContent = formatHours(openHours);
 
-  openShiftsCountElement.textContent =
-    openShiftsCount;
+  openShiftsCountElement.textContent = openShiftsCount;
 
   if (toastOpenShiftsCount) {
-    toastOpenShiftsCount.textContent =
-      openShiftsCount;
+    toastOpenShiftsCount.textContent = openShiftsCount;
   }
 
   caregiverHoursList.innerHTML = "";
 
   if (caregivers.length === 0) {
-    const emptyCaregiverItem =
-      document.createElement("li");
+    const emptyCaregiverItem = document.createElement("li");
 
-    emptyCaregiverItem.textContent =
-      "No caregivers added yet.";
+    emptyCaregiverItem.textContent = "No caregivers added yet.";
 
-    caregiverHoursList.append(
-      emptyCaregiverItem,
-    );
+    caregiverHoursList.append(emptyCaregiverItem);
   } else {
-    caregivers.forEach(
-      function (caregiverName) {
-        const caregiverHoursItem =
-          document.createElement(
-            "li",
-          );
+    caregivers.forEach(function (caregiverName) {
+      const caregiverHoursItem = document.createElement("li");
 
-        const hoursWorked =
-          caregiverHours[
-            caregiverName
-          ] || 0;
+      const hoursWorked = caregiverHours[caregiverName] || 0;
 
-        const maxHours =
-          caregiverMaxHours[
-            caregiverName
-          ] || 50;
+      const maxHours = caregiverMaxHours[caregiverName] || 50;
 
-        if (
-          hoursWorked > maxHours
-        ) {
-          const hoursOver =
-            hoursWorked - maxHours;
+      if (hoursWorked > maxHours) {
+        const hoursOver = hoursWorked - maxHours;
 
-          caregiverHoursItem
-            .classList
-            .add(
-              "hours-over-limit",
-            );
+        caregiverHoursItem.classList.add("hours-over-limit");
 
-          caregiverHoursItem
-            .textContent =
-              `${caregiverName}: ` +
-              `${formatHours(
-                hoursWorked,
-              )} ` +
-              `⚠ over by ` +
-              `${formatHours(
-                hoursOver,
-              )}`;
+        caregiverHoursItem.textContent =
+          `${caregiverName}: ` +
+          `${formatHours(hoursWorked)} ` +
+          `⚠ over by ` +
+          `${formatHours(hoursOver)}`;
 
-          warnings.push({
-            level: "high",
+        warnings.push({
+          level: "high",
 
-            text:
-              `${caregiverName} ` +
-              `is over their max by ` +
-              `${formatHours(
-                hoursOver,
-              )}.`,
-          });
-        } else if (
-          hoursWorked >=
-          maxHours - 5
-        ) {
-          caregiverHoursItem
-            .classList
-            .add(
-              "hours-near-limit",
-            );
+          text:
+            `${caregiverName} ` +
+            `is over their max by ` +
+            `${formatHours(hoursOver)}.`,
+        });
+      } else if (hoursWorked >= maxHours - 5) {
+        caregiverHoursItem.classList.add("hours-near-limit");
 
-          caregiverHoursItem
-            .textContent =
-              `${caregiverName}: ` +
-              `${formatHours(
-                hoursWorked,
-              )} · near ` +
-              `${formatHours(
-                maxHours,
-              )} limit`;
+        caregiverHoursItem.textContent =
+          `${caregiverName}: ` +
+          `${formatHours(hoursWorked)} · near ` +
+          `${formatHours(maxHours)} limit`;
 
-          warnings.push({
-            level: "medium",
+        warnings.push({
+          level: "medium",
 
-            text:
-              `${caregiverName} ` +
-              `is close to their ` +
-              `${formatHours(
-                maxHours,
-              )} limit.`,
-          });
-        } else {
-          caregiverHoursItem
-            .textContent =
-              `${caregiverName}: ` +
-              `${formatHours(
-                hoursWorked,
-              )} / ` +
-              `${formatHours(
-                maxHours,
-              )}`;
-        }
+          text:
+            `${caregiverName} ` +
+            `is close to their ` +
+            `${formatHours(maxHours)} limit.`,
+        });
+      } else {
+        caregiverHoursItem.textContent =
+          `${caregiverName}: ` +
+          `${formatHours(hoursWorked)} / ` +
+          `${formatHours(maxHours)}`;
+      }
 
-        caregiverHoursList.append(
-          caregiverHoursItem,
-        );
-      },
-    );
+      caregiverHoursList.append(caregiverHoursItem);
+    });
   }
 
   if (openShiftsCount === 0) {
-    const noOpenShiftsItem =
-      document.createElement("li");
+    const noOpenShiftsItem = document.createElement("li");
 
-    noOpenShiftsItem.textContent =
-      "No available shifts.";
+    noOpenShiftsItem.textContent = "No available shifts.";
 
-    availableShiftsList.append(
-      noOpenShiftsItem,
-    );
+    availableShiftsList.append(noOpenShiftsItem);
   } else {
     warnings.unshift({
       level: "medium",
 
-      text:
-        `${openShiftsCount} ` +
-        `open shifts still need ` +
-        `coverage.`,
+      text: `${openShiftsCount} ` + `open shifts still need ` + `coverage.`,
     });
   }
 
-  if (
-    coveragePercentElement &&
-    coverageProgressFill
-  ) {
+  if (coveragePercentElement && coverageProgressFill) {
     let coveragePercent = 0;
 
     if (totalHoursNeeded > 0) {
       coveragePercent = Math.round(
-        (
-          totalHoursCovered /
-          totalHoursNeeded
-        ) * 100,
+        (totalHoursCovered / totalHoursNeeded) * 100,
       );
     }
 
-    coveragePercentElement.textContent =
-      `${coveragePercent}%`;
+    coveragePercentElement.textContent = `${coveragePercent}%`;
 
-    coverageProgressFill.style.width =
-      `${coveragePercent}%`;
+    coverageProgressFill.style.width = `${coveragePercent}%`;
 
-    const degrees = Math.round(
-      (
-        coveragePercent / 100
-      ) * 360,
-    );
+    const degrees = Math.round((coveragePercent / 100) * 360);
 
-    const coverageRing =
-      document.querySelector(
-        ".coverage-ring",
-      );
+    const coverageRing = document.querySelector(".coverage-ring");
 
     if (coverageRing) {
       coverageRing.style.background = `
@@ -1981,48 +1354,30 @@ function renderCoverageSummary(
   }
 
   if (warningCountElement) {
-    warningCountElement.textContent =
-      warnings.length;
+    warningCountElement.textContent = warnings.length;
   }
 
   if (scheduleWarningsList) {
-    scheduleWarningsList.innerHTML =
-      "";
+    scheduleWarningsList.innerHTML = "";
 
     if (warnings.length === 0) {
-      const noWarnings =
-        document.createElement("li");
+      const noWarnings = document.createElement("li");
 
-      noWarnings.textContent =
-        "No warnings right now.";
+      noWarnings.textContent = "No warnings right now.";
 
-      scheduleWarningsList.append(
-        noWarnings,
-      );
+      scheduleWarningsList.append(noWarnings);
     } else {
-      warnings
-        .slice(0, 6)
-        .forEach(
-          function (warning) {
-            const warningItem =
-              document.createElement(
-                "li",
-              );
+      warnings.slice(0, 6).forEach(function (warning) {
+        const warningItem = document.createElement("li");
 
-            warningItem.classList.add(
-              warning.level === "high"
-                ? "warning-high"
-                : "warning-medium",
-            );
-
-            warningItem.textContent =
-              warning.text;
-
-            scheduleWarningsList.append(
-              warningItem,
-            );
-          },
+        warningItem.classList.add(
+          warning.level === "high" ? "warning-high" : "warning-medium",
         );
+
+        warningItem.textContent = warning.text;
+
+        scheduleWarningsList.append(warningItem);
+      });
     }
   }
 
@@ -2030,296 +1385,169 @@ function renderCoverageSummary(
 }
 
 function attachCaregiverDragListeners() {
-  const caregiverCells =
-    document.querySelectorAll(
-      ".draggable-caregiver[data-caregiver]",
-    );
-
-  caregiverCells.forEach(
-    function (caregiverCell) {
-      caregiverCell.addEventListener(
-        "dragstart",
-        function (event) {
-          draggedCaregiverName =
-            caregiverCell.dataset
-              .caregiver;
-
-          event.dataTransfer
-            .effectAllowed = "move";
-
-          event.dataTransfer.setData(
-            "text/plain",
-            draggedCaregiverName,
-          );
-
-          caregiverCell.classList.add(
-            "is-dragging",
-          );
-        },
-      );
-
-      caregiverCell.addEventListener(
-        "dragover",
-        function (event) {
-          event.preventDefault();
-
-          event.dataTransfer
-            .dropEffect = "move";
-
-          document
-            .querySelectorAll(
-              ".draggable-caregiver",
-            )
-            .forEach(
-              function (cell) {
-                cell.classList.remove(
-                  "drag-over",
-                );
-              },
-            );
-
-          caregiverCell.classList.add(
-            "drag-over",
-          );
-        },
-      );
-
-      caregiverCell.addEventListener(
-        "dragleave",
-        function () {
-          caregiverCell.classList.remove(
-            "drag-over",
-          );
-        },
-      );
-
-      caregiverCell.addEventListener(
-        "drop",
-        function (event) {
-          event.preventDefault();
-
-          const sourceCaregiverName =
-            event.dataTransfer.getData(
-              "text/plain",
-            ) ||
-            draggedCaregiverName;
-
-          const targetCaregiverName =
-            caregiverCell.dataset
-              .caregiver;
-
-          if (
-            !sourceCaregiverName ||
-            !targetCaregiverName ||
-            sourceCaregiverName ===
-              targetCaregiverName
-          ) {
-            caregiverCell
-              .classList
-              .remove("drag-over");
-
-            return;
-          }
-
-          const sourceIndex =
-            caregivers.indexOf(
-              sourceCaregiverName,
-            );
-
-          if (sourceIndex === -1) {
-            return;
-          }
-
-          const movedCaregiver =
-            caregivers.splice(
-              sourceIndex,
-              1,
-            )[0];
-
-          const targetIndexAfterRemoval =
-            caregivers.indexOf(
-              targetCaregiverName,
-            );
-
-          if (
-            targetIndexAfterRemoval ===
-            -1
-          ) {
-            caregivers.push(
-              movedCaregiver,
-            );
-          } else {
-            caregivers.splice(
-              targetIndexAfterRemoval,
-              0,
-              movedCaregiver,
-            );
-          }
-
-          draggedCaregiverName = null;
-
-          saveData();
-          renderCaregiverList();
-          renderSchedule();
-        },
-      );
-
-      caregiverCell.addEventListener(
-        "dragend",
-        function () {
-          draggedCaregiverName = null;
-
-          document
-            .querySelectorAll(
-              ".draggable-caregiver",
-            )
-            .forEach(
-              function (cell) {
-                cell.classList.remove(
-                  "is-dragging",
-                  "drag-over",
-                );
-              },
-            );
-        },
-      );
-    },
+  const caregiverCells = document.querySelectorAll(
+    ".draggable-caregiver[data-caregiver]",
   );
+
+  caregiverCells.forEach(function (caregiverCell) {
+    caregiverCell.addEventListener("dragstart", function (event) {
+      draggedCaregiverName = caregiverCell.dataset.caregiver;
+
+      event.dataTransfer.effectAllowed = "move";
+
+      event.dataTransfer.setData("text/plain", draggedCaregiverName);
+
+      caregiverCell.classList.add("is-dragging");
+    });
+
+    caregiverCell.addEventListener("dragover", function (event) {
+      event.preventDefault();
+
+      event.dataTransfer.dropEffect = "move";
+
+      document
+        .querySelectorAll(".draggable-caregiver")
+        .forEach(function (cell) {
+          cell.classList.remove("drag-over");
+        });
+
+      caregiverCell.classList.add("drag-over");
+    });
+
+    caregiverCell.addEventListener("dragleave", function () {
+      caregiverCell.classList.remove("drag-over");
+    });
+
+    caregiverCell.addEventListener("drop", function (event) {
+      event.preventDefault();
+
+      const sourceCaregiverName =
+        event.dataTransfer.getData("text/plain") || draggedCaregiverName;
+
+      const targetCaregiverName = caregiverCell.dataset.caregiver;
+
+      if (
+        !sourceCaregiverName ||
+        !targetCaregiverName ||
+        sourceCaregiverName === targetCaregiverName
+      ) {
+        caregiverCell.classList.remove("drag-over");
+
+        return;
+      }
+
+      const sourceIndex = caregivers.indexOf(sourceCaregiverName);
+
+      if (sourceIndex === -1) {
+        return;
+      }
+
+      const movedCaregiver = caregivers.splice(sourceIndex, 1)[0];
+
+      const targetIndexAfterRemoval = caregivers.indexOf(targetCaregiverName);
+
+      if (targetIndexAfterRemoval === -1) {
+        caregivers.push(movedCaregiver);
+      } else {
+        caregivers.splice(targetIndexAfterRemoval, 0, movedCaregiver);
+      }
+
+      draggedCaregiverName = null;
+
+      saveData();
+      renderCaregiverList();
+      renderSchedule();
+    });
+
+    caregiverCell.addEventListener("dragend", function () {
+      draggedCaregiverName = null;
+
+      document
+        .querySelectorAll(".draggable-caregiver")
+        .forEach(function (cell) {
+          cell.classList.remove("is-dragging", "drag-over");
+        });
+    });
+  });
 }
 
 function renderSchedule() {
-  const activeShifts =
-    getActiveShifts();
+  const activeShifts = getActiveShifts();
 
-  const selectedView =
-    scheduleViewSelect.value;
+  const selectedView = scheduleViewSelect.value;
 
   let scheduleDays = [];
 
   if (selectedView === "monthly") {
-    scheduleTitle.textContent =
-      "Monthly Care Map";
+    scheduleTitle.textContent = "Monthly Care Map";
 
-    scheduleDays =
-      getDaysInSelectedMonth();
+    scheduleDays = getDaysInSelectedMonth();
 
-    const selectedMonth =
-      monthPicker.value ||
-      getTodayMonthValue();
+    const selectedMonth = monthPicker.value || getTodayMonthValue();
 
-    const [year, month] =
-      selectedMonth
-        .split("-")
-        .map(Number);
+    const [year, month] = selectedMonth.split("-").map(Number);
 
-    weekLabel.textContent =
-      new Date(
-        year,
-        month - 1,
-      ).toLocaleDateString(
-        "en-US",
-        {
-          month: "long",
-          year: "numeric",
-        },
-      );
-
-    renderMonthlySchedule(
-      scheduleDays,
-      activeShifts,
+    weekLabel.textContent = new Date(year, month - 1).toLocaleDateString(
+      "en-US",
+      {
+        month: "long",
+        year: "numeric",
+      },
     );
+
+    renderMonthlySchedule(scheduleDays, activeShifts);
   } else {
-    scheduleTitle.textContent =
-      "Weekly Care Map";
+    scheduleTitle.textContent = "Weekly Care Map";
 
-    scheduleDays =
-      getDaysInSelectedWeek();
+    scheduleDays = getDaysInSelectedWeek();
 
-    const firstDay =
-      scheduleDays[0].label;
+    const firstDay = scheduleDays[0].label;
 
-    const lastDay =
-      scheduleDays[
-        scheduleDays.length - 1
-      ].label;
+    const lastDay = scheduleDays[scheduleDays.length - 1].label;
 
-    weekLabel.textContent =
-      `${firstDay} – ${lastDay}`;
+    weekLabel.textContent = `${firstDay} – ${lastDay}`;
 
-    renderWeeklySchedule(
-      scheduleDays,
-      activeShifts,
-    );
+    renderWeeklySchedule(scheduleDays, activeShifts);
   }
 
-  attachAssignmentListeners(
-    scheduleDays,
-    activeShifts,
-  );
+  attachAssignmentListeners(scheduleDays, activeShifts);
 
-  renderCoverageSummary(
-    scheduleDays,
-    activeShifts,
-  );
+  renderCoverageSummary(scheduleDays, activeShifts);
 }
 
 function attachAssignmentListeners() {
-  const assignmentSelects =
-    document.querySelectorAll(
-      ".assignment-select",
-    );
+  const assignmentSelects = document.querySelectorAll(".assignment-select");
 
-  assignmentSelects.forEach(
-    function (select) {
-      select.addEventListener(
-        "change",
-        function () {
-          const dayName =
-            select.dataset.day;
+  assignmentSelects.forEach(function (select) {
+    select.addEventListener("change", function () {
+      const dayName = select.dataset.day;
 
-          const shiftName =
-            select.dataset.shift;
+      const shiftName = select.dataset.shift;
 
-          const assignmentKey =
-            `${dayName}-${shiftName}`;
+      const assignmentKey = `${dayName}-${shiftName}`;
 
-          scheduleAssignments[
-            assignmentKey
-          ] = select.value;
+      scheduleAssignments[assignmentKey] = select.value;
 
-          saveData();
-          renderSchedule();
-        },
-      );
-    },
-  );
+      saveData();
+      renderSchedule();
+    });
+  });
 }
 
 function renderCaregiverList() {
   caregiverList.innerHTML = "";
 
-  caregivers.forEach(
-    function (
-      caregiverName,
-      index,
-    ) {
-      const caregiverItem =
-        document.createElement("li");
+  caregivers.forEach(function (caregiverName, index) {
+    const caregiverItem = document.createElement("li");
 
-      caregiverItem.classList.add(
-        "caregiver-list-item",
-      );
+    caregiverItem.classList.add("caregiver-list-item");
 
-      caregiverItem.innerHTML = `
+    caregiverItem.innerHTML = `
         <span>
           ${caregiverName}
           —
           Max
-          ${
-            caregiverMaxHours[
-              caregiverName
-            ] || 50
-          }
+          ${caregiverMaxHours[caregiverName] || 50}
           hrs
         </span>
 
@@ -2357,225 +1585,127 @@ function renderCaregiverList() {
         </div>
       `;
 
-      const editButton =
-        caregiverItem.querySelector(
-          ".edit-caregiver-button",
-        );
+    const editButton = caregiverItem.querySelector(".edit-caregiver-button");
 
-      const editMaxHoursButton =
-        caregiverItem.querySelector(
-          ".edit-max-hours-button",
-        );
+    const editMaxHoursButton = caregiverItem.querySelector(
+      ".edit-max-hours-button",
+    );
 
-      const removeButton =
-        caregiverItem.querySelector(
-          ".remove-caregiver-button",
-        );
+    const removeButton = caregiverItem.querySelector(
+      ".remove-caregiver-button",
+    );
 
-      editButton.addEventListener(
-        "click",
-        function () {
-          const updatedName = prompt(
-            "Edit caregiver name:",
-            caregiverName,
+    editButton.addEventListener("click", function () {
+      const updatedName = prompt("Edit caregiver name:", caregiverName);
+
+      if (updatedName === null) {
+        return;
+      }
+
+      const trimmedName = updatedName.trim();
+
+      if (trimmedName === "") {
+        return;
+      }
+
+      const isDuplicate = caregivers.some(
+        function (existingName, existingIndex) {
+          return (
+            existingIndex !== index &&
+            existingName.toLowerCase() === trimmedName.toLowerCase()
           );
-
-          if (updatedName === null) {
-            return;
-          }
-
-          const trimmedName =
-            updatedName.trim();
-
-          if (trimmedName === "") {
-            return;
-          }
-
-          const isDuplicate =
-            caregivers.some(
-              function (
-                existingName,
-                existingIndex,
-              ) {
-                return (
-                  existingIndex !==
-                    index &&
-                  existingName
-                    .toLowerCase() ===
-                    trimmedName
-                      .toLowerCase()
-                );
-              },
-            );
-
-          if (isDuplicate) {
-            alert(
-              "That caregiver name already exists.",
-            );
-
-            return;
-          }
-
-          caregivers[index] =
-            trimmedName;
-
-          caregiverMaxHours[
-            trimmedName
-          ] =
-            caregiverMaxHours[
-              caregiverName
-            ] || 50;
-
-          delete caregiverMaxHours[
-            caregiverName
-          ];
-
-          Object.keys(
-            scheduleAssignments,
-          ).forEach(
-            function (
-              assignmentKey,
-            ) {
-              if (
-                scheduleAssignments[
-                  assignmentKey
-                ] === caregiverName
-              ) {
-                scheduleAssignments[
-                  assignmentKey
-                ] = trimmedName;
-              }
-            },
-          );
-
-          saveData();
-          renderCaregiverList();
-          renderSchedule();
         },
       );
 
-      editMaxHoursButton
-        .addEventListener(
-          "click",
-          function () {
-            const currentMaxHours =
-              caregiverMaxHours[
-                caregiverName
-              ] || 50;
+      if (isDuplicate) {
+        alert("That caregiver name already exists.");
 
-            const updatedMaxHours =
-              prompt(
-                `Set max weekly hours for ${caregiverName}:`,
-                currentMaxHours,
-              );
+        return;
+      }
 
-            if (
-              updatedMaxHours === null
-            ) {
-              return;
-            }
+      caregivers[index] = trimmedName;
 
-            const maxHoursNumber =
-              Number(
-                updatedMaxHours,
-              );
+      caregiverMaxHours[trimmedName] = caregiverMaxHours[caregiverName] || 50;
 
-            if (
-              !maxHoursNumber ||
-              maxHoursNumber <= 0
-            ) {
-              alert(
-                "Please enter a valid number.",
-              );
+      delete caregiverMaxHours[caregiverName];
 
-              return;
-            }
+      Object.keys(scheduleAssignments).forEach(function (assignmentKey) {
+        if (scheduleAssignments[assignmentKey] === caregiverName) {
+          scheduleAssignments[assignmentKey] = trimmedName;
+        }
+      });
 
-            caregiverMaxHours[
-              caregiverName
-            ] = maxHoursNumber;
+      saveData();
+      renderCaregiverList();
+      renderSchedule();
+    });
 
-            saveData();
-            renderCaregiverList();
-            renderSchedule();
-          },
-        );
+    editMaxHoursButton.addEventListener("click", function () {
+      const currentMaxHours = caregiverMaxHours[caregiverName] || 50;
 
-      removeButton.addEventListener(
-        "click",
-        function () {
-          caregivers.splice(
-            index,
-            1,
-          );
-
-          delete caregiverMaxHours[
-            caregiverName
-          ];
-
-          Object.keys(
-            scheduleAssignments,
-          ).forEach(
-            function (
-              assignmentKey,
-            ) {
-              if (
-                scheduleAssignments[
-                  assignmentKey
-                ] === caregiverName
-              ) {
-                scheduleAssignments[
-                  assignmentKey
-                ] = "Open";
-              }
-            },
-          );
-
-          saveData();
-          renderCaregiverList();
-          renderSchedule();
-        },
+      const updatedMaxHours = prompt(
+        `Set max weekly hours for ${caregiverName}:`,
+        currentMaxHours,
       );
 
-      caregiverList.append(
-        caregiverItem,
-      );
-    },
-  );
+      if (updatedMaxHours === null) {
+        return;
+      }
+
+      const maxHoursNumber = Number(updatedMaxHours);
+
+      if (!maxHoursNumber || maxHoursNumber <= 0) {
+        alert("Please enter a valid number.");
+
+        return;
+      }
+
+      caregiverMaxHours[caregiverName] = maxHoursNumber;
+
+      saveData();
+      renderCaregiverList();
+      renderSchedule();
+    });
+
+    removeButton.addEventListener("click", function () {
+      caregivers.splice(index, 1);
+
+      delete caregiverMaxHours[caregiverName];
+
+      Object.keys(scheduleAssignments).forEach(function (assignmentKey) {
+        if (scheduleAssignments[assignmentKey] === caregiverName) {
+          scheduleAssignments[assignmentKey] = "Open";
+        }
+      });
+
+      saveData();
+      renderCaregiverList();
+      renderSchedule();
+    });
+
+    caregiverList.append(caregiverItem);
+  });
 }
 
 function addCaregiver() {
-  const newCaregiverName =
-    caregiverInput.value.trim();
+  const newCaregiverName = caregiverInput.value.trim();
 
   if (newCaregiverName === "") {
     return;
   }
 
-  const isDuplicate =
-    caregivers.some(
-      function (caregiverName) {
-        return (
-          caregiverName
-            .toLowerCase() ===
-          newCaregiverName
-            .toLowerCase()
-        );
-      },
-    );
+  const isDuplicate = caregivers.some(function (caregiverName) {
+    return caregiverName.toLowerCase() === newCaregiverName.toLowerCase();
+  });
 
   if (isDuplicate) {
     caregiverInput.value = "";
     return;
   }
 
-  caregivers.push(
-    newCaregiverName,
-  );
+  caregivers.push(newCaregiverName);
 
-  caregiverMaxHours[
-    newCaregiverName
-  ] = 50;
+  caregiverMaxHours[newCaregiverName] = 50;
 
   caregiverInput.value = "";
 
@@ -2587,16 +1717,12 @@ function addCaregiver() {
 function renderShiftList() {
   shiftList.innerHTML = "";
 
-  customShifts.forEach(
-    function (shiftName, index) {
-      const shiftItem =
-        document.createElement("li");
+  customShifts.forEach(function (shiftName, index) {
+    const shiftItem = document.createElement("li");
 
-      shiftItem.classList.add(
-        "shift-list-item",
-      );
+    shiftItem.classList.add("shift-list-item");
 
-      shiftItem.innerHTML = `
+    shiftItem.innerHTML = `
         <span>
           ${shiftName}
         </span>
@@ -2627,197 +1753,108 @@ function renderShiftList() {
         </div>
       `;
 
-      const moveUpButton =
-        shiftItem.querySelector(
-          ".move-up-button",
-        );
+    const moveUpButton = shiftItem.querySelector(".move-up-button");
 
-      const moveDownButton =
-        shiftItem.querySelector(
-          ".move-down-button",
-        );
+    const moveDownButton = shiftItem.querySelector(".move-down-button");
 
-      const removeButton =
-        shiftItem.querySelector(
-          ".remove-shift-button",
-        );
+    const removeButton = shiftItem.querySelector(".remove-shift-button");
 
-      moveUpButton.addEventListener(
-        "click",
-        function () {
-          if (index === 0) {
-            return;
-          }
+    moveUpButton.addEventListener("click", function () {
+      if (index === 0) {
+        return;
+      }
 
-          const currentShift =
-            customShifts[index];
+      const currentShift = customShifts[index];
 
-          customShifts[index] =
-            customShifts[
-              index - 1
-            ];
+      customShifts[index] = customShifts[index - 1];
 
-          customShifts[
-            index - 1
-          ] = currentShift;
+      customShifts[index - 1] = currentShift;
 
-          saveData();
-          renderShiftList();
-          renderShiftTimeList();
-          renderSchedule();
-        },
-      );
+      saveData();
+      renderShiftList();
+      renderShiftTimeList();
+      renderSchedule();
+    });
 
-      moveDownButton
-        .addEventListener(
-          "click",
-          function () {
-            if (
-              index ===
-              customShifts.length - 1
-            ) {
-              return;
-            }
+    moveDownButton.addEventListener("click", function () {
+      if (index === customShifts.length - 1) {
+        return;
+      }
 
-            const currentShift =
-              customShifts[index];
+      const currentShift = customShifts[index];
 
-            customShifts[index] =
-              customShifts[
-                index + 1
-              ];
+      customShifts[index] = customShifts[index + 1];
 
-            customShifts[
-              index + 1
-            ] = currentShift;
+      customShifts[index + 1] = currentShift;
 
-            saveData();
-            renderShiftList();
-            renderShiftTimeList();
-            renderSchedule();
-          },
-        );
+      saveData();
+      renderShiftList();
+      renderShiftTimeList();
+      renderSchedule();
+    });
 
-      removeButton.addEventListener(
-        "click",
-        function () {
-          const removedShiftName =
-            customShifts[index];
+    removeButton.addEventListener("click", function () {
+      const removedShiftName = customShifts[index];
 
-          customShifts.splice(
-            index,
-            1,
-          );
+      customShifts.splice(index, 1);
 
-          delete shiftTimes[
-            removedShiftName
-          ];
+      delete shiftTimes[removedShiftName];
 
-          Object.keys(
-            scheduleAssignments,
-          ).forEach(
-            function (
-              assignmentKey,
-            ) {
-              if (
-                assignmentKey.endsWith(
-                  `-${removedShiftName}`,
-                )
-              ) {
-                delete scheduleAssignments[
-                  assignmentKey
-                ];
-              }
-            },
-          );
+      Object.keys(scheduleAssignments).forEach(function (assignmentKey) {
+        if (assignmentKey.endsWith(`-${removedShiftName}`)) {
+          delete scheduleAssignments[assignmentKey];
+        }
+      });
 
-          Object.keys(
-            shiftTimeOverrides,
-          ).forEach(
-            function (overrideKey) {
-              if (
-                overrideKey.endsWith(
-                  `__${removedShiftName}`,
-                )
-              ) {
-                delete shiftTimeOverrides[
-                  overrideKey
-                ];
-              }
-            },
-          );
+      Object.keys(shiftTimeOverrides).forEach(function (overrideKey) {
+        if (overrideKey.endsWith(`__${removedShiftName}`)) {
+          delete shiftTimeOverrides[overrideKey];
+        }
+      });
 
-          saveData();
-          renderShiftList();
-          renderShiftTimeList();
-          renderSchedule();
-        },
-      );
+      saveData();
+      renderShiftList();
+      renderShiftTimeList();
+      renderSchedule();
+    });
 
-      shiftList.append(
-        shiftItem,
-      );
-    },
-  );
+    shiftList.append(shiftItem);
+  });
 }
 
 function updateCustomShiftVisibility() {
-  if (
-    shiftStyleSelect.value ===
-    "custom"
-  ) {
-    customShiftSection.classList.remove(
-      "hidden",
-    );
+  if (shiftStyleSelect.value === "custom") {
+    customShiftSection.classList.remove("hidden");
   } else {
-    customShiftSection.classList.add(
-      "hidden",
-    );
+    customShiftSection.classList.add("hidden");
   }
 }
 
 function updatePickerVisibility() {
-  if (
-    scheduleViewSelect.value ===
-    "monthly"
-  ) {
-    monthPickerSection.classList.remove(
-      "hidden",
-    );
+  if (scheduleViewSelect.value === "monthly") {
+    monthPickerSection.classList.remove("hidden");
 
-    weekPickerSection.classList.add(
-      "hidden",
-    );
+    weekPickerSection.classList.add("hidden");
   } else {
-    monthPickerSection.classList.add(
-      "hidden",
-    );
+    monthPickerSection.classList.add("hidden");
 
-    weekPickerSection.classList.remove(
-      "hidden",
-    );
+    weekPickerSection.classList.remove("hidden");
   }
 }
 
 function renderShiftTimeList() {
   shiftTimeList.innerHTML = "";
 
-  const activeShifts =
-    getActiveShifts();
+  const activeShifts = getActiveShifts();
 
-  activeShifts.forEach(
-    function (shift) {
-      const shiftTimeRow =
-        document.createElement("div");
+  activeShifts.forEach(function (shift) {
+    const shiftTimeRow = document.createElement("div");
 
-      shiftTimeRow.classList.add(
-        "clean-shift-time-row",
-      );
+    shiftTimeRow.classList.add("clean-shift-time-row");
 
-      const shiftHours =
-        getShiftHours(shift);
+    const shiftHours = getShiftHours(shift);
 
-      shiftTimeRow.innerHTML = `
+    shiftTimeRow.innerHTML = `
         <div>
           <strong>
             ${shift.name}
@@ -2828,17 +1865,11 @@ function renderShiftTimeList() {
               clean-shift-time-text
             "
           >
-            ${formatTime(
-              shift.start,
-            )}
+            ${formatTime(shift.start)}
             –
-            ${formatTime(
-              shift.end,
-            )}
+            ${formatTime(shift.end)}
             ·
-            ${formatHours(
-              shiftHours,
-            )}
+            ${formatHours(shiftHours)}
           </span>
         </div>
 
@@ -2853,134 +1884,70 @@ function renderShiftTimeList() {
         </button>
       `;
 
-      shiftTimeList.append(
-        shiftTimeRow,
-      );
-    },
+    shiftTimeList.append(shiftTimeRow);
+  });
+
+  const editDefaultTimeButtons = document.querySelectorAll(
+    ".edit-default-time-button",
   );
 
-  const editDefaultTimeButtons =
-    document.querySelectorAll(
-      ".edit-default-time-button",
-    );
+  editDefaultTimeButtons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      const shiftName = button.dataset.shift;
 
-  editDefaultTimeButtons.forEach(
-    function (button) {
-      button.addEventListener(
-        "click",
-        function () {
-          const shiftName =
-            button.dataset.shift;
+      const shift = activeShifts.find(function (activeShift) {
+        return activeShift.name === shiftName;
+      });
 
-          const shift =
-            activeShifts.find(
-              function (
-                activeShift,
-              ) {
-                return (
-                  activeShift.name ===
-                  shiftName
-                );
-              },
-            );
+      if (!shift) {
+        return;
+      }
 
-          if (!shift) {
-            return;
-          }
-
-          editDefaultShiftTime(
-            shift,
-          );
-        },
-      );
-    },
-  );
+      editDefaultShiftTime(shift);
+    });
+  });
 }
 
 function fillPrettyTimeSelects() {
-  const hourSelects = [
-    editStartHourSelect,
-    editEndHourSelect,
-  ];
+  const hourSelects = [editStartHourSelect, editEndHourSelect];
 
-  const minuteSelects = [
-    editStartMinuteSelect,
-    editEndMinuteSelect,
-  ];
+  const minuteSelects = [editStartMinuteSelect, editEndMinuteSelect];
 
-  hourSelects.forEach(
-    function (select) {
-      select.innerHTML = "";
+  hourSelects.forEach(function (select) {
+    select.innerHTML = "";
 
-      for (
-        let hour = 1;
-        hour <= 12;
-        hour++
-      ) {
-        const option =
-          document.createElement(
-            "option",
-          );
+    for (let hour = 1; hour <= 12; hour++) {
+      const option = document.createElement("option");
 
-        option.value =
-          String(hour).padStart(
-            2,
-            "0",
-          );
+      option.value = String(hour).padStart(2, "0");
 
-        option.textContent =
-          String(hour).padStart(
-            2,
-            "0",
-          );
+      option.textContent = String(hour).padStart(2, "0");
 
-        select.append(option);
-      }
-    },
-  );
+      select.append(option);
+    }
+  });
 
-  minuteSelects.forEach(
-    function (select) {
-      select.innerHTML = "";
+  minuteSelects.forEach(function (select) {
+    select.innerHTML = "";
 
-      for (
-        let minute = 0;
-        minute < 60;
-        minute++
-      ) {
-        const option =
-          document.createElement(
-            "option",
-          );
+    for (let minute = 0; minute < 60; minute++) {
+      const option = document.createElement("option");
 
-        option.value =
-          String(minute).padStart(
-            2,
-            "0",
-          );
+      option.value = String(minute).padStart(2, "0");
 
-        option.textContent =
-          String(minute).padStart(
-            2,
-            "0",
-          );
+      option.textContent = String(minute).padStart(2, "0");
 
-        select.append(option);
-      }
-    },
-  );
+      select.append(option);
+    }
+  });
 }
 
-function convert24HourToPrettyTime(
-  timeValue,
-) {
-  const [hourText, minute] =
-    timeValue.split(":");
+function convert24HourToPrettyTime(timeValue) {
+  const [hourText, minute] = timeValue.split(":");
 
   let hour = Number(hourText);
 
-  const period =
-    hour >= 12 ? "PM" : "AM";
+  const period = hour >= 12 ? "PM" : "AM";
 
   hour = hour % 12;
 
@@ -2989,80 +1956,45 @@ function convert24HourToPrettyTime(
   }
 
   return {
-    hour:
-      String(hour).padStart(
-        2,
-        "0",
-      ),
+    hour: String(hour).padStart(2, "0"),
 
     minute,
     period,
   };
 }
 
-function convertPrettyTimeTo24Hour(
-  hourValue,
-  minuteValue,
-  periodValue,
-) {
+function convertPrettyTimeTo24Hour(hourValue, minuteValue, periodValue) {
   let hour = Number(hourValue);
 
-  if (
-    periodValue === "AM" &&
-    hour === 12
-  ) {
+  if (periodValue === "AM" && hour === 12) {
     hour = 0;
   }
 
-  if (
-    periodValue === "PM" &&
-    hour !== 12
-  ) {
+  if (periodValue === "PM" && hour !== 12) {
     hour += 12;
   }
 
-  return (
-    `${String(hour).padStart(
-      2,
-      "0",
-    )}:${minuteValue}`
-  );
+  return `${String(hour).padStart(2, "0")}:${minuteValue}`;
 }
 
-function setPrettyStartTime(
-  timeValue,
-) {
-  const prettyTime =
-    convert24HourToPrettyTime(
-      timeValue,
-    );
+function setPrettyStartTime(timeValue) {
+  const prettyTime = convert24HourToPrettyTime(timeValue);
 
-  editStartHourSelect.value =
-    prettyTime.hour;
+  editStartHourSelect.value = prettyTime.hour;
 
-  editStartMinuteSelect.value =
-    prettyTime.minute;
+  editStartMinuteSelect.value = prettyTime.minute;
 
-  editStartPeriodSelect.value =
-    prettyTime.period;
+  editStartPeriodSelect.value = prettyTime.period;
 }
 
-function setPrettyEndTime(
-  timeValue,
-) {
-  const prettyTime =
-    convert24HourToPrettyTime(
-      timeValue,
-    );
+function setPrettyEndTime(timeValue) {
+  const prettyTime = convert24HourToPrettyTime(timeValue);
 
-  editEndHourSelect.value =
-    prettyTime.hour;
+  editEndHourSelect.value = prettyTime.hour;
 
-  editEndMinuteSelect.value =
-    prettyTime.minute;
+  editEndMinuteSelect.value = prettyTime.minute;
 
-  editEndPeriodSelect.value =
-    prettyTime.period;
+  editEndPeriodSelect.value = prettyTime.period;
 }
 
 function getPrettyStartTime() {
@@ -3081,40 +2013,29 @@ function getPrettyEndTime() {
   );
 }
 
-function editDefaultShiftTime(
-  shift,
-) {
+function editDefaultShiftTime(shift) {
   activeTimeEdit = {
     mode: "default",
     dayKey: "",
     shift,
   };
 
-  editTimeTitle.textContent =
-    `Edit ${shift.name}`;
+  editTimeTitle.textContent = `Edit ${shift.name}`;
 
   editTimeSubtitle.textContent =
     `This changes ${shift.name} ` +
     `everywhere unless a date ` +
     `has a custom time.`;
 
-  setPrettyStartTime(
-    shift.start,
-  );
+  setPrettyStartTime(shift.start);
 
-  setPrettyEndTime(
-    shift.end,
-  );
+  setPrettyEndTime(shift.end);
 
-  editTimeModal.classList.remove(
-    "hidden",
-  );
+  editTimeModal.classList.remove("hidden");
 }
 
 function closeEditTimeModal() {
-  editTimeModal.classList.add(
-    "hidden",
-  );
+  editTimeModal.classList.add("hidden");
 
   activeTimeEdit = {
     mode: "date",
@@ -3123,12 +2044,8 @@ function closeEditTimeModal() {
   };
 }
 
-function isValidTimeValue(
-  timeValue,
-) {
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(
-    timeValue,
-  );
+function isValidTimeValue(timeValue) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(timeValue);
 }
 
 function saveEditedShiftTime() {
@@ -3136,25 +2053,17 @@ function saveEditedShiftTime() {
     return;
   }
 
-  const newStart =
-    getPrettyStartTime();
+  const newStart = getPrettyStartTime();
 
-  const newEnd =
-    getPrettyEndTime();
+  const newEnd = getPrettyEndTime();
 
-  if (
-    !isValidTimeValue(newStart) ||
-    !isValidTimeValue(newEnd)
-  ) {
-    alert(
-      "Please choose a valid start and end time.",
-    );
+  if (!isValidTimeValue(newStart) || !isValidTimeValue(newEnd)) {
+    alert("Please choose a valid start and end time.");
 
     return;
   }
 
-  const shiftName =
-    activeTimeEdit.shift.name;
+  const shiftName = activeTimeEdit.shift.name;
 
   if (!shiftTimes[shiftName]) {
     shiftTimes[shiftName] = {
@@ -3163,11 +2072,9 @@ function saveEditedShiftTime() {
     };
   }
 
-  shiftTimes[shiftName].start =
-    newStart;
+  shiftTimes[shiftName].start = newStart;
 
-  shiftTimes[shiftName].end =
-    newEnd;
+  shiftTimes[shiftName].end = newEnd;
 
   saveData();
   closeEditTimeModal();
@@ -3176,61 +2083,38 @@ function saveEditedShiftTime() {
 }
 
 function copySelectedWeek() {
-  if (
-    scheduleViewSelect.value !==
-    "weekly"
-  ) {
-    alert(
-      "Switch to Weekly view before copying a week.",
-    );
+  if (scheduleViewSelect.value !== "weekly") {
+    alert("Switch to Weekly view before copying a week.");
 
     return;
   }
 
-  const weekDays =
-    getDaysInSelectedWeek();
+  const weekDays = getDaysInSelectedWeek();
 
-  const activeShifts =
-    getActiveShifts();
+  const activeShifts = getActiveShifts();
 
   copiedWeekAssignments = [];
 
-  weekDays.forEach(
-    function (day, dayIndex) {
-      activeShifts.forEach(
-        function (shift) {
-          const assignmentKey =
-            `${day.key}-${shift.name}`;
+  weekDays.forEach(function (day, dayIndex) {
+    activeShifts.forEach(function (shift) {
+      const assignmentKey = `${day.key}-${shift.name}`;
 
-          const assignedCaregiver =
-            scheduleAssignments[
-              assignmentKey
-            ] || "Open";
+      const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
 
-          copiedWeekAssignments.push({
-            dayIndex,
-            shiftName: shift.name,
-            caregiver:
-              assignedCaregiver,
-          });
-        },
-      );
-    },
-  );
+      copiedWeekAssignments.push({
+        dayIndex,
+        shiftName: shift.name,
+        caregiver: assignedCaregiver,
+      });
+    });
+  });
 
-  alert(
-    "This week has been copied.",
-  );
+  alert("This week has been copied.");
 }
 
 function pasteCopiedWeek() {
-  if (
-    scheduleViewSelect.value !==
-    "weekly"
-  ) {
-    alert(
-      "Switch to Weekly view before pasting a week.",
-    );
+  if (scheduleViewSelect.value !== "weekly") {
+    alert("Switch to Weekly view before pasting a week.");
 
     return;
   }
@@ -3240,165 +2124,99 @@ function pasteCopiedWeek() {
     return;
   }
 
-  const weekDays =
-    getDaysInSelectedWeek();
+  const weekDays = getDaysInSelectedWeek();
 
-  copiedWeekAssignments.forEach(
-    function (copiedShift) {
-      const targetDay =
-        weekDays[
-          copiedShift.dayIndex
-        ];
+  copiedWeekAssignments.forEach(function (copiedShift) {
+    const targetDay = weekDays[copiedShift.dayIndex];
 
-      if (!targetDay) {
-        return;
-      }
+    if (!targetDay) {
+      return;
+    }
 
-      const assignmentKey =
-        `${targetDay.key}-` +
-        `${copiedShift.shiftName}`;
+    const assignmentKey = `${targetDay.key}-` + `${copiedShift.shiftName}`;
 
-      scheduleAssignments[
-        assignmentKey
-      ] = copiedShift.caregiver;
-    },
-  );
+    scheduleAssignments[assignmentKey] = copiedShift.caregiver;
+  });
 
   saveData();
   renderSchedule();
 
-  alert(
-    "Copied week pasted to the selected week.",
-  );
+  alert("Copied week pasted to the selected week.");
 }
 
 function clearSelectedWeek() {
-  if (
-    scheduleViewSelect.value !==
-    "weekly"
-  ) {
-    alert(
-      "Switch to Weekly view before clearing a week.",
-    );
+  if (scheduleViewSelect.value !== "weekly") {
+    alert("Switch to Weekly view before clearing a week.");
 
     return;
   }
 
-  if (
-    !confirm(
-      "Clear only this selected week?",
-    )
-  ) {
+  if (!confirm("Clear only this selected week?")) {
     return;
   }
 
-  const weekDays =
-    getDaysInSelectedWeek();
+  const weekDays = getDaysInSelectedWeek();
 
-  const activeShifts =
-    getActiveShifts();
+  const activeShifts = getActiveShifts();
 
-  weekDays.forEach(
-    function (day) {
-      activeShifts.forEach(
-        function (shift) {
-          const assignmentKey =
-            `${day.key}-${shift.name}`;
+  weekDays.forEach(function (day) {
+    activeShifts.forEach(function (shift) {
+      const assignmentKey = `${day.key}-${shift.name}`;
 
-          delete scheduleAssignments[
-            assignmentKey
-          ];
-        },
-      );
-    },
-  );
+      delete scheduleAssignments[assignmentKey];
+    });
+  });
 
   saveData();
   renderSchedule();
 
-  alert(
-    "This week has been cleared.",
-  );
+  alert("This week has been cleared.");
 }
 
 function clearSelectedMonth() {
-  if (
-    scheduleViewSelect.value !==
-    "monthly"
-  ) {
-    alert(
-      "Switch to Monthly view before clearing a month.",
-    );
+  if (scheduleViewSelect.value !== "monthly") {
+    alert("Switch to Monthly view before clearing a month.");
 
     return;
   }
 
-  if (
-    !confirm(
-      "Clear only this selected month?",
-    )
-  ) {
+  if (!confirm("Clear only this selected month?")) {
     return;
   }
 
-  const monthDays =
-    getDaysInSelectedMonth();
+  const monthDays = getDaysInSelectedMonth();
 
-  const activeShifts =
-    getActiveShifts();
+  const activeShifts = getActiveShifts();
 
-  monthDays.forEach(
-    function (day) {
-      activeShifts.forEach(
-        function (shift) {
-          const assignmentKey =
-            `${day.key}-${shift.name}`;
+  monthDays.forEach(function (day) {
+    activeShifts.forEach(function (shift) {
+      const assignmentKey = `${day.key}-${shift.name}`;
 
-          delete scheduleAssignments[
-            assignmentKey
-          ];
-        },
-      );
-    },
-  );
+      delete scheduleAssignments[assignmentKey];
+    });
+  });
 
   saveData();
   renderSchedule();
 
-  alert(
-    "This month has been cleared.",
-  );
+  alert("This month has been cleared.");
 }
 
 function updateAvailableShiftsMinimizedState() {
-  if (
-    !availableShiftsToast ||
-    !minimizeAvailableShiftsButton
-  ) {
+  if (!availableShiftsToast || !minimizeAvailableShiftsButton) {
     return;
   }
 
   const isMinimized =
-    localStorage.getItem(
-      "curavelaAvailableShiftsMinimized",
-    ) === "true";
+    localStorage.getItem("curavelaAvailableShiftsMinimized") === "true";
 
-  availableShiftsToast
-    .classList
-    .toggle(
-      "is-minimized",
-      isMinimized,
-    );
+  availableShiftsToast.classList.toggle("is-minimized", isMinimized);
 
-  minimizeAvailableShiftsButton
-    .textContent =
-      isMinimized ? "+" : "−";
+  minimizeAvailableShiftsButton.textContent = isMinimized ? "+" : "−";
 }
 
 function startAvailableShiftsAutoScroll() {
-  clearInterval(
-    availableShiftsScrollInterval,
-  );
+  clearInterval(availableShiftsScrollInterval);
 
   if (!availableShiftsBody) {
     return;
@@ -3406,461 +2224,350 @@ function startAvailableShiftsAutoScroll() {
 
   availableShiftsBody.scrollTop = 0;
 
-  availableShiftsScrollInterval =
-    setInterval(
-      function () {
-        const maxScroll =
-          availableShiftsBody
-            .scrollHeight -
-          availableShiftsBody
-            .clientHeight;
+  availableShiftsScrollInterval = setInterval(function () {
+    const maxScroll =
+      availableShiftsBody.scrollHeight - availableShiftsBody.clientHeight;
 
-        if (maxScroll <= 0) {
-          return;
-        }
+    if (maxScroll <= 0) {
+      return;
+    }
 
-        if (
-          availableShiftsBody
-            .scrollTop >=
-          maxScroll
-        ) {
-          availableShiftsBody
-            .scrollTop = 0;
-        } else {
-          availableShiftsBody
-            .scrollTop += 1;
-        }
-      },
-      90,
-    );
+    if (availableShiftsBody.scrollTop >= maxScroll) {
+      availableShiftsBody.scrollTop = 0;
+    } else {
+      availableShiftsBody.scrollTop += 1;
+    }
+  }, 90);
 }
 
-addShiftButton.addEventListener(
-  "click",
-  function () {
-    const newShiftName =
-      customShiftInput
-        .value
-        .trim();
+function setAppView(viewName) {
+  const dashboardPanels = [
+    caregiverPanel,
+    hoursPanel,
+    openShiftsPanel,
+    warningsPanel,
+    reportsPanel,
+    settingsPanel,
+  ];
 
-    if (newShiftName === "") {
-      return;
+  dashboardPanels.forEach(function (panel) {
+    if (panel) {
+      panel.classList.add("app-view-hidden");
     }
+  });
 
-    const isDuplicate =
-      customShifts.some(
-        function (shiftName) {
-          return (
-            shiftName
-              .toLowerCase() ===
-            newShiftName
-              .toLowerCase()
-          );
-        },
-      );
+  heroSection.classList.add("app-view-hidden");
+  statsStrip.classList.add("app-view-hidden");
+  scheduleArea.classList.add("app-view-hidden");
+  dashboardGrid.classList.add("app-view-hidden");
+  dashboardGrid.classList.remove("single-panel-view");
 
-    if (isDuplicate) {
-      customShiftInput.value = "";
-      return;
-    }
+  if (viewName === "schedule") {
+    heroSection.classList.remove("app-view-hidden");
+    statsStrip.classList.remove("app-view-hidden");
+    scheduleArea.classList.remove("app-view-hidden");
+  }
 
-    customShifts.push(
-      newShiftName,
+  if (viewName === "open-shifts") {
+    dashboardGrid.classList.remove("app-view-hidden");
+    openShiftsPanel.classList.remove("app-view-hidden");
+    warningsPanel.classList.remove("app-view-hidden");
+  }
+
+  if (viewName === "caregivers") {
+    dashboardGrid.classList.remove("app-view-hidden");
+    caregiverPanel.classList.remove("app-view-hidden");
+    hoursPanel.classList.remove("app-view-hidden");
+  }
+
+  if (viewName === "reports") {
+    dashboardGrid.classList.remove("app-view-hidden");
+    dashboardGrid.classList.add("single-panel-view");
+    reportsPanel.classList.remove("app-view-hidden");
+  }
+
+  if (viewName === "settings") {
+    dashboardGrid.classList.remove("app-view-hidden");
+    dashboardGrid.classList.add("single-panel-view");
+    settingsPanel.classList.remove("app-view-hidden");
+  }
+
+  sideNavLinks.forEach(function (link) {
+    link.classList.toggle("active", link.dataset.view === viewName);
+  });
+
+  if (mainContent) {
+    mainContent.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+}
+
+addShiftButton.addEventListener("click", function () {
+  const newShiftName = customShiftInput.value.trim();
+
+  if (newShiftName === "") {
+    return;
+  }
+
+  const isDuplicate = customShifts.some(function (shiftName) {
+    return shiftName.toLowerCase() === newShiftName.toLowerCase();
+  });
+
+  if (isDuplicate) {
+    customShiftInput.value = "";
+    return;
+  }
+
+  customShifts.push(newShiftName);
+
+  shiftTimes[newShiftName] = {
+    start: "09:00",
+    end: "17:00",
+  };
+
+  customShiftInput.value = "";
+
+  saveData();
+  renderShiftList();
+  renderShiftTimeList();
+  renderSchedule();
+});
+
+customShiftInput.addEventListener("keydown", function (event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addShiftButton.click();
+  }
+});
+
+addCaregiverButton.addEventListener("click", function () {
+  addCaregiver();
+});
+
+caregiverInput.addEventListener("keydown", function (event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addCaregiver();
+  }
+});
+
+previousWeekButton.addEventListener("click", function () {
+  changeSelectedWeekByDays(-7);
+});
+
+nextWeekButton.addEventListener("click", function () {
+  changeSelectedWeekByDays(7);
+});
+
+todayWeekButton.addEventListener("click", function () {
+  weekStartDateInput.value = getTodayDateValue();
+
+  saveData();
+  updateWeekDisplay();
+  renderSchedule();
+});
+
+weekStartSelect.addEventListener("change", function () {
+  saveData();
+  updateWeekDisplay();
+  renderSchedule();
+});
+
+shiftStyleSelect.addEventListener("change", function () {
+  updateCustomShiftVisibility();
+  renderShiftTimeList();
+  saveData();
+  renderSchedule();
+});
+
+scheduleViewSelect.addEventListener("change", function () {
+  updatePickerVisibility();
+  saveData();
+  renderSchedule();
+});
+
+monthPicker.addEventListener("change", function () {
+  saveData();
+  renderSchedule();
+});
+
+weekStartDateInput.addEventListener("change", function () {
+  saveData();
+  updateWeekDisplay();
+  renderSchedule();
+});
+
+scheduleNoteInput.addEventListener("input", function () {
+  scheduleNote = scheduleNoteInput.value;
+
+  saveData();
+});
+
+clearScheduleButton.addEventListener("click", function () {
+  if (confirm("Are you sure you want to clear the full schedule?")) {
+    scheduleAssignments = {};
+
+    saveData();
+    renderSchedule();
+  }
+});
+
+exportDataButton.addEventListener("click", function () {
+  exportCuravelaData();
+});
+
+importDataButton.addEventListener("click", function () {
+  importDataInput.click();
+});
+
+importDataInput.addEventListener("change", function () {
+  const file = importDataInput.files[0];
+
+  if (!file) {
+    return;
+  }
+
+  importCuravelaData(file);
+
+  importDataInput.value = "";
+});
+
+printScheduleButton.addEventListener("click", function () {
+  window.print();
+});
+
+copyWeekButton.addEventListener("click", function () {
+  copySelectedWeek();
+});
+
+pasteWeekButton.addEventListener("click", function () {
+  pasteCopiedWeek();
+});
+
+clearWeekButton.addEventListener("click", function () {
+  clearSelectedWeek();
+});
+
+clearMonthButton.addEventListener("click", function () {
+  clearSelectedMonth();
+});
+
+previousMonthButton.addEventListener("click", function () {
+  changeSelectedMonthByMonths(-1);
+});
+
+nextMonthButton.addEventListener("click", function () {
+  changeSelectedMonthByMonths(1);
+});
+
+currentMonthButton.addEventListener("click", function () {
+  monthPicker.value = getTodayMonthValue();
+
+  saveData();
+  updateMonthDisplay();
+  renderSchedule();
+});
+
+if (minimizeAvailableShiftsButton && availableShiftsToast) {
+  minimizeAvailableShiftsButton.addEventListener("click", function () {
+    const isCurrentlyMinimized =
+      availableShiftsToast.classList.contains("is-minimized");
+
+    localStorage.setItem(
+      "curavelaAvailableShiftsMinimized",
+      String(!isCurrentlyMinimized),
     );
 
-    shiftTimes[newShiftName] = {
-      start: "09:00",
-      end: "17:00",
-    };
+    updateAvailableShiftsMinimizedState();
+  });
+}
 
-    customShiftInput.value = "";
+if (moreActionsButton && moreActionsMenu) {
+  moreActionsButton.addEventListener("click", function (event) {
+    event.stopPropagation();
 
-    saveData();
-    renderShiftList();
-    renderShiftTimeList();
-    renderSchedule();
-  },
-);
+    moreActionsMenu.classList.toggle("hidden");
+  });
 
-customShiftInput.addEventListener(
-  "keydown",
-  function (event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      addShiftButton.click();
+  moreActionsMenu.addEventListener("click", function (event) {
+    event.stopPropagation();
+  });
+
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest(".more-actions")) {
+      moreActionsMenu.classList.add("hidden");
     }
-  },
-);
+  });
+}
 
-addCaregiverButton.addEventListener(
-  "click",
-  function () {
-    addCaregiver();
-  },
-);
+if (quickAddShiftButton) {
+  quickAddShiftButton.addEventListener("click", function () {
+    shiftStyleSelect.value = "custom";
 
-caregiverInput.addEventListener(
-  "keydown",
-  function (event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      addCaregiver();
-    }
-  },
-);
-
-previousWeekButton.addEventListener(
-  "click",
-  function () {
-    changeSelectedWeekByDays(-7);
-  },
-);
-
-nextWeekButton.addEventListener(
-  "click",
-  function () {
-    changeSelectedWeekByDays(7);
-  },
-);
-
-todayWeekButton.addEventListener(
-  "click",
-  function () {
-    weekStartDateInput.value =
-      getTodayDateValue();
-
-    saveData();
-    updateWeekDisplay();
-    renderSchedule();
-  },
-);
-
-weekStartSelect.addEventListener(
-  "change",
-  function () {
-    saveData();
-    updateWeekDisplay();
-    renderSchedule();
-  },
-);
-
-shiftStyleSelect.addEventListener(
-  "change",
-  function () {
     updateCustomShiftVisibility();
     renderShiftTimeList();
     saveData();
     renderSchedule();
-  },
-);
 
-scheduleViewSelect.addEventListener(
-  "change",
-  function () {
-    updatePickerVisibility();
-    saveData();
-    renderSchedule();
-  },
-);
+    document.querySelector("#settings-panel").scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
 
-monthPicker.addEventListener(
-  "change",
-  function () {
-    saveData();
-    renderSchedule();
-  },
-);
-
-weekStartDateInput.addEventListener(
-  "change",
-  function () {
-    saveData();
-    updateWeekDisplay();
-    renderSchedule();
-  },
-);
-
-scheduleNoteInput.addEventListener(
-  "input",
-  function () {
-    scheduleNote =
-      scheduleNoteInput.value;
-
-    saveData();
-  },
-);
-
-clearScheduleButton.addEventListener(
-  "click",
-  function () {
-    if (
-      confirm(
-        "Are you sure you want to clear the full schedule?",
-      )
-    ) {
-      scheduleAssignments = {};
-
-      saveData();
-      renderSchedule();
-    }
-  },
-);
-
-exportDataButton.addEventListener(
-  "click",
-  function () {
-    exportCuravelaData();
-  },
-);
-
-importDataButton.addEventListener(
-  "click",
-  function () {
-    importDataInput.click();
-  },
-);
-
-importDataInput.addEventListener(
-  "change",
-  function () {
-    const file =
-      importDataInput.files[0];
-
-    if (!file) {
-      return;
-    }
-
-    importCuravelaData(file);
-
-    importDataInput.value = "";
-  },
-);
-
-printScheduleButton.addEventListener(
-  "click",
-  function () {
-    window.print();
-  },
-);
-
-copyWeekButton.addEventListener(
-  "click",
-  function () {
-    copySelectedWeek();
-  },
-);
-
-pasteWeekButton.addEventListener(
-  "click",
-  function () {
-    pasteCopiedWeek();
-  },
-);
-
-clearWeekButton.addEventListener(
-  "click",
-  function () {
-    clearSelectedWeek();
-  },
-);
-
-clearMonthButton.addEventListener(
-  "click",
-  function () {
-    clearSelectedMonth();
-  },
-);
-
-previousMonthButton.addEventListener(
-  "click",
-  function () {
-    changeSelectedMonthByMonths(
-      -1,
-    );
-  },
-);
-
-nextMonthButton.addEventListener(
-  "click",
-  function () {
-    changeSelectedMonthByMonths(
-      1,
-    );
-  },
-);
-
-currentMonthButton.addEventListener(
-  "click",
-  function () {
-    monthPicker.value =
-      getTodayMonthValue();
-
-    saveData();
-    updateMonthDisplay();
-    renderSchedule();
-  },
-);
-
-if (
-  minimizeAvailableShiftsButton &&
-  availableShiftsToast
-) {
-  minimizeAvailableShiftsButton
-    .addEventListener(
-      "click",
-      function () {
-        const isCurrentlyMinimized =
-          availableShiftsToast
-            .classList
-            .contains(
-              "is-minimized",
-            );
-
-        localStorage.setItem(
-          "curavelaAvailableShiftsMinimized",
-          String(
-            !isCurrentlyMinimized,
-          ),
-        );
-
-        updateAvailableShiftsMinimizedState();
-      },
-    );
+    setTimeout(function () {
+      customShiftInput.focus();
+    }, 500);
+  });
 }
 
-if (
-  moreActionsButton &&
-  moreActionsMenu
-) {
-  moreActionsButton.addEventListener(
-    "click",
-    function (event) {
-      event.stopPropagation();
+closeEditTimeButton.addEventListener("click", function () {
+  closeEditTimeModal();
+});
 
-      moreActionsMenu
-        .classList
-        .toggle("hidden");
-    },
-  );
+cancelEditTimeButton.addEventListener("click", function () {
+  closeEditTimeModal();
+});
 
-  moreActionsMenu.addEventListener(
-    "click",
-    function (event) {
-      event.stopPropagation();
-    },
-  );
+saveEditTimeButton.addEventListener("click", function () {
+  saveEditedShiftTime();
+});
 
-  document.addEventListener(
-    "click",
-    function (event) {
-      if (
-        !event.target.closest(
-          ".more-actions",
-        )
-      ) {
-        moreActionsMenu
-          .classList
-          .add("hidden");
-      }
-    },
-  );
-}
-
-if (quickAddShiftButton) {
-  quickAddShiftButton
-    .addEventListener(
-      "click",
-      function () {
-        shiftStyleSelect.value =
-          "custom";
-
-        updateCustomShiftVisibility();
-        renderShiftTimeList();
-        saveData();
-        renderSchedule();
-
-        document
-          .querySelector(
-            "#settings-panel",
-          )
-          .scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-
-        setTimeout(
-          function () {
-            customShiftInput.focus();
-          },
-          500,
-        );
-      },
-    );
-}
-
-closeEditTimeButton.addEventListener(
-  "click",
-  function () {
+editTimeModal.addEventListener("click", function (event) {
+  if (event.target === editTimeModal) {
     closeEditTimeModal();
-  },
-);
+  }
+});
 
-cancelEditTimeButton.addEventListener(
-  "click",
-  function () {
+document.addEventListener("keydown", function (event) {
+  if (event.key === "Escape" && !editTimeModal.classList.contains("hidden")) {
     closeEditTimeModal();
-  },
-);
+  }
+});
 
-saveEditTimeButton.addEventListener(
-  "click",
-  function () {
-    saveEditedShiftTime();
-  },
-);
+sideNavLinks.forEach(function (link) {
+  link.addEventListener("click", function (event) {
+    event.preventDefault();
 
-editTimeModal.addEventListener(
-  "click",
-  function (event) {
-    if (
-      event.target === editTimeModal
-    ) {
-      closeEditTimeModal();
-    }
-  },
-);
+    const selectedView = link.dataset.view;
 
-document.addEventListener(
-  "keydown",
-  function (event) {
-    if (
-      event.key === "Escape" &&
-      !editTimeModal.classList.contains(
-        "hidden",
-      )
-    ) {
-      closeEditTimeModal();
-    }
-  },
-);
+    setAppView(selectedView);
+  });
+});
 
 fillPrettyTimeSelects();
 loadData();
 
 if (monthPicker.value === "") {
-  monthPicker.value =
-    getTodayMonthValue();
+  monthPicker.value = getTodayMonthValue();
 }
 
-if (
-  weekStartDateInput.value === ""
-) {
-  weekStartDateInput.value =
-    getTodayDateValue();
+if (weekStartDateInput.value === "") {
+  weekStartDateInput.value = getTodayDateValue();
 }
 
-scheduleNoteInput.value =
-  scheduleNote;
+scheduleNoteInput.value = scheduleNote;
 
 updateCustomShiftVisibility();
 updatePickerVisibility();
@@ -3871,3 +2578,4 @@ renderShiftTimeList();
 renderSchedule();
 updateWeekDisplay();
 updateMonthDisplay();
+setAppView("schedule");

@@ -2146,3 +2146,21 @@ select {
     display: none;
   }
 }
+
+/* real sidebar page navigation */
+
+.app-view-hidden {
+  display: none !important;
+}
+
+.dashboard-grid.single-panel-view {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dashboard-grid.single-panel-view .panel-card {
+  grid-column: 1 / -1;
+}
+
+.side-nav-link {
+  cursor: pointer;
+}
