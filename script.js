@@ -23,6 +23,9 @@ let caregiverMaxHours = {
   Miguel: 50,
 };
 
+let caregiverRules = {};
+let activeCaregiverRulesName = "";
+
 let activeTimeEdit = {
   mode: "date",
   dayKey: "",
@@ -143,6 +146,36 @@ const moreActionsButton = document.querySelector("#more-actions-button");
 
 const moreActionsMenu = document.querySelector("#more-actions-menu");
 
+const caregiverRulesModal = document.querySelector("#caregiver-rules-modal");
+
+const caregiverRulesTitle = document.querySelector("#caregiver-rules-title");
+
+const caregiverRuleDays = document.querySelector("#caregiver-rule-days");
+
+const caregiverRuleShifts = document.querySelector("#caregiver-rule-shifts");
+
+const caregiverMaxConsecutiveDaysInput = document.querySelector(
+  "#caregiver-max-consecutive-days",
+);
+
+const caregiverNeedsTwoDaysOffInput = document.querySelector(
+  "#caregiver-needs-two-days-off",
+);
+
+const caregiverRuleNoteInput = document.querySelector("#caregiver-rule-note");
+
+const closeCaregiverRulesButton = document.querySelector(
+  "#close-caregiver-rules-button",
+);
+
+const cancelCaregiverRulesButton = document.querySelector(
+  "#cancel-caregiver-rules-button",
+);
+
+const saveCaregiverRulesButton = document.querySelector(
+  "#save-caregiver-rules-button",
+);
+
 let availableShiftsScrollInterval;
 
 function getSavedItem(newKey, oldKey) {
@@ -182,6 +215,11 @@ function saveData() {
   localStorage.setItem("curavelaMonth", monthPicker.value);
 
   localStorage.setItem("curavelaWeekStartDate", weekStartDateInput.value);
+
+  localStorage.setItem(
+    "curavelaCaregiverRules",
+    JSON.stringify(caregiverRules),
+  );
 }
 
 function loadData() {
@@ -198,6 +236,8 @@ function loadData() {
   const savedCaregiverMaxHours = localStorage.getItem(
     "curavelaCaregiverMaxHours",
   );
+
+  const savedCaregiverRules = localStorage.getItem("curavelaCaregiverRules");
 
   const savedAssignments = getSavedItem(
     "curavelaAssignments",
@@ -229,6 +269,10 @@ function loadData() {
 
   if (savedCaregiverMaxHours) {
     caregiverMaxHours = JSON.parse(savedCaregiverMaxHours);
+  }
+
+  if (savedCaregiverRules) {
+    caregiverRules = JSON.parse(savedCaregiverRules);
   }
 
   if (savedAssignments) {
@@ -1534,6 +1578,125 @@ function attachAssignmentListeners() {
   });
 }
 
+function getDefaultCaregiverRules() {
+  return {
+    availableDays: [...allWeekDays],
+    allowedShifts: [],
+    maxConsecutiveDays: 0,
+    needsTwoConsecutiveDaysOff: false,
+    note: "",
+  };
+}
+
+function getCaregiverRules(caregiverName) {
+  if (!caregiverRules[caregiverName]) {
+    caregiverRules[caregiverName] = getDefaultCaregiverRules();
+  }
+
+  return {
+    ...getDefaultCaregiverRules(),
+    ...caregiverRules[caregiverName],
+  };
+}
+
+function renderCaregiverRuleChoices(caregiverName) {
+  const rules = getCaregiverRules(caregiverName);
+
+  caregiverRuleDays.innerHTML = allWeekDays
+    .map(function (dayName) {
+      const isChecked = rules.availableDays.includes(dayName);
+
+      return `
+        <label class="rule-choice">
+          <input
+            class="caregiver-rule-day-checkbox"
+            type="checkbox"
+            value="${dayName}"
+            ${isChecked ? "checked" : ""}
+          />
+
+          <span>${dayName}</span>
+        </label>
+      `;
+    })
+    .join("");
+
+  const activeShifts = getActiveShifts();
+
+  caregiverRuleShifts.innerHTML = activeShifts
+    .map(function (shift) {
+      const isChecked = rules.allowedShifts.includes(shift.name);
+
+      return `
+        <label class="rule-choice">
+          <input
+            class="caregiver-rule-shift-checkbox"
+            type="checkbox"
+            value="${shift.name}"
+            ${isChecked ? "checked" : ""}
+          />
+
+          <span>${shift.name}</span>
+        </label>
+      `;
+    })
+    .join("");
+}
+
+function openCaregiverRulesModal(caregiverName) {
+  activeCaregiverRulesName = caregiverName;
+
+  const rules = getCaregiverRules(caregiverName);
+
+  caregiverRulesTitle.textContent = `${caregiverName} Rules`;
+
+  caregiverMaxConsecutiveDaysInput.value = rules.maxConsecutiveDays || 0;
+
+  caregiverNeedsTwoDaysOffInput.checked = rules.needsTwoConsecutiveDaysOff;
+
+  caregiverRuleNoteInput.value = rules.note || "";
+
+  renderCaregiverRuleChoices(caregiverName);
+
+  caregiverRulesModal.classList.remove("hidden");
+}
+
+function closeCaregiverRulesModal() {
+  caregiverRulesModal.classList.add("hidden");
+  activeCaregiverRulesName = "";
+}
+
+function saveActiveCaregiverRules() {
+  if (!activeCaregiverRulesName) {
+    return;
+  }
+
+  const selectedDays = Array.from(
+    document.querySelectorAll(".caregiver-rule-day-checkbox:checked"),
+  ).map(function (checkbox) {
+    return checkbox.value;
+  });
+
+  const selectedShifts = Array.from(
+    document.querySelectorAll(".caregiver-rule-shift-checkbox:checked"),
+  ).map(function (checkbox) {
+    return checkbox.value;
+  });
+
+  caregiverRules[activeCaregiverRulesName] = {
+    availableDays: selectedDays,
+    allowedShifts: selectedShifts,
+    maxConsecutiveDays: Number(caregiverMaxConsecutiveDaysInput.value) || 0,
+    needsTwoConsecutiveDaysOff: caregiverNeedsTwoDaysOffInput.checked,
+    note: caregiverRuleNoteInput.value.trim(),
+  };
+
+  saveData();
+  closeCaregiverRulesModal();
+  renderCaregiverList();
+  renderSchedule();
+}
+
 function renderCaregiverList() {
   caregiverList.innerHTML = "";
 
@@ -1566,22 +1729,29 @@ function renderCaregiverList() {
           </button>
 
           <button
-            class="
-              edit-max-hours-button
-            "
-            type="button"
-          >
-            Edit Max
-          </button>
+  class="
+    edit-max-hours-button
+  "
+  type="button"
+>
+  Edit Max
+</button>
 
-          <button
-            class="
-              remove-caregiver-button
-            "
-            type="button"
-          >
-            Remove
-          </button>
+<button
+  class="edit-rules-button"
+  type="button"
+>
+  Edit Rules
+</button>
+
+<button
+  class="
+    remove-caregiver-button
+  "
+  type="button"
+>
+  Remove
+</button>
         </div>
       `;
 
@@ -1590,6 +1760,8 @@ function renderCaregiverList() {
     const editMaxHoursButton = caregiverItem.querySelector(
       ".edit-max-hours-button",
     );
+
+    const editRulesButton = caregiverItem.querySelector(".edit-rules-button");
 
     const removeButton = caregiverItem.querySelector(
       ".remove-caregiver-button",
@@ -1791,6 +1963,10 @@ function renderShiftList() {
       renderShiftList();
       renderShiftTimeList();
       renderSchedule();
+    });
+
+    editRulesButton.addEventListener("click", function () {
+      openCaregiverRulesModal(caregiverName);
     });
 
     removeButton.addEventListener("click", function () {
@@ -2290,6 +2466,33 @@ function setAppView(viewName) {
     dashboardGrid.classList.add("single-panel-view");
     settingsPanel.classList.remove("app-view-hidden");
   }
+
+  closeCaregiverRulesButton.addEventListener("click", function () {
+    closeCaregiverRulesModal();
+  });
+
+  cancelCaregiverRulesButton.addEventListener("click", function () {
+    closeCaregiverRulesModal();
+  });
+
+  saveCaregiverRulesButton.addEventListener("click", function () {
+    saveActiveCaregiverRules();
+  });
+
+  caregiverRulesModal.addEventListener("click", function (event) {
+    if (event.target === caregiverRulesModal) {
+      closeCaregiverRulesModal();
+    }
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (
+      event.key === "Escape" &&
+      !caregiverRulesModal.classList.contains("hidden")
+    ) {
+      closeCaregiverRulesModal();
+    }
+  });
 
   sideNavLinks.forEach(function (link) {
     link.classList.toggle("active", link.dataset.view === viewName);
