@@ -15,6 +15,9 @@ let scheduleNote = "";
 let shiftTimeOverrides = {};
 let copiedWeekAssignments = null;
 let draggedCaregiverName = null;
+let caregiverRules = {};
+let activeCaregiverRulesName = "";
+let scheduleMode = "all";
 
 let caregiverMaxHours = {
   Brody: 50,
@@ -22,9 +25,6 @@ let caregiverMaxHours = {
   Raymundo: 50,
   Miguel: 50,
 };
-
-let caregiverRules = {};
-let activeCaregiverRulesName = "";
 
 let activeTimeEdit = {
   mode: "date",
@@ -39,6 +39,8 @@ let shiftTimes = {
   Morning: { start: "06:30", end: "13:00" },
   Afternoon: { start: "13:00", end: "19:00" },
 };
+
+/* DOM */
 
 const scheduleSection = document.querySelector("#schedule");
 
@@ -90,10 +92,8 @@ const settingsPanel = document.querySelector("#settings-panel");
 const sideNavLinks = document.querySelectorAll(".side-nav-link");
 
 const printScheduleButton = document.querySelector("#print-schedule-button");
-
 const copyWeekButton = document.querySelector("#copy-week-button");
 const pasteWeekButton = document.querySelector("#paste-week-button");
-
 const clearWeekButton = document.querySelector("#clear-week-button");
 const clearMonthButton = document.querySelector("#clear-month-button");
 
@@ -115,11 +115,25 @@ const availableShiftsList = document.querySelector("#available-shifts-list");
 const coveragePercentElement = document.querySelector("#coverage-percent");
 const coverageProgressFill = document.querySelector("#coverage-progress-fill");
 const warningCountElement = document.querySelector("#warning-count");
-const scheduleWarningsList = document.querySelector("#schedule-warnings-list");
+
+const scheduleWarningStrip = document.querySelector("#schedule-warning-strip");
+
+const scheduleWarningSummary = document.querySelector(
+  "#schedule-warning-summary",
+);
+
+const scheduleWarningDetails = document.querySelector(
+  "#schedule-warning-details",
+);
 
 const toastOpenShiftsCount = document.querySelector("#toast-open-shifts-count");
-const availableShiftsBody = document.querySelector(".available-shifts-body");
+
+const availableShiftsBody = document.querySelector(
+  "#open-shifts-panel .available-shifts-body",
+);
+
 const availableShiftsToast = document.querySelector(".available-shifts-toast");
+
 const minimizeAvailableShiftsButton = document.querySelector(
   "#minimize-available-shifts-button",
 );
@@ -137,7 +151,9 @@ const editEndMinuteSelect = document.querySelector("#edit-end-minute");
 const editEndPeriodSelect = document.querySelector("#edit-end-period");
 
 const closeEditTimeButton = document.querySelector("#close-edit-time-button");
+
 const cancelEditTimeButton = document.querySelector("#cancel-edit-time-button");
+
 const saveEditTimeButton = document.querySelector("#save-edit-time-button");
 
 const quickAddShiftButton = document.querySelector("#quick-add-shift-button");
@@ -145,6 +161,8 @@ const quickAddShiftButton = document.querySelector("#quick-add-shift-button");
 const moreActionsButton = document.querySelector("#more-actions-button");
 
 const moreActionsMenu = document.querySelector("#more-actions-menu");
+
+/* caregiver rules modal */
 
 const caregiverRulesModal = document.querySelector("#caregiver-rules-modal");
 
@@ -178,6 +196,8 @@ const saveCaregiverRulesButton = document.querySelector(
 
 let availableShiftsScrollInterval;
 
+/* storage */
+
 function getSavedItem(newKey, oldKey) {
   return localStorage.getItem(newKey) || localStorage.getItem(oldKey);
 }
@@ -190,6 +210,11 @@ function saveData() {
   localStorage.setItem(
     "curavelaCaregiverMaxHours",
     JSON.stringify(caregiverMaxHours),
+  );
+
+  localStorage.setItem(
+    "curavelaCaregiverRules",
+    JSON.stringify(caregiverRules),
   );
 
   localStorage.setItem(
@@ -215,11 +240,6 @@ function saveData() {
   localStorage.setItem("curavelaMonth", monthPicker.value);
 
   localStorage.setItem("curavelaWeekStartDate", weekStartDateInput.value);
-
-  localStorage.setItem(
-    "curavelaCaregiverRules",
-    JSON.stringify(caregiverRules),
-  );
 }
 
 function loadData() {
@@ -340,11 +360,12 @@ function loadData() {
 function exportCuravelaData() {
   const backupData = {
     app: "Curavela",
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     customShifts,
     caregivers,
     caregiverMaxHours,
+    caregiverRules,
     scheduleAssignments,
     scheduleNote,
     shiftTimes,
@@ -356,19 +377,15 @@ function exportCuravelaData() {
     weekStartDate: weekStartDateInput.value,
   };
 
-  const backupText = JSON.stringify(backupData, null, 2);
-
-  const backupBlob = new Blob([backupText], {
+  const backupBlob = new Blob([JSON.stringify(backupData, null, 2)], {
     type: "application/json",
   });
 
   const backupUrl = URL.createObjectURL(backupBlob);
-
   const downloadLink = document.createElement("a");
 
   downloadLink.href = backupUrl;
   downloadLink.download = "curavela-backup.json";
-
   downloadLink.click();
 
   URL.revokeObjectURL(backupUrl);
@@ -386,6 +403,8 @@ function importCuravelaData(file) {
       caregivers = backupData.caregivers || caregivers;
 
       caregiverMaxHours = backupData.caregiverMaxHours || caregiverMaxHours;
+
+      caregiverRules = backupData.caregiverRules || {};
 
       scheduleAssignments = backupData.scheduleAssignments || {};
 
@@ -430,12 +449,16 @@ function importCuravelaData(file) {
 
       alert("Backup imported successfully.");
     } catch (error) {
+      console.error(error);
+
       alert("That backup file could not be imported.");
     }
   });
 
   reader.readAsText(file);
 }
+
+/* dates */
 
 function getTodayDateValue() {
   const today = new Date();
@@ -472,21 +495,13 @@ function getDateKey(date) {
 function getAppDayIndex(date) {
   const jsDayIndex = date.getDay();
 
-  if (jsDayIndex === 0) {
-    return 6;
-  }
-
-  return jsDayIndex - 1;
+  return jsDayIndex === 0 ? 6 : jsDayIndex - 1;
 }
 
 function getOrderedWeekDays() {
   const startIndex = allWeekDays.indexOf(weekStartSelect.value);
 
-  const firstPart = allWeekDays.slice(startIndex);
-
-  const secondPart = allWeekDays.slice(0, startIndex);
-
-  return firstPart.concat(secondPart);
+  return allWeekDays.slice(startIndex).concat(allWeekDays.slice(0, startIndex));
 }
 
 function getDaysInSelectedWeek() {
@@ -512,10 +527,10 @@ function getDaysInSelectedWeek() {
 
   const days = [];
 
-  for (let i = 0; i < 7; i++) {
+  for (let index = 0; index < 7; index += 1) {
     const currentDate = new Date(startDate);
 
-    currentDate.setDate(startDate.getDate() + i);
+    currentDate.setDate(startDate.getDate() + index);
 
     days.push({
       label: currentDate.toLocaleDateString("en-US", {
@@ -546,16 +561,25 @@ function getDaysInSelectedMonth() {
 
   const [year, month] = selectedMonth.split("-").map(Number);
 
-  const days = [];
-
   const lastDayOfMonth = new Date(year, month, 0).getDate();
 
-  for (let dayNumber = 1; dayNumber <= lastDayOfMonth; dayNumber++) {
+  const days = [];
+
+  for (let dayNumber = 1; dayNumber <= lastDayOfMonth; dayNumber += 1) {
     const date = new Date(year, month - 1, dayNumber);
 
     days.push({
       label: date.toLocaleDateString("en-US", {
         weekday: "long",
+        month: "short",
+        day: "numeric",
+      }),
+
+      shortLabel: date.toLocaleDateString("en-US", {
+        weekday: "short",
+      }),
+
+      dateLabel: date.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       }),
@@ -591,11 +615,8 @@ function updateWeekDisplay() {
 
   const days = getDaysInSelectedWeek();
 
-  const firstDay = days[0].dateLabel;
-
-  const lastDay = days[days.length - 1].dateLabel;
-
-  selectedWeekDisplay.textContent = `${firstDay} – ${lastDay}`;
+  selectedWeekDisplay.textContent =
+    `${days[0].dateLabel} – ` + `${days[days.length - 1].dateLabel}`;
 }
 
 function updateMonthDisplay() {
@@ -625,16 +646,16 @@ function changeSelectedMonthByMonths(monthAmount) {
 
   currentDate.setMonth(currentDate.getMonth() + monthAmount);
 
-  const newYear = currentDate.getFullYear();
-
-  const newMonth = String(currentDate.getMonth() + 1).padStart(2, "0");
-
-  monthPicker.value = `${newYear}-${newMonth}`;
+  monthPicker.value =
+    `${currentDate.getFullYear()}-` +
+    `${String(currentDate.getMonth() + 1).padStart(2, "0")}`;
 
   saveData();
   updateMonthDisplay();
   renderSchedule();
 }
+
+/* shifts */
 
 function getShiftConfig(shiftName, defaultStart, defaultEnd) {
   if (!shiftTimes[shiftName]) {
@@ -686,9 +707,7 @@ function getShiftOverrideKey(dayKey, shiftName) {
 }
 
 function getShiftForDay(dayKey, shift) {
-  const overrideKey = getShiftOverrideKey(dayKey, shift.name);
-
-  const override = shiftTimeOverrides[overrideKey];
+  const override = shiftTimeOverrides[getShiftOverrideKey(dayKey, shift.name)];
 
   if (override) {
     return {
@@ -709,13 +728,12 @@ function formatTime(timeValue) {
   const [hourText, minuteText] = timeValue.split(":");
 
   const hour = Number(hourText);
-  const minute = minuteText;
 
   const period = hour >= 12 ? "PM" : "AM";
 
   const displayHour = hour % 12 === 0 ? 12 : hour % 12;
 
-  return `${displayHour}:${minute} ${period}`;
+  return `${displayHour}:${minuteText} ${period}`;
 }
 
 function getShiftHours(shift) {
@@ -731,17 +749,11 @@ function getShiftHours(shift) {
     endMinutes += 24 * 60;
   }
 
-  const totalMinutes = endMinutes - startMinutes;
-
-  return totalMinutes / 60;
+  return (endMinutes - startMinutes) / 60;
 }
 
 function formatHours(hours) {
-  if (Number.isInteger(hours)) {
-    return `${hours} hrs`;
-  }
-
-  return `${hours.toFixed(1)} hrs`;
+  return Number.isInteger(hours) ? `${hours} hrs` : `${hours.toFixed(1)} hrs`;
 }
 
 function buildCaregiverOptions(assignedCaregiver) {
@@ -772,36 +784,326 @@ function getCaregiverHoursForDays(scheduleDays, activeShifts) {
 
   scheduleDays.forEach(function (day) {
     activeShifts.forEach(function (shift) {
-      const shiftForDay = getShiftForDay(day.key, shift);
-
-      const shiftHours = getShiftHours(shiftForDay);
-
       const assignmentKey = `${day.key}-${shift.name}`;
 
       const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
 
-      if (assignedCaregiver !== "Open") {
-        if (!caregiverHours[assignedCaregiver]) {
-          caregiverHours[assignedCaregiver] = 0;
-        }
-
-        caregiverHours[assignedCaregiver] += shiftHours;
+      if (assignedCaregiver === "Open") {
+        return;
       }
+
+      const shiftForDay = getShiftForDay(day.key, shift);
+
+      caregiverHours[assignedCaregiver] =
+        (caregiverHours[assignedCaregiver] || 0) + getShiftHours(shiftForDay);
     });
   });
 
   return caregiverHours;
 }
 
+/* caregiver rules */
+
+function getDefaultCaregiverRules() {
+  return {
+    availableDays: [...allWeekDays],
+    allowedShifts: [],
+    maxConsecutiveDays: 0,
+    needsTwoConsecutiveDaysOff: false,
+    note: "",
+  };
+}
+
+function getCaregiverRules(caregiverName) {
+  return {
+    ...getDefaultCaregiverRules(),
+    ...(caregiverRules[caregiverName] || {}),
+  };
+}
+
+function renderCaregiverRuleChoices(caregiverName) {
+  if (!caregiverRuleDays || !caregiverRuleShifts) {
+    return;
+  }
+
+  const rules = getCaregiverRules(caregiverName);
+
+  caregiverRuleDays.innerHTML = allWeekDays
+    .map(function (dayName) {
+      const isChecked = rules.availableDays.includes(dayName);
+
+      return `
+          <label class="rule-choice">
+            <input
+              class="caregiver-rule-day-checkbox"
+              type="checkbox"
+              value="${dayName}"
+              ${isChecked ? "checked" : ""}
+            />
+
+            <span>${dayName}</span>
+          </label>
+        `;
+    })
+    .join("");
+
+  caregiverRuleShifts.innerHTML = getActiveShifts()
+    .map(function (shift) {
+      const isChecked = rules.allowedShifts.includes(shift.name);
+
+      return `
+          <label class="rule-choice">
+            <input
+              class="caregiver-rule-shift-checkbox"
+              type="checkbox"
+              value="${shift.name}"
+              ${isChecked ? "checked" : ""}
+            />
+
+            <span>${shift.name}</span>
+          </label>
+        `;
+    })
+    .join("");
+}
+
+function openCaregiverRulesModal(caregiverName) {
+  if (!caregiverRulesModal) {
+    return;
+  }
+
+  activeCaregiverRulesName = caregiverName;
+
+  const rules = getCaregiverRules(caregiverName);
+
+  caregiverRulesTitle.textContent = `${caregiverName} Rules`;
+
+  caregiverMaxConsecutiveDaysInput.value = rules.maxConsecutiveDays || 0;
+
+  caregiverNeedsTwoDaysOffInput.checked = rules.needsTwoConsecutiveDaysOff;
+
+  caregiverRuleNoteInput.value = rules.note || "";
+
+  renderCaregiverRuleChoices(caregiverName);
+
+  caregiverRulesModal.classList.remove("hidden");
+}
+
+function closeCaregiverRulesModal() {
+  if (!caregiverRulesModal) {
+    return;
+  }
+
+  caregiverRulesModal.classList.add("hidden");
+
+  activeCaregiverRulesName = "";
+}
+
+function saveActiveCaregiverRules() {
+  if (!activeCaregiverRulesName) {
+    return;
+  }
+
+  const selectedDays = Array.from(
+    document.querySelectorAll(".caregiver-rule-day-checkbox:checked"),
+  ).map(function (checkbox) {
+    return checkbox.value;
+  });
+
+  const selectedShifts = Array.from(
+    document.querySelectorAll(".caregiver-rule-shift-checkbox:checked"),
+  ).map(function (checkbox) {
+    return checkbox.value;
+  });
+
+  caregiverRules[activeCaregiverRulesName] = {
+    availableDays: selectedDays,
+
+    allowedShifts: selectedShifts,
+
+    maxConsecutiveDays: Number(caregiverMaxConsecutiveDaysInput.value) || 0,
+
+    needsTwoConsecutiveDaysOff: caregiverNeedsTwoDaysOffInput.checked,
+
+    note: caregiverRuleNoteInput.value.trim(),
+  };
+
+  saveData();
+  closeCaregiverRulesModal();
+  renderCaregiverList();
+  renderSchedule();
+}
+
+function getCaregiverScheduledDays(caregiverName, scheduleDays, activeShifts) {
+  return scheduleDays.map(function (day) {
+    return activeShifts.some(function (shift) {
+      const assignmentKey = `${day.key}-${shift.name}`;
+
+      return scheduleAssignments[assignmentKey] === caregiverName;
+    });
+  });
+}
+
+function getLongestConsecutiveRun(scheduledDays) {
+  let longestRun = 0;
+  let currentRun = 0;
+
+  scheduledDays.forEach(function (isScheduled) {
+    if (isScheduled) {
+      currentRun += 1;
+
+      longestRun = Math.max(longestRun, currentRun);
+    } else {
+      currentRun = 0;
+    }
+  });
+
+  return longestRun;
+}
+
+function hasTwoConsecutiveDaysOff(scheduledDays) {
+  for (let index = 0; index < scheduledDays.length - 1; index += 1) {
+    if (!scheduledDays[index] && !scheduledDays[index + 1]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function getCaregiverRuleWarnings(scheduleDays, activeShifts) {
+  const warningMap = new Map();
+
+  caregivers.forEach(function (caregiverName) {
+    const rules = getCaregiverRules(caregiverName);
+
+    scheduleDays.forEach(function (day) {
+      const dayName = day.date.toLocaleDateString("en-US", {
+        weekday: "long",
+      });
+
+      activeShifts.forEach(function (shift) {
+        const assignmentKey = `${day.key}-${shift.name}`;
+
+        const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
+
+        if (assignedCaregiver !== caregiverName) {
+          return;
+        }
+
+        if (!rules.availableDays.includes(dayName)) {
+          warningMap.set(`${caregiverName}-unavailable-${day.key}`, {
+            level: "high",
+
+            text:
+              `${caregiverName} is scheduled ${day.label}, ` +
+              `but ${dayName} is unavailable.`,
+          });
+        }
+
+        if (
+          rules.allowedShifts.length > 0 &&
+          !rules.allowedShifts.includes(shift.name)
+        ) {
+          warningMap.set(`${caregiverName}-shift-${day.key}-${shift.name}`, {
+            level: "high",
+
+            text:
+              `${caregiverName} is scheduled for ${shift.name} ` +
+              `on ${day.label}, but that shift is not allowed.`,
+          });
+        }
+      });
+    });
+
+    const scheduledDays = getCaregiverScheduledDays(
+      caregiverName,
+      scheduleDays,
+      activeShifts,
+    );
+
+    const maxConsecutiveDays = Number(rules.maxConsecutiveDays);
+
+    if (maxConsecutiveDays > 0) {
+      const longestRun = getLongestConsecutiveRun(scheduledDays);
+
+      if (longestRun > maxConsecutiveDays) {
+        warningMap.set(`${caregiverName}-consecutive`, {
+          level: "medium",
+
+          text:
+            `${caregiverName} is scheduled ${longestRun} days in a row. ` +
+            `Their maximum is ${maxConsecutiveDays}.`,
+        });
+      }
+    }
+
+    if (
+      rules.needsTwoConsecutiveDaysOff &&
+      scheduleDays.length >= 2 &&
+      !hasTwoConsecutiveDaysOff(scheduledDays)
+    ) {
+      warningMap.set(`${caregiverName}-two-days-off`, {
+        level: "medium",
+
+        text:
+          `${caregiverName} does not have two consecutive days off ` +
+          `in this schedule.`,
+      });
+    }
+  });
+
+  return Array.from(warningMap.values());
+}
+
+function renderScheduleWarningStrip(warnings) {
+  if (
+    !scheduleWarningStrip ||
+    !scheduleWarningSummary ||
+    !scheduleWarningDetails
+  ) {
+    return;
+  }
+
+  scheduleWarningDetails.innerHTML = "";
+
+  if (warnings.length === 0) {
+    scheduleWarningStrip.classList.add("hidden");
+
+    scheduleWarningStrip.removeAttribute("open");
+
+    return;
+  }
+
+  scheduleWarningStrip.classList.remove("hidden");
+
+  scheduleWarningSummary.textContent =
+    `${warnings.length} ` +
+    `${warnings.length === 1 ? "warning" : "warnings"} to review`;
+
+  warnings.forEach(function (warning) {
+    const warningItem = document.createElement("li");
+
+    warningItem.classList.add(
+      warning.level === "high" ? "warning-high" : "warning-medium",
+    );
+
+    warningItem.textContent = warning.text;
+
+    scheduleWarningDetails.append(warningItem);
+  });
+}
+
+/* weekly schedule */
+
 function renderWeeklySchedule(scheduleDays, activeShifts) {
   scheduleSection.className = "";
   scheduleSection.innerHTML = "";
 
-  if (caregivers.length === 0) {
+  if (caregivers.length === 0 && scheduleMode !== "open") {
     scheduleSection.innerHTML = `
       <div class="empty-state">
-        Add caregivers to start
-        building the care map.
+        Add caregivers to start building the care map.
       </div>
     `;
 
@@ -817,16 +1119,12 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
   careMapGrid.style.setProperty("--day-count", scheduleDays.length);
 
   careMapGrid.innerHTML = `
-    <div
-      class="
-        care-map-cell
-        care-map-header
-        caregiver-cell
-      "
-    >
-      <strong>Caregiver</strong>
-    </div>
-  `;
+  <div class="care-map-cell care-map-header caregiver-cell">
+    <strong>
+      ${scheduleMode === "open" ? "Open shifts" : "Caregiver"}
+    </strong>
+  </div>
+`;
 
   scheduleDays.forEach(function (day) {
     const dayHeader = document.createElement("div");
@@ -834,32 +1132,28 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
     dayHeader.classList.add("care-map-cell", "care-map-header");
 
     dayHeader.innerHTML = `
-        <strong>
-          ${day.shortLabel}
-        </strong>
-
-        <span>
-          ${day.dateLabel}
-        </span>
+        <strong>${day.shortLabel}</strong>
+        <span>${day.dateLabel}</span>
       `;
 
     careMapGrid.append(dayHeader);
   });
 
-  caregivers.forEach(function (caregiverName) {
-    const caregiverCell = document.createElement("div");
+  if (scheduleMode !== "open") {
+    caregivers.forEach(function (caregiverName) {
+      const caregiverCell = document.createElement("div");
 
-    caregiverCell.classList.add(
-      "care-map-cell",
-      "caregiver-cell",
-      "draggable-caregiver",
-    );
+      caregiverCell.classList.add(
+        "care-map-cell",
+        "caregiver-cell",
+        "draggable-caregiver",
+      );
 
-    caregiverCell.draggable = true;
+      caregiverCell.draggable = true;
 
-    caregiverCell.dataset.caregiver = caregiverName;
+      caregiverCell.dataset.caregiver = caregiverName;
 
-    caregiverCell.innerHTML = `
+      caregiverCell.innerHTML = `
         <span
           class="caregiver-drag-handle"
           title="Drag to reorder"
@@ -872,47 +1166,44 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
         </div>
 
         <div>
-          <span
-            class="caregiver-name"
-          >
+          <span class="caregiver-name">
             ${caregiverName}
           </span>
 
-          <span
-            class="caregiver-meta"
-          >
+          <span class="caregiver-meta">
             ${formatHours(caregiverHours[caregiverName] || 0)}
           </span>
         </div>
       `;
 
-    careMapGrid.append(caregiverCell);
+      careMapGrid.append(caregiverCell);
 
-    scheduleDays.forEach(function (day) {
-      const dayCell = document.createElement("div");
+      scheduleDays.forEach(function (day) {
+        const dayCell = document.createElement("div");
 
-      dayCell.classList.add("care-map-cell");
+        dayCell.classList.add("care-map-cell");
 
-      const shiftStack = document.createElement("div");
+        const shiftStack = document.createElement("div");
 
-      shiftStack.classList.add("shift-stack");
+        shiftStack.classList.add("shift-stack");
 
-      activeShifts.forEach(function (shift) {
-        const assignmentKey = `${day.key}-${shift.name}`;
+        activeShifts.forEach(function (shift) {
+          const assignmentKey = `${day.key}-${shift.name}`;
 
-        const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
+          const assignedCaregiver =
+            scheduleAssignments[assignmentKey] || "Open";
 
-        if (assignedCaregiver !== caregiverName) {
-          return;
-        }
+          if (assignedCaregiver !== caregiverName) {
+            return;
+          }
 
-        const shiftForDay = getShiftForDay(day.key, shift);
+          const shiftForDay = getShiftForDay(day.key, shift);
 
-        const shiftPill = document.createElement("div");
+          const shiftPill = document.createElement("div");
 
-        shiftPill.classList.add("shift-pill");
+          shiftPill.classList.add("shift-pill");
 
-        shiftPill.innerHTML = `
+          shiftPill.innerHTML = `
                 <strong>
                   ${formatTime(shiftForDay.start)}
                   –
@@ -932,30 +1223,29 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
                 </select>
               `;
 
-        shiftStack.append(shiftPill);
-      });
+          shiftStack.append(shiftPill);
+        });
 
-      if (shiftStack.children.length === 0) {
-        dayCell.innerHTML = `
+        if (shiftStack.children.length === 0) {
+          dayCell.innerHTML = `
               <div class="empty-cell">
                 —
               </div>
             `;
-      } else {
-        dayCell.append(shiftStack);
-      }
+        } else {
+          dayCell.append(shiftStack);
+        }
 
-      careMapGrid.append(dayCell);
+        careMapGrid.append(dayCell);
+      });
     });
-  });
+  }
 
   const totalOpenShifts = scheduleDays.reduce(function (total, day) {
     const openShiftsForDay = activeShifts.filter(function (shift) {
       const assignmentKey = `${day.key}-${shift.name}`;
 
-      const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
-
-      return assignedCaregiver === "Open";
+      return (scheduleAssignments[assignmentKey] || "Open") === "Open";
     });
 
     return total + openShiftsForDay.length;
@@ -970,9 +1260,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
   );
 
   openCaregiverCell.innerHTML = `
-    <div class="avatar">
-      +
-    </div>
+    <div class="avatar">+</div>
 
     <div>
       <span class="caregiver-name">
@@ -997,9 +1285,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
     const openShiftsForDay = activeShifts.filter(function (shift) {
       const assignmentKey = `${day.key}-${shift.name}`;
 
-      const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
-
-      return assignedCaregiver === "Open";
+      return (scheduleAssignments[assignmentKey] || "Open") === "Open";
     });
 
     if (openShiftsForDay.length === 0) {
@@ -1026,14 +1312,8 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
         const shiftForDay = getShiftForDay(day.key, shift);
 
         return `
-                <div
-                  class="open-mini-shift"
-                >
-                  <div
-                    class="
-                      open-mini-shift-info
-                    "
-                  >
+                <div class="open-mini-shift">
+                  <div class="open-mini-shift-info">
                     <strong>
                       ${shift.name}
                     </strong>
@@ -1046,9 +1326,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
                   </div>
 
                   <select
-                    class="
-                      assignment-select
-                    "
+                    class="assignment-select"
                     data-day="${day.key}"
                     data-shift="${shift.name}"
                   >
@@ -1060,9 +1338,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
       .join("");
 
     dayCell.innerHTML = `
-        <details
-          class="open-day-summary"
-        >
+        <details class="open-day-summary">
           <summary>
             <div>
               <strong>
@@ -1075,16 +1351,12 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
               </span>
             </div>
 
-            <span
-              class="open-chevron"
-            >
+            <span class="open-chevron">
               ⌄
             </span>
           </summary>
 
-          <div
-            class="open-day-menu"
-          >
+          <div class="open-day-menu">
             ${openShiftRows}
           </div>
         </details>
@@ -1097,6 +1369,8 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
   attachCaregiverDragListeners();
 }
+
+/* monthly schedule */
 
 function renderMonthlySchedule(scheduleDays, activeShifts) {
   scheduleSection.innerHTML = "";
@@ -1117,9 +1391,7 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
   });
 
   if (scheduleDays.length > 0) {
-    const firstDate = scheduleDays[0].date;
-
-    const firstDayIndex = getAppDayIndex(firstDate);
+    const firstDayIndex = getAppDayIndex(scheduleDays[0].date);
 
     const selectedStartIndex = allWeekDays.indexOf(weekStartSelect.value);
 
@@ -1129,7 +1401,7 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
       blankDays += 7;
     }
 
-    for (let i = 0; i < blankDays; i++) {
+    for (let index = 0; index < blankDays; index += 1) {
       const emptyDay = document.createElement("div");
 
       emptyDay.classList.add("month-empty-day");
@@ -1143,12 +1415,6 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
 
     dayCard.classList.add("month-day-card");
 
-    const dayNumber = day.date.getDate();
-
-    const weekdayShort = day.date.toLocaleDateString("en-US", {
-      weekday: "short",
-    });
-
     let shiftRows = "";
 
     activeShifts.forEach(function (shift) {
@@ -1156,17 +1422,11 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
 
       const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
 
-      const caregiverOptions = buildCaregiverOptions(assignedCaregiver);
-
       const shiftForDay = getShiftForDay(day.key, shift);
 
       shiftRows += `
-            <div
-              class="month-shift-row"
-            >
-              <div
-                class="month-shift-info"
-              >
+            <div class="month-shift-row">
+              <div class="month-shift-info">
                 <span>
                   ${shift.name}
                 </span>
@@ -1177,14 +1437,11 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
               </div>
 
               <select
-                class="
-                  assignment-select
-                  month-assignment-select
-                "
+                class="assignment-select month-assignment-select"
                 data-day="${day.key}"
                 data-shift="${shift.name}"
               >
-                ${caregiverOptions}
+                ${buildCaregiverOptions(assignedCaregiver)}
               </select>
             </div>
           `;
@@ -1192,16 +1449,12 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
 
     dayCard.innerHTML = `
         <div class="month-day-header">
-          <span
-            class="month-date-number"
-          >
-            ${dayNumber}
+          <span class="month-date-number">
+            ${day.date.getDate()}
           </span>
 
-          <span
-            class="month-weekday"
-          >
-            ${weekdayShort}
+          <span class="month-weekday">
+            ${day.shortLabel}
           </span>
         </div>
 
@@ -1214,20 +1467,24 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
   });
 }
 
+/* summaries and warnings */
+
 function renderCoverageSummary(scheduleDays, activeShifts) {
   let totalHoursNeeded = 0;
   let totalHoursCovered = 0;
   let openHours = 0;
   let openShiftsCount = 0;
 
-  const warnings = [];
   const caregiverHours = {};
+  const warnings = [];
 
   caregivers.forEach(function (caregiverName) {
     caregiverHours[caregiverName] = 0;
   });
 
-  availableShiftsList.innerHTML = "";
+  if (availableShiftsList) {
+    availableShiftsList.innerHTML = "";
+  }
 
   scheduleDays.forEach(function (day) {
     activeShifts.forEach(function (shift) {
@@ -1245,32 +1502,31 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
         openHours += shiftHours;
         openShiftsCount += 1;
 
-        const availableShiftItem = document.createElement("li");
+        if (availableShiftsList) {
+          const availableShiftItem = document.createElement("li");
 
-        availableShiftItem.innerHTML = `
-              <strong>
-                ${day.label}
-              </strong>
-              <br>
+          availableShiftItem.innerHTML = `
+                <strong>
+                  ${day.label}
+                </strong>
+                <br>
 
-              ${shift.name}
-              ·
-              ${formatTime(shiftForDay.start)}
-              –
-              ${formatTime(shiftForDay.end)}
-              ·
-              ${formatHours(shiftHours)}
-            `;
+                ${shift.name}
+                ·
+                ${formatTime(shiftForDay.start)}
+                –
+                ${formatTime(shiftForDay.end)}
+                ·
+                ${formatHours(shiftHours)}
+              `;
 
-        availableShiftsList.append(availableShiftItem);
+          availableShiftsList.append(availableShiftItem);
+        }
       } else {
         totalHoursCovered += shiftHours;
 
-        if (!caregiverHours[assignedCaregiver]) {
-          caregiverHours[assignedCaregiver] = 0;
-        }
-
-        caregiverHours[assignedCaregiver] += shiftHours;
+        caregiverHours[assignedCaregiver] =
+          (caregiverHours[assignedCaregiver] || 0) + shiftHours;
       }
     });
   });
@@ -1287,90 +1543,89 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
     toastOpenShiftsCount.textContent = openShiftsCount;
   }
 
-  caregiverHoursList.innerHTML = "";
+  if (caregiverHoursList) {
+    caregiverHoursList.innerHTML = "";
 
-  if (caregivers.length === 0) {
-    const emptyCaregiverItem = document.createElement("li");
+    if (caregivers.length === 0) {
+      const emptyCaregiverItem = document.createElement("li");
 
-    emptyCaregiverItem.textContent = "No caregivers added yet.";
+      emptyCaregiverItem.textContent = "No caregivers added yet.";
 
-    caregiverHoursList.append(emptyCaregiverItem);
-  } else {
-    caregivers.forEach(function (caregiverName) {
-      const caregiverHoursItem = document.createElement("li");
+      caregiverHoursList.append(emptyCaregiverItem);
+    } else {
+      caregivers.forEach(function (caregiverName) {
+        const caregiverHoursItem = document.createElement("li");
 
-      const hoursWorked = caregiverHours[caregiverName] || 0;
+        const hoursWorked = caregiverHours[caregiverName] || 0;
 
-      const maxHours = caregiverMaxHours[caregiverName] || 50;
+        const maxHours = caregiverMaxHours[caregiverName] || 50;
 
-      if (hoursWorked > maxHours) {
-        const hoursOver = hoursWorked - maxHours;
+        if (hoursWorked > maxHours) {
+          const hoursOver = hoursWorked - maxHours;
 
-        caregiverHoursItem.classList.add("hours-over-limit");
+          caregiverHoursItem.classList.add("hours-over-limit");
 
-        caregiverHoursItem.textContent =
-          `${caregiverName}: ` +
-          `${formatHours(hoursWorked)} ` +
-          `⚠ over by ` +
-          `${formatHours(hoursOver)}`;
+          caregiverHoursItem.textContent =
+            `${caregiverName}: ` +
+            `${formatHours(hoursWorked)} ` +
+            `⚠ over by ` +
+            `${formatHours(hoursOver)}`;
 
-        warnings.push({
-          level: "high",
+          warnings.push({
+            level: "high",
 
-          text:
-            `${caregiverName} ` +
-            `is over their max by ` +
-            `${formatHours(hoursOver)}.`,
-        });
-      } else if (hoursWorked >= maxHours - 5) {
-        caregiverHoursItem.classList.add("hours-near-limit");
+            text:
+              `${caregiverName} is over their weekly maximum by ` +
+              `${formatHours(hoursOver)}.`,
+          });
+        } else if (hoursWorked >= maxHours - 5) {
+          caregiverHoursItem.classList.add("hours-near-limit");
 
-        caregiverHoursItem.textContent =
-          `${caregiverName}: ` +
-          `${formatHours(hoursWorked)} · near ` +
-          `${formatHours(maxHours)} limit`;
+          caregiverHoursItem.textContent =
+            `${caregiverName}: ` +
+            `${formatHours(hoursWorked)} · near ` +
+            `${formatHours(maxHours)} limit`;
 
-        warnings.push({
-          level: "medium",
+          warnings.push({
+            level: "medium",
 
-          text:
-            `${caregiverName} ` +
-            `is close to their ` +
-            `${formatHours(maxHours)} limit.`,
-        });
-      } else {
-        caregiverHoursItem.textContent =
-          `${caregiverName}: ` +
-          `${formatHours(hoursWorked)} / ` +
-          `${formatHours(maxHours)}`;
-      }
+            text:
+              `${caregiverName} is close to their ` +
+              `${formatHours(maxHours)} weekly limit.`,
+          });
+        } else {
+          caregiverHoursItem.textContent =
+            `${caregiverName}: ` +
+            `${formatHours(hoursWorked)} / ` +
+            `${formatHours(maxHours)}`;
+        }
 
-      caregiverHoursList.append(caregiverHoursItem);
-    });
+        caregiverHoursList.append(caregiverHoursItem);
+      });
+    }
   }
 
-  if (openShiftsCount === 0) {
+  if (availableShiftsList && openShiftsCount === 0) {
     const noOpenShiftsItem = document.createElement("li");
 
     noOpenShiftsItem.textContent = "No available shifts.";
 
     availableShiftsList.append(noOpenShiftsItem);
-  } else {
-    warnings.unshift({
-      level: "medium",
-
-      text: `${openShiftsCount} ` + `open shifts still need ` + `coverage.`,
-    });
   }
 
-  if (coveragePercentElement && coverageProgressFill) {
-    let coveragePercent = 0;
+  warnings.push(...getCaregiverRuleWarnings(scheduleDays, activeShifts));
 
-    if (totalHoursNeeded > 0) {
-      coveragePercent = Math.round(
-        (totalHoursCovered / totalHoursNeeded) * 100,
-      );
-    }
+  if (warningCountElement) {
+    warningCountElement.textContent = warnings.length;
+  }
+
+  renderScheduleWarningStrip(warnings);
+
+  if (coveragePercentElement && coverageProgressFill) {
+    const coveragePercent =
+      totalHoursNeeded > 0
+        ? Math.round((totalHoursCovered / totalHoursNeeded) * 100)
+        : 0;
 
     coveragePercentElement.textContent = `${coveragePercent}%`;
 
@@ -1388,45 +1643,17 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
           transparent 60%
         ),
         conic-gradient(
-          var(--blue)
-          ${degrees}deg,
-          #edf2fb
-          ${degrees}deg
+          var(--blue) ${degrees}deg,
+          #edf2fb ${degrees}deg
         )
       `;
     }
   }
 
-  if (warningCountElement) {
-    warningCountElement.textContent = warnings.length;
-  }
-
-  if (scheduleWarningsList) {
-    scheduleWarningsList.innerHTML = "";
-
-    if (warnings.length === 0) {
-      const noWarnings = document.createElement("li");
-
-      noWarnings.textContent = "No warnings right now.";
-
-      scheduleWarningsList.append(noWarnings);
-    } else {
-      warnings.slice(0, 6).forEach(function (warning) {
-        const warningItem = document.createElement("li");
-
-        warningItem.classList.add(
-          warning.level === "high" ? "warning-high" : "warning-medium",
-        );
-
-        warningItem.textContent = warning.text;
-
-        scheduleWarningsList.append(warningItem);
-      });
-    }
-  }
-
   startAvailableShiftsAutoScroll();
 }
+
+/* drag ordering */
 
 function attachCaregiverDragListeners() {
   const caregiverCells = document.querySelectorAll(
@@ -1515,6 +1742,8 @@ function attachCaregiverDragListeners() {
   });
 }
 
+/* main render */
+
 function renderSchedule() {
   const activeShifts = getActiveShifts();
 
@@ -1541,34 +1770,27 @@ function renderSchedule() {
 
     renderMonthlySchedule(scheduleDays, activeShifts);
   } else {
-    scheduleTitle.textContent = "Weekly Care Map";
+    scheduleTitle.textContent =
+      scheduleMode === "open" ? "Open Shifts" : "Weekly Care Map";
 
     scheduleDays = getDaysInSelectedWeek();
 
-    const firstDay = scheduleDays[0].label;
-
-    const lastDay = scheduleDays[scheduleDays.length - 1].label;
-
-    weekLabel.textContent = `${firstDay} – ${lastDay}`;
+    weekLabel.textContent =
+      `${scheduleDays[0].label} – ` +
+      `${scheduleDays[scheduleDays.length - 1].label}`;
 
     renderWeeklySchedule(scheduleDays, activeShifts);
   }
 
-  attachAssignmentListeners(scheduleDays, activeShifts);
+  attachAssignmentListeners();
 
   renderCoverageSummary(scheduleDays, activeShifts);
 }
 
 function attachAssignmentListeners() {
-  const assignmentSelects = document.querySelectorAll(".assignment-select");
-
-  assignmentSelects.forEach(function (select) {
+  document.querySelectorAll(".assignment-select").forEach(function (select) {
     select.addEventListener("change", function () {
-      const dayName = select.dataset.day;
-
-      const shiftName = select.dataset.shift;
-
-      const assignmentKey = `${dayName}-${shiftName}`;
+      const assignmentKey = `${select.dataset.day}-${select.dataset.shift}`;
 
       scheduleAssignments[assignmentKey] = select.value;
 
@@ -1578,123 +1800,32 @@ function attachAssignmentListeners() {
   });
 }
 
-function getDefaultCaregiverRules() {
-  return {
-    availableDays: [...allWeekDays],
-    allowedShifts: [],
-    maxConsecutiveDays: 0,
-    needsTwoConsecutiveDaysOff: false,
-    note: "",
-  };
-}
+/* caregivers */
 
-function getCaregiverRules(caregiverName) {
-  if (!caregiverRules[caregiverName]) {
-    caregiverRules[caregiverName] = getDefaultCaregiverRules();
-  }
-
-  return {
-    ...getDefaultCaregiverRules(),
-    ...caregiverRules[caregiverName],
-  };
-}
-
-function renderCaregiverRuleChoices(caregiverName) {
+function getCaregiverRulesSummary(caregiverName) {
   const rules = getCaregiverRules(caregiverName);
 
-  caregiverRuleDays.innerHTML = allWeekDays
-    .map(function (dayName) {
-      const isChecked = rules.availableDays.includes(dayName);
+  const summaryParts = [];
 
-      return `
-        <label class="rule-choice">
-          <input
-            class="caregiver-rule-day-checkbox"
-            type="checkbox"
-            value="${dayName}"
-            ${isChecked ? "checked" : ""}
-          />
-
-          <span>${dayName}</span>
-        </label>
-      `;
-    })
-    .join("");
-
-  const activeShifts = getActiveShifts();
-
-  caregiverRuleShifts.innerHTML = activeShifts
-    .map(function (shift) {
-      const isChecked = rules.allowedShifts.includes(shift.name);
-
-      return `
-        <label class="rule-choice">
-          <input
-            class="caregiver-rule-shift-checkbox"
-            type="checkbox"
-            value="${shift.name}"
-            ${isChecked ? "checked" : ""}
-          />
-
-          <span>${shift.name}</span>
-        </label>
-      `;
-    })
-    .join("");
-}
-
-function openCaregiverRulesModal(caregiverName) {
-  activeCaregiverRulesName = caregiverName;
-
-  const rules = getCaregiverRules(caregiverName);
-
-  caregiverRulesTitle.textContent = `${caregiverName} Rules`;
-
-  caregiverMaxConsecutiveDaysInput.value = rules.maxConsecutiveDays || 0;
-
-  caregiverNeedsTwoDaysOffInput.checked = rules.needsTwoConsecutiveDaysOff;
-
-  caregiverRuleNoteInput.value = rules.note || "";
-
-  renderCaregiverRuleChoices(caregiverName);
-
-  caregiverRulesModal.classList.remove("hidden");
-}
-
-function closeCaregiverRulesModal() {
-  caregiverRulesModal.classList.add("hidden");
-  activeCaregiverRulesName = "";
-}
-
-function saveActiveCaregiverRules() {
-  if (!activeCaregiverRulesName) {
-    return;
+  if (rules.availableDays.length < allWeekDays.length) {
+    summaryParts.push(`${rules.availableDays.length} available days`);
   }
 
-  const selectedDays = Array.from(
-    document.querySelectorAll(".caregiver-rule-day-checkbox:checked"),
-  ).map(function (checkbox) {
-    return checkbox.value;
-  });
+  if (rules.allowedShifts.length > 0) {
+    summaryParts.push(rules.allowedShifts.join(", "));
+  }
 
-  const selectedShifts = Array.from(
-    document.querySelectorAll(".caregiver-rule-shift-checkbox:checked"),
-  ).map(function (checkbox) {
-    return checkbox.value;
-  });
+  if (rules.maxConsecutiveDays > 0) {
+    summaryParts.push(`max ${rules.maxConsecutiveDays} days in a row`);
+  }
 
-  caregiverRules[activeCaregiverRulesName] = {
-    availableDays: selectedDays,
-    allowedShifts: selectedShifts,
-    maxConsecutiveDays: Number(caregiverMaxConsecutiveDaysInput.value) || 0,
-    needsTwoConsecutiveDaysOff: caregiverNeedsTwoDaysOffInput.checked,
-    note: caregiverRuleNoteInput.value.trim(),
-  };
+  if (rules.needsTwoConsecutiveDaysOff) {
+    summaryParts.push("needs 2 days off");
+  }
 
-  saveData();
-  closeCaregiverRulesModal();
-  renderCaregiverList();
-  renderSchedule();
+  return summaryParts.length > 0
+    ? summaryParts.join(" · ")
+    : "No special rules";
 }
 
 function renderCaregiverList() {
@@ -1706,52 +1837,47 @@ function renderCaregiverList() {
     caregiverItem.classList.add("caregiver-list-item");
 
     caregiverItem.innerHTML = `
-        <span>
-          ${caregiverName}
-          —
-          Max
-          ${caregiverMaxHours[caregiverName] || 50}
-          hrs
-        </span>
+        <div class="caregiver-list-copy">
+          <strong>
+            ${caregiverName}
+          </strong>
 
-        <div
-          class="
-            caregiver-list-buttons
-          "
-        >
+          <span>
+            Max
+            ${caregiverMaxHours[caregiverName] || 50}
+            hrs ·
+            ${getCaregiverRulesSummary(caregiverName)}
+          </span>
+        </div>
+
+        <div class="caregiver-list-buttons">
           <button
-            class="
-              edit-caregiver-button
-            "
+            class="edit-caregiver-button"
             type="button"
           >
             Edit Name
           </button>
 
           <button
-  class="
-    edit-max-hours-button
-  "
-  type="button"
->
-  Edit Max
-</button>
+            class="edit-max-hours-button"
+            type="button"
+          >
+            Edit Max
+          </button>
 
-<button
-  class="edit-rules-button"
-  type="button"
->
-  Edit Rules
-</button>
+          <button
+            class="edit-rules-button"
+            type="button"
+          >
+            Edit Rules
+          </button>
 
-<button
-  class="
-    remove-caregiver-button
-  "
-  type="button"
->
-  Remove
-</button>
+          <button
+            class="remove-caregiver-button"
+            type="button"
+          >
+            Remove
+          </button>
         </div>
       `;
 
@@ -1799,7 +1925,12 @@ function renderCaregiverList() {
 
       caregiverMaxHours[trimmedName] = caregiverMaxHours[caregiverName] || 50;
 
+      caregiverRules[trimmedName] =
+        caregiverRules[caregiverName] || getDefaultCaregiverRules();
+
       delete caregiverMaxHours[caregiverName];
+
+      delete caregiverRules[caregiverName];
 
       Object.keys(scheduleAssignments).forEach(function (assignmentKey) {
         if (scheduleAssignments[assignmentKey] === caregiverName) {
@@ -1839,10 +1970,20 @@ function renderCaregiverList() {
       renderSchedule();
     });
 
+    editRulesButton.addEventListener("click", function () {
+      openCaregiverRulesModal(caregiverName);
+    });
+
     removeButton.addEventListener("click", function () {
+      if (!confirm(`Remove ${caregiverName}?`)) {
+        return;
+      }
+
       caregivers.splice(index, 1);
 
       delete caregiverMaxHours[caregiverName];
+
+      delete caregiverRules[caregiverName];
 
       Object.keys(scheduleAssignments).forEach(function (assignmentKey) {
         if (scheduleAssignments[assignmentKey] === caregiverName) {
@@ -1879,12 +2020,16 @@ function addCaregiver() {
 
   caregiverMaxHours[newCaregiverName] = 50;
 
+  caregiverRules[newCaregiverName] = getDefaultCaregiverRules();
+
   caregiverInput.value = "";
 
   saveData();
   renderCaregiverList();
   renderSchedule();
 }
+
+/* shift settings */
 
 function renderShiftList() {
   shiftList.innerHTML = "";
@@ -1899,9 +2044,7 @@ function renderShiftList() {
           ${shiftName}
         </span>
 
-        <div
-          class="shift-list-buttons"
-        >
+        <div class="shift-list-buttons">
           <button
             class="move-up-button"
             type="button"
@@ -1936,11 +2079,10 @@ function renderShiftList() {
         return;
       }
 
-      const currentShift = customShifts[index];
-
-      customShifts[index] = customShifts[index - 1];
-
-      customShifts[index - 1] = currentShift;
+      [customShifts[index - 1], customShifts[index]] = [
+        customShifts[index],
+        customShifts[index - 1],
+      ];
 
       saveData();
       renderShiftList();
@@ -1953,20 +2095,15 @@ function renderShiftList() {
         return;
       }
 
-      const currentShift = customShifts[index];
-
-      customShifts[index] = customShifts[index + 1];
-
-      customShifts[index + 1] = currentShift;
+      [customShifts[index], customShifts[index + 1]] = [
+        customShifts[index + 1],
+        customShifts[index],
+      ];
 
       saveData();
       renderShiftList();
       renderShiftTimeList();
       renderSchedule();
-    });
-
-    editRulesButton.addEventListener("click", function () {
-      openCaregiverRulesModal(caregiverName);
     });
 
     removeButton.addEventListener("click", function () {
@@ -1988,9 +2125,22 @@ function renderShiftList() {
         }
       });
 
+      Object.keys(caregiverRules).forEach(function (caregiverName) {
+        const rules = getCaregiverRules(caregiverName);
+
+        caregiverRules[caregiverName] = {
+          ...rules,
+
+          allowedShifts: rules.allowedShifts.filter(function (allowedShift) {
+            return allowedShift !== removedShiftName;
+          }),
+        };
+      });
+
       saveData();
       renderShiftList();
       renderShiftTimeList();
+      renderCaregiverList();
       renderSchedule();
     });
 
@@ -1999,23 +2149,18 @@ function renderShiftList() {
 }
 
 function updateCustomShiftVisibility() {
-  if (shiftStyleSelect.value === "custom") {
-    customShiftSection.classList.remove("hidden");
-  } else {
-    customShiftSection.classList.add("hidden");
-  }
+  customShiftSection.classList.toggle(
+    "hidden",
+    shiftStyleSelect.value !== "custom",
+  );
 }
 
 function updatePickerVisibility() {
-  if (scheduleViewSelect.value === "monthly") {
-    monthPickerSection.classList.remove("hidden");
+  const isMonthly = scheduleViewSelect.value === "monthly";
 
-    weekPickerSection.classList.add("hidden");
-  } else {
-    monthPickerSection.classList.add("hidden");
+  monthPickerSection.classList.toggle("hidden", !isMonthly);
 
-    weekPickerSection.classList.remove("hidden");
-  }
+  weekPickerSection.classList.toggle("hidden", isMonthly);
 }
 
 function renderShiftTimeList() {
@@ -2028,31 +2173,23 @@ function renderShiftTimeList() {
 
     shiftTimeRow.classList.add("clean-shift-time-row");
 
-    const shiftHours = getShiftHours(shift);
-
     shiftTimeRow.innerHTML = `
         <div>
           <strong>
             ${shift.name}
           </strong>
 
-          <span
-            class="
-              clean-shift-time-text
-            "
-          >
+          <span class="clean-shift-time-text">
             ${formatTime(shift.start)}
             –
             ${formatTime(shift.end)}
             ·
-            ${formatHours(shiftHours)}
+            ${formatHours(getShiftHours(shift))}
           </span>
         </div>
 
         <button
-          class="
-            edit-default-time-button
-          "
+          class="edit-default-time-button"
           type="button"
           data-shift="${shift.name}"
         >
@@ -2063,26 +2200,22 @@ function renderShiftTimeList() {
     shiftTimeList.append(shiftTimeRow);
   });
 
-  const editDefaultTimeButtons = document.querySelectorAll(
-    ".edit-default-time-button",
-  );
+  document
+    .querySelectorAll(".edit-default-time-button")
+    .forEach(function (button) {
+      button.addEventListener("click", function () {
+        const shift = activeShifts.find(function (activeShift) {
+          return activeShift.name === button.dataset.shift;
+        });
 
-  editDefaultTimeButtons.forEach(function (button) {
-    button.addEventListener("click", function () {
-      const shiftName = button.dataset.shift;
-
-      const shift = activeShifts.find(function (activeShift) {
-        return activeShift.name === shiftName;
+        if (shift) {
+          editDefaultShiftTime(shift);
+        }
       });
-
-      if (!shift) {
-        return;
-      }
-
-      editDefaultShiftTime(shift);
     });
-  });
 }
+
+/* time modal */
 
 function fillPrettyTimeSelects() {
   const hourSelects = [editStartHourSelect, editEndHourSelect];
@@ -2092,7 +2225,7 @@ function fillPrettyTimeSelects() {
   hourSelects.forEach(function (select) {
     select.innerHTML = "";
 
-    for (let hour = 1; hour <= 12; hour++) {
+    for (let hour = 1; hour <= 12; hour += 1) {
       const option = document.createElement("option");
 
       option.value = String(hour).padStart(2, "0");
@@ -2106,7 +2239,7 @@ function fillPrettyTimeSelects() {
   minuteSelects.forEach(function (select) {
     select.innerHTML = "";
 
-    for (let minute = 0; minute < 60; minute++) {
+    for (let minute = 0; minute < 60; minute += 1) {
       const option = document.createElement("option");
 
       option.value = String(minute).padStart(2, "0");
@@ -2125,7 +2258,7 @@ function convert24HourToPrettyTime(timeValue) {
 
   const period = hour >= 12 ? "PM" : "AM";
 
-  hour = hour % 12;
+  hour %= 12;
 
   if (hour === 0) {
     hour = 12;
@@ -2199,9 +2332,8 @@ function editDefaultShiftTime(shift) {
   editTimeTitle.textContent = `Edit ${shift.name}`;
 
   editTimeSubtitle.textContent =
-    `This changes ${shift.name} ` +
-    `everywhere unless a date ` +
-    `has a custom time.`;
+    `This changes ${shift.name} everywhere unless ` +
+    `a date has a custom time.`;
 
   setPrettyStartTime(shift.start);
 
@@ -2241,22 +2373,18 @@ function saveEditedShiftTime() {
 
   const shiftName = activeTimeEdit.shift.name;
 
-  if (!shiftTimes[shiftName]) {
-    shiftTimes[shiftName] = {
-      start: newStart,
-      end: newEnd,
-    };
-  }
-
-  shiftTimes[shiftName].start = newStart;
-
-  shiftTimes[shiftName].end = newEnd;
+  shiftTimes[shiftName] = {
+    start: newStart,
+    end: newEnd,
+  };
 
   saveData();
   closeEditTimeModal();
   renderShiftTimeList();
   renderSchedule();
 }
+
+/* copy, paste and clear */
 
 function copySelectedWeek() {
   if (scheduleViewSelect.value !== "weekly") {
@@ -2275,12 +2403,12 @@ function copySelectedWeek() {
     activeShifts.forEach(function (shift) {
       const assignmentKey = `${day.key}-${shift.name}`;
 
-      const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
-
       copiedWeekAssignments.push({
         dayIndex,
+
         shiftName: shift.name,
-        caregiver: assignedCaregiver,
+
+        caregiver: scheduleAssignments[assignmentKey] || "Open",
       });
     });
   });
@@ -2297,6 +2425,7 @@ function pasteCopiedWeek() {
 
   if (!copiedWeekAssignments) {
     alert("Copy a week first.");
+
     return;
   }
 
@@ -2309,9 +2438,8 @@ function pasteCopiedWeek() {
       return;
     }
 
-    const assignmentKey = `${targetDay.key}-` + `${copiedShift.shiftName}`;
-
-    scheduleAssignments[assignmentKey] = copiedShift.caregiver;
+    scheduleAssignments[`${targetDay.key}-${copiedShift.shiftName}`] =
+      copiedShift.caregiver;
   });
 
   saveData();
@@ -2337,9 +2465,7 @@ function clearSelectedWeek() {
 
   weekDays.forEach(function (day) {
     activeShifts.forEach(function (shift) {
-      const assignmentKey = `${day.key}-${shift.name}`;
-
-      delete scheduleAssignments[assignmentKey];
+      delete scheduleAssignments[`${day.key}-${shift.name}`];
     });
   });
 
@@ -2366,9 +2492,7 @@ function clearSelectedMonth() {
 
   monthDays.forEach(function (day) {
     activeShifts.forEach(function (shift) {
-      const assignmentKey = `${day.key}-${shift.name}`;
-
-      delete scheduleAssignments[assignmentKey];
+      delete scheduleAssignments[`${day.key}-${shift.name}`];
     });
   });
 
@@ -2377,6 +2501,8 @@ function clearSelectedMonth() {
 
   alert("This month has been cleared.");
 }
+
+/* open-shift card */
 
 function updateAvailableShiftsMinimizedState() {
   if (!availableShiftsToast || !minimizeAvailableShiftsButton) {
@@ -2416,6 +2542,8 @@ function startAvailableShiftsAutoScroll() {
   }, 90);
 }
 
+/* navigation */
+
 function setAppView(viewName) {
   const dashboardPanels = [
     caregiverPanel,
@@ -2439,60 +2567,64 @@ function setAppView(viewName) {
   dashboardGrid.classList.remove("single-panel-view");
 
   if (viewName === "schedule") {
+    scheduleMode = "all";
+
     heroSection.classList.remove("app-view-hidden");
     statsStrip.classList.remove("app-view-hidden");
     scheduleArea.classList.remove("app-view-hidden");
+
+    renderSchedule();
   }
 
   if (viewName === "open-shifts") {
-    dashboardGrid.classList.remove("app-view-hidden");
-    openShiftsPanel.classList.remove("app-view-hidden");
+    scheduleMode = "open";
+
+    scheduleViewSelect.value = "weekly";
+    updatePickerVisibility();
+
+    heroSection.classList.remove("app-view-hidden");
+    statsStrip.classList.remove("app-view-hidden");
+    scheduleArea.classList.remove("app-view-hidden");
+
+    renderSchedule();
   }
 
   if (viewName === "caregivers") {
     dashboardGrid.classList.remove("app-view-hidden");
-    caregiverPanel.classList.remove("app-view-hidden");
-    hoursPanel.classList.remove("app-view-hidden");
+
+    if (caregiverPanel) {
+      caregiverPanel.classList.remove("app-view-hidden");
+    }
+
+    if (hoursPanel) {
+      hoursPanel.classList.remove("app-view-hidden");
+    }
   }
 
   if (viewName === "reports") {
     dashboardGrid.classList.remove("app-view-hidden");
     dashboardGrid.classList.add("single-panel-view");
-    reportsPanel.classList.remove("app-view-hidden");
+
+    if (reportsPanel) {
+      reportsPanel.classList.remove("app-view-hidden");
+    }
   }
 
   if (viewName === "settings") {
     dashboardGrid.classList.remove("app-view-hidden");
     dashboardGrid.classList.add("single-panel-view");
-    settingsPanel.classList.remove("app-view-hidden");
+
+    if (settingsPanel) {
+      settingsPanel.classList.remove("app-view-hidden");
+    }
   }
 
-  closeCaregiverRulesButton.addEventListener("click", function () {
-    closeCaregiverRulesModal();
-  });
-
-  cancelCaregiverRulesButton.addEventListener("click", function () {
-    closeCaregiverRulesModal();
-  });
-
-  saveCaregiverRulesButton.addEventListener("click", function () {
-    saveActiveCaregiverRules();
-  });
-
-  caregiverRulesModal.addEventListener("click", function (event) {
-    if (event.target === caregiverRulesModal) {
-      closeCaregiverRulesModal();
-    }
-  });
-
-  document.addEventListener("keydown", function (event) {
-    if (
-      event.key === "Escape" &&
-      !caregiverRulesModal.classList.contains("hidden")
-    ) {
-      closeCaregiverRulesModal();
-    }
-  });
+  if (availableShiftsToast) {
+    availableShiftsToast.classList.toggle(
+      "app-view-hidden",
+      viewName === "open-shifts",
+    );
+  }
 
   sideNavLinks.forEach(function (link) {
     link.classList.toggle("active", link.dataset.view === viewName);
@@ -2505,6 +2637,8 @@ function setAppView(viewName) {
     });
   }
 }
+
+/* event listeners */
 
 addShiftButton.addEventListener("click", function () {
   const newShiftName = customShiftInput.value.trim();
@@ -2519,6 +2653,7 @@ addShiftButton.addEventListener("click", function () {
 
   if (isDuplicate) {
     customShiftInput.value = "";
+
     return;
   }
 
@@ -2540,17 +2675,17 @@ addShiftButton.addEventListener("click", function () {
 customShiftInput.addEventListener("keydown", function (event) {
   if (event.key === "Enter") {
     event.preventDefault();
+
     addShiftButton.click();
   }
 });
 
-addCaregiverButton.addEventListener("click", function () {
-  addCaregiver();
-});
+addCaregiverButton.addEventListener("click", addCaregiver);
 
 caregiverInput.addEventListener("keydown", function (event) {
   if (event.key === "Enter") {
     event.preventDefault();
+
     addCaregiver();
   }
 });
@@ -2580,6 +2715,7 @@ weekStartSelect.addEventListener("change", function () {
 shiftStyleSelect.addEventListener("change", function () {
   updateCustomShiftVisibility();
   renderShiftTimeList();
+  renderCaregiverList();
   saveData();
   renderSchedule();
 });
@@ -2616,9 +2752,7 @@ clearScheduleButton.addEventListener("click", function () {
   }
 });
 
-exportDataButton.addEventListener("click", function () {
-  exportCuravelaData();
-});
+exportDataButton.addEventListener("click", exportCuravelaData);
 
 importDataButton.addEventListener("click", function () {
   importDataInput.click();
@@ -2640,21 +2774,13 @@ printScheduleButton.addEventListener("click", function () {
   window.print();
 });
 
-copyWeekButton.addEventListener("click", function () {
-  copySelectedWeek();
-});
+copyWeekButton.addEventListener("click", copySelectedWeek);
 
-pasteWeekButton.addEventListener("click", function () {
-  pasteCopiedWeek();
-});
+pasteWeekButton.addEventListener("click", pasteCopiedWeek);
 
-clearWeekButton.addEventListener("click", function () {
-  clearSelectedWeek();
-});
+clearWeekButton.addEventListener("click", clearSelectedWeek);
 
-clearMonthButton.addEventListener("click", function () {
-  clearSelectedMonth();
-});
+clearMonthButton.addEventListener("click", clearSelectedMonth);
 
 previousMonthButton.addEventListener("click", function () {
   changeSelectedMonthByMonths(-1);
@@ -2706,6 +2832,8 @@ if (moreActionsButton && moreActionsMenu) {
 
 if (quickAddShiftButton) {
   quickAddShiftButton.addEventListener("click", function () {
+    setAppView("settings");
+
     shiftStyleSelect.value = "custom";
 
     updateCustomShiftVisibility();
@@ -2713,28 +2841,17 @@ if (quickAddShiftButton) {
     saveData();
     renderSchedule();
 
-    document.querySelector("#settings-panel").scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-
     setTimeout(function () {
       customShiftInput.focus();
-    }, 500);
+    }, 250);
   });
 }
 
-closeEditTimeButton.addEventListener("click", function () {
-  closeEditTimeModal();
-});
+closeEditTimeButton.addEventListener("click", closeEditTimeModal);
 
-cancelEditTimeButton.addEventListener("click", function () {
-  closeEditTimeModal();
-});
+cancelEditTimeButton.addEventListener("click", closeEditTimeModal);
 
-saveEditTimeButton.addEventListener("click", function () {
-  saveEditedShiftTime();
-});
+saveEditTimeButton.addEventListener("click", saveEditedShiftTime);
 
 editTimeModal.addEventListener("click", function (event) {
   if (event.target === editTimeModal) {
@@ -2742,9 +2859,42 @@ editTimeModal.addEventListener("click", function (event) {
   }
 });
 
+if (
+  closeCaregiverRulesButton &&
+  cancelCaregiverRulesButton &&
+  saveCaregiverRulesButton &&
+  caregiverRulesModal
+) {
+  closeCaregiverRulesButton.addEventListener("click", closeCaregiverRulesModal);
+
+  cancelCaregiverRulesButton.addEventListener(
+    "click",
+    closeCaregiverRulesModal,
+  );
+
+  saveCaregiverRulesButton.addEventListener("click", saveActiveCaregiverRules);
+
+  caregiverRulesModal.addEventListener("click", function (event) {
+    if (event.target === caregiverRulesModal) {
+      closeCaregiverRulesModal();
+    }
+  });
+}
+
 document.addEventListener("keydown", function (event) {
-  if (event.key === "Escape" && !editTimeModal.classList.contains("hidden")) {
+  if (event.key !== "Escape") {
+    return;
+  }
+
+  if (!editTimeModal.classList.contains("hidden")) {
     closeEditTimeModal();
+  }
+
+  if (
+    caregiverRulesModal &&
+    !caregiverRulesModal.classList.contains("hidden")
+  ) {
+    closeCaregiverRulesModal();
   }
 });
 
@@ -2752,11 +2902,11 @@ sideNavLinks.forEach(function (link) {
   link.addEventListener("click", function (event) {
     event.preventDefault();
 
-    const selectedView = link.dataset.view;
-
-    setAppView(selectedView);
+    setAppView(link.dataset.view);
   });
 });
+
+/* initialize */
 
 fillPrettyTimeSelects();
 loadData();
