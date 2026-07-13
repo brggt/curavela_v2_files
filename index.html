@@ -32,8 +32,8 @@
           </a>
 
           <a class="side-nav-link" href="#" data-view="open-shifts">
-            <span>□</span>
-            Open Shifts
+            <span>✦</span>
+            Coverage
           </a>
 
           <a class="side-nav-link" href="#" data-view="caregivers">
@@ -94,9 +94,45 @@
               >
                 ‹
               </button>
-              <button id="selected-week-display-button" type="button">
-                <span id="selected-week-display">Selected week</span>
-              </button>
+
+              <div class="date-picker-wrapper">
+                <button
+                  id="selected-week-display-button"
+                  class="selected-date-button"
+                  type="button"
+                  aria-expanded="false"
+                >
+                  <span id="selected-week-display">Selected week</span>
+                  <span class="date-picker-chevron">⌄</span>
+                </button>
+
+                <div id="week-date-popover" class="date-popover hidden">
+                  <div class="date-popover-heading">
+                    <div>
+                      <strong>Jump to a date</strong>
+                      <span>The schedule will open that week.</span>
+                    </div>
+                  </div>
+
+                  <label class="date-popover-field">
+                    Select date
+                    <input
+                      id="week-start-date"
+                      class="themed-date-input"
+                      type="date"
+                    />
+                  </label>
+
+                  <div class="date-quick-actions">
+                    <button id="week-picker-today" type="button">Today</button>
+
+                    <button id="week-picker-next" type="button">
+                      Next week
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <button
                 id="next-week-button"
                 type="button"
@@ -104,8 +140,8 @@
               >
                 ›
               </button>
+
               <button id="today-week-button" type="button">Today</button>
-              <input id="week-start-date" class="hidden" type="date" />
             </div>
 
             <div id="month-picker-section" class="date-control hidden">
@@ -116,9 +152,47 @@
               >
                 ‹
               </button>
-              <button id="selected-month-display-button" type="button">
-                <span id="selected-month-display">Selected month</span>
-              </button>
+
+              <div class="date-picker-wrapper">
+                <button
+                  id="selected-month-display-button"
+                  class="selected-date-button"
+                  type="button"
+                  aria-expanded="false"
+                >
+                  <span id="selected-month-display">Selected month</span>
+                  <span class="date-picker-chevron">⌄</span>
+                </button>
+
+                <div id="month-date-popover" class="date-popover hidden">
+                  <div class="date-popover-heading">
+                    <div>
+                      <strong>Jump to a month</strong>
+                      <span>Select the month you want to view.</span>
+                    </div>
+                  </div>
+
+                  <label class="date-popover-field">
+                    Select month
+                    <input
+                      id="month-picker"
+                      class="themed-date-input"
+                      type="month"
+                    />
+                  </label>
+
+                  <div class="date-quick-actions">
+                    <button id="month-picker-current" type="button">
+                      This month
+                    </button>
+
+                    <button id="month-picker-next" type="button">
+                      Next month
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <button
                 id="next-month-button"
                 type="button"
@@ -126,10 +200,10 @@
               >
                 ›
               </button>
+
               <button id="current-month-button" type="button">
                 This Month
               </button>
-              <input id="month-picker" class="hidden" type="month" />
             </div>
 
             <button
@@ -296,6 +370,113 @@
             <span><i class="dot open"></i> Open shift</span>
             <span><i class="dot warning"></i> Warning</span>
             <span><i class="dash"></i> Unavailable / empty</span>
+          </div>
+        </section>
+
+        <section
+          id="coverage-area"
+          class="coverage-assistant-card app-view-hidden"
+        >
+          <div class="coverage-assistant-header">
+            <div>
+              <p class="eyebrow">Smart coverage</p>
+              <h2>Coverage Assistant</h2>
+              <p>
+                Find the safest caregiver match for every open shift based on
+                availability, rules, and current hours.
+              </p>
+            </div>
+
+            <div class="coverage-week-picker">
+              <button
+                id="coverage-previous-week-button"
+                type="button"
+                aria-label="Previous week"
+              >
+                ‹
+              </button>
+
+              <div>
+                <strong id="coverage-week-label"> Selected week </strong>
+
+                <span>Coverage recommendations</span>
+              </div>
+
+              <button
+                id="coverage-next-week-button"
+                type="button"
+                aria-label="Next week"
+              >
+                ›
+              </button>
+
+              <button
+                id="coverage-today-button"
+                class="ghost-button"
+                type="button"
+              >
+                Today
+              </button>
+            </div>
+          </div>
+
+          <div class="coverage-summary-grid">
+            <article class="coverage-summary-card">
+              <span>Open shifts</span>
+              <strong id="coverage-open-count">0</strong>
+            </article>
+
+            <article class="coverage-summary-card">
+              <span>Hours needing coverage</span>
+              <strong id="coverage-open-hours">0 hrs</strong>
+            </article>
+
+            <article class="coverage-summary-card">
+              <span>Safe matches</span>
+              <strong id="coverage-safe-count">0</strong>
+            </article>
+
+            <article class="coverage-summary-card attention">
+              <span>No safe match</span>
+              <strong id="coverage-no-match-count">0</strong>
+            </article>
+          </div>
+
+          <div class="coverage-toolbar">
+            <div>
+              <strong>Open shift recommendations</strong>
+              <span> Assign the best match or choose another caregiver. </span>
+            </div>
+
+            <label class="coverage-filter-toggle">
+              <input id="coverage-only-no-match" type="checkbox" />
+
+              <span>Show only shifts with no safe match</span>
+            </label>
+          </div>
+
+          <div class="coverage-workspace">
+            <aside class="coverage-open-list-panel">
+              <div class="coverage-list-heading">
+                <div>
+                  <strong>Open shifts</strong>
+                  <span>Select one to compare caregivers.</span>
+                </div>
+
+                <span id="coverage-list-count">0</span>
+              </div>
+
+              <div id="coverage-shifts-list" class="coverage-shifts-list"></div>
+            </aside>
+
+            <section
+              id="coverage-comparison-panel"
+              class="coverage-comparison-panel"
+            >
+              <div class="coverage-comparison-empty">
+                Select an open shift to compare caregivers.
+              </div>
+            </section>
           </div>
         </section>
 

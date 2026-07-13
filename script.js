@@ -17,6 +17,7 @@ let copiedWeekAssignments = null;
 let draggedCaregiverName = null;
 let caregiverRules = {};
 let activeCaregiverRulesName = "";
+let selectedCoverageShiftKey = "";
 let scheduleMode = "all";
 
 let caregiverMaxHours = {
@@ -69,6 +70,16 @@ const nextWeekButton = document.querySelector("#next-week-button");
 const todayWeekButton = document.querySelector("#today-week-button");
 const selectedWeekDisplay = document.querySelector("#selected-week-display");
 
+const selectedWeekDisplayButton = document.querySelector(
+  "#selected-week-display-button",
+);
+
+const weekDatePopover = document.querySelector("#week-date-popover");
+
+const weekPickerTodayButton = document.querySelector("#week-picker-today");
+
+const weekPickerNextButton = document.querySelector("#week-picker-next");
+
 const scheduleNoteInput = document.querySelector("#schedule-note");
 const clearScheduleButton = document.querySelector("#clear-schedule-button");
 
@@ -80,6 +91,39 @@ const mainContent = document.querySelector(".main-content");
 const heroSection = document.querySelector(".hero");
 const statsStrip = document.querySelector(".stats-strip");
 const scheduleArea = document.querySelector("#schedule-area");
+
+const coverageArea = document.querySelector("#coverage-area");
+
+const coverageWeekLabel = document.querySelector("#coverage-week-label");
+
+const coveragePreviousWeekButton = document.querySelector(
+  "#coverage-previous-week-button",
+);
+
+const coverageNextWeekButton = document.querySelector(
+  "#coverage-next-week-button",
+);
+
+const coverageTodayButton = document.querySelector("#coverage-today-button");
+
+const coverageOpenCount = document.querySelector("#coverage-open-count");
+
+const coverageOpenHours = document.querySelector("#coverage-open-hours");
+
+const coverageSafeCount = document.querySelector("#coverage-safe-count");
+
+const coverageNoMatchCount = document.querySelector("#coverage-no-match-count");
+
+const coverageOnlyNoMatch = document.querySelector("#coverage-only-no-match");
+
+const coverageShiftsList = document.querySelector("#coverage-shifts-list");
+
+const coverageComparisonPanel = document.querySelector(
+  "#coverage-comparison-panel",
+);
+
+const coverageListCount = document.querySelector("#coverage-list-count");
+
 const dashboardGrid = document.querySelector(".dashboard-grid");
 
 const caregiverPanel = document.querySelector("#caregiver-panel");
@@ -104,6 +148,18 @@ const previousMonthButton = document.querySelector("#previous-month-button");
 const nextMonthButton = document.querySelector("#next-month-button");
 const currentMonthButton = document.querySelector("#current-month-button");
 const selectedMonthDisplay = document.querySelector("#selected-month-display");
+
+const selectedMonthDisplayButton = document.querySelector(
+  "#selected-month-display-button",
+);
+
+const monthDatePopover = document.querySelector("#month-date-popover");
+
+const monthPickerCurrentButton = document.querySelector(
+  "#month-picker-current",
+);
+
+const monthPickerNextButton = document.querySelector("#month-picker-next");
 
 const totalHoursNeededElement = document.querySelector("#total-hours-needed");
 const totalHoursCoveredElement = document.querySelector("#total-hours-covered");
@@ -1094,7 +1150,647 @@ function renderScheduleWarningStrip(warnings) {
   });
 }
 
+/* coverage assistant */
+
+function getCoverageOpenShifts(scheduleDays, activeShifts) {
+  const openShifts = [];
+
+  scheduleDays.forEach(function (day) {
+    activeShifts.forEach(function (shift) {
+      const assignmentKey = `${day.key}-${shift.name}`;
+
+      const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
+
+      if (assignedCaregiver !== "Open") {
+        return;
+      }
+
+      const shiftForDay = getShiftForDay(day.key, shift);
+
+      openShifts.push({
+        day,
+        shift,
+        shiftForDay,
+        hours: getShiftHours(shiftForDay),
+      });
+    });
+  });
+
+  return openShifts;
+}
+
+function evaluateCoverageCandidate(
+  caregiverName,
+  day,
+  shift,
+  scheduleDays,
+  activeShifts,
+  caregiverHours,
+) {
+  const rules = getCaregiverRules(caregiverName);
+
+  const dayName = day.date.toLocaleDateString("en-US", {
+    weekday: "long",
+  });
+
+  const shiftForDay = getShiftForDay(day.key, shift);
+
+  const shiftHours = getShiftHours(shiftForDay);
+
+  const currentHours = caregiverHours[caregiverName] || 0;
+
+  const maxHours = caregiverMaxHours[caregiverName] || 50;
+
+  const projectedHours = currentHours + shiftHours;
+
+  const conflicts = [];
+  const checks = [];
+
+  if (rules.availableDays.includes(dayName)) {
+    checks.push(`Available ${dayName}`);
+  } else {
+    conflicts.push(`Unavailable ${dayName}`);
+  }
+
+  if (
+    rules.allowedShifts.length === 0 ||
+    rules.allowedShifts.includes(shift.name)
+  ) {
+    checks.push(`${shift.name} shift allowed`);
+  } else {
+    conflicts.push(`${shift.name} shift not allowed`);
+  }
+
+  if (projectedHours <= maxHours) {
+    checks.push(`${formatHours(projectedHours)} of ${formatHours(maxHours)}`);
+  } else {
+    conflicts.push(
+      `Would exceed max hours by ${formatHours(projectedHours - maxHours)}`,
+    );
+  }
+
+  const scheduledDays = getCaregiverScheduledDays(
+    caregiverName,
+    scheduleDays,
+    activeShifts,
+  );
+
+  const selectedDayIndex = scheduleDays.findIndex(function (scheduleDay) {
+    return scheduleDay.key === day.key;
+  });
+
+  if (selectedDayIndex !== -1) {
+    scheduledDays[selectedDayIndex] = true;
+  }
+
+  const maxConsecutiveDays = Number(rules.maxConsecutiveDays) || 0;
+
+  if (maxConsecutiveDays > 0) {
+    const longestRun = getLongestConsecutiveRun(scheduledDays);
+
+    if (longestRun > maxConsecutiveDays) {
+      conflicts.push(`Would create ${longestRun} consecutive days`);
+    } else {
+      checks.push("Consecutive-day rule stays safe");
+    }
+  }
+
+  if (rules.needsTwoConsecutiveDaysOff) {
+    if (hasTwoConsecutiveDaysOff(scheduledDays)) {
+      checks.push("Keeps two consecutive days off");
+    } else {
+      conflicts.push("Would remove two consecutive days off");
+    }
+  }
+
+  return {
+    caregiverName,
+    currentHours,
+    projectedHours,
+    maxHours,
+    conflicts,
+    checks,
+    safe: conflicts.length === 0,
+  };
+}
+
+function getCoverageCandidates(
+  openShift,
+  scheduleDays,
+  activeShifts,
+  caregiverHours,
+) {
+  const candidates = caregivers.map(function (caregiverName) {
+    return evaluateCoverageCandidate(
+      caregiverName,
+      openShift.day,
+      openShift.shift,
+      scheduleDays,
+      activeShifts,
+      caregiverHours,
+    );
+  });
+
+  candidates.sort(function (firstCandidate, secondCandidate) {
+    if (firstCandidate.safe !== secondCandidate.safe) {
+      return firstCandidate.safe ? -1 : 1;
+    }
+
+    if (firstCandidate.conflicts.length !== secondCandidate.conflicts.length) {
+      return firstCandidate.conflicts.length - secondCandidate.conflicts.length;
+    }
+
+    return firstCandidate.projectedHours - secondCandidate.projectedHours;
+  });
+
+  return candidates;
+}
+
+function assignCoverageShift(dayKey, shiftName, caregiverName) {
+  if (!caregiverName) {
+    return;
+  }
+
+  const assignmentKey = `${dayKey}-${shiftName}`;
+
+  scheduleAssignments[assignmentKey] = caregiverName;
+
+  saveData();
+  renderSchedule();
+}
+
+function buildCoverageCaregiverOptions() {
+  let options = `
+    <option value="">
+      Choose caregiver
+    </option>
+  `;
+
+  caregivers.forEach(function (caregiverName) {
+    options += `
+      <option value="${caregiverName}">
+        ${caregiverName}
+      </option>
+    `;
+  });
+
+  return options;
+}
+
+function getCoverageShiftKey(dayKey, shiftName) {
+  return `${dayKey}__${shiftName}`;
+}
+
+function renderCoverageAssistant() {
+  if (!coverageArea || !coverageShiftsList || !coverageComparisonPanel) {
+    return;
+  }
+
+  const scheduleDays = getDaysInSelectedWeek();
+  const activeShifts = getActiveShifts();
+
+  const caregiverHours = getCaregiverHoursForDays(scheduleDays, activeShifts);
+
+  const openShifts = getCoverageOpenShifts(scheduleDays, activeShifts);
+
+  const firstDay = scheduleDays[0].dateLabel;
+
+  const lastDay = scheduleDays[scheduleDays.length - 1].dateLabel;
+
+  coverageWeekLabel.textContent = `${firstDay} – ${lastDay}`;
+
+  let totalOpenHours = 0;
+  let safeMatchCount = 0;
+  let noSafeMatchCount = 0;
+
+  const recommendations = openShifts.map(function (openShift) {
+    totalOpenHours += openShift.hours;
+
+    const candidates = getCoverageCandidates(
+      openShift,
+      scheduleDays,
+      activeShifts,
+      caregiverHours,
+    );
+
+    const bestMatch =
+      candidates.find(function (candidate) {
+        return candidate.safe;
+      }) || null;
+
+    if (bestMatch) {
+      safeMatchCount += 1;
+    } else {
+      noSafeMatchCount += 1;
+    }
+
+    return {
+      ...openShift,
+      candidates,
+      bestMatch,
+      key: getCoverageShiftKey(openShift.day.key, openShift.shift.name),
+    };
+  });
+
+  coverageOpenCount.textContent = openShifts.length;
+
+  coverageOpenHours.textContent = formatHours(totalOpenHours);
+
+  coverageSafeCount.textContent = safeMatchCount;
+
+  coverageNoMatchCount.textContent = noSafeMatchCount;
+
+  if (coverageListCount) {
+    coverageListCount.textContent = openShifts.length;
+  }
+
+  let visibleRecommendations = recommendations;
+
+  if (coverageOnlyNoMatch && coverageOnlyNoMatch.checked) {
+    visibleRecommendations = recommendations.filter(function (recommendation) {
+      return !recommendation.bestMatch;
+    });
+  }
+
+  coverageShiftsList.innerHTML = "";
+  coverageComparisonPanel.innerHTML = "";
+
+  if (openShifts.length === 0) {
+    selectedCoverageShiftKey = "";
+
+    coverageShiftsList.innerHTML = `
+      <div class="coverage-small-empty">
+        No open shifts.
+      </div>
+    `;
+
+    coverageComparisonPanel.innerHTML = `
+      <div class="coverage-comparison-empty">
+        <span>✓</span>
+
+        <div>
+          <strong>Every shift is covered</strong>
+
+          <p>
+            There are no open shifts in this week.
+          </p>
+        </div>
+      </div>
+    `;
+
+    return;
+  }
+
+  if (visibleRecommendations.length === 0) {
+    selectedCoverageShiftKey = "";
+
+    coverageShiftsList.innerHTML = `
+      <div class="coverage-small-empty">
+        Every open shift has a safe match.
+      </div>
+    `;
+
+    coverageComparisonPanel.innerHTML = `
+      <div class="coverage-comparison-empty">
+        Turn off the filter to view all open shifts.
+      </div>
+    `;
+
+    return;
+  }
+
+  const selectedStillExists = visibleRecommendations.some(
+    function (recommendation) {
+      return recommendation.key === selectedCoverageShiftKey;
+    },
+  );
+
+  if (!selectedStillExists) {
+    selectedCoverageShiftKey = visibleRecommendations[0].key;
+  }
+
+  let previousDayKey = "";
+
+  visibleRecommendations.forEach(function (recommendation) {
+    const { day, shift, shiftForDay, hours, bestMatch, key } = recommendation;
+
+    if (previousDayKey !== day.key) {
+      const dayHeading = document.createElement("div");
+
+      dayHeading.classList.add("coverage-shift-day-heading");
+
+      dayHeading.textContent = day.date.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      });
+
+      coverageShiftsList.append(dayHeading);
+
+      previousDayKey = day.key;
+    }
+
+    const shiftButton = document.createElement("button");
+
+    shiftButton.type = "button";
+
+    shiftButton.classList.add("coverage-shift-list-button");
+
+    if (key === selectedCoverageShiftKey) {
+      shiftButton.classList.add("active");
+    }
+
+    if (!bestMatch) {
+      shiftButton.classList.add("has-conflict");
+    }
+
+    shiftButton.innerHTML = `
+        <div>
+          <strong>${shift.name}</strong>
+
+          <span>
+            ${formatTime(shiftForDay.start)}
+            –
+            ${formatTime(shiftForDay.end)}
+          </span>
+        </div>
+
+        <div class="coverage-shift-list-meta">
+          <strong>${formatHours(hours)}</strong>
+
+          <span class="${bestMatch ? "safe-label" : "conflict-label"}">
+            ${bestMatch ? `Best: ${bestMatch.caregiverName}` : "No safe match"}
+          </span>
+        </div>
+      `;
+
+    shiftButton.addEventListener("click", function () {
+      selectedCoverageShiftKey = key;
+
+      renderCoverageAssistant();
+    });
+
+    coverageShiftsList.append(shiftButton);
+  });
+
+  const selectedRecommendation = visibleRecommendations.find(
+    function (recommendation) {
+      return recommendation.key === selectedCoverageShiftKey;
+    },
+  );
+
+  renderCoverageComparison(selectedRecommendation);
+}
+
+function renderCoverageComparison(recommendation) {
+  if (!recommendation || !coverageComparisonPanel) {
+    return;
+  }
+
+  const { day, shift, shiftForDay, hours, candidates, bestMatch } =
+    recommendation;
+
+  const dayName = day.date.toLocaleDateString("en-US", {
+    weekday: "long",
+  });
+
+  const candidateRows = candidates
+    .map(function (candidate) {
+      const rules = getCaregiverRules(candidate.caregiverName);
+
+      const isAvailable = rules.availableDays.includes(dayName);
+
+      const shiftAllowed =
+        rules.allowedShifts.length === 0 ||
+        rules.allowedShifts.includes(shift.name);
+
+      const hoursSafe = candidate.projectedHours <= candidate.maxHours;
+
+      const otherConflicts = candidate.conflicts.filter(function (conflict) {
+        return (
+          !conflict.startsWith("Unavailable") &&
+          !conflict.includes("shift not allowed") &&
+          !conflict.startsWith("Would exceed max hours")
+        );
+      });
+
+      const otherRuleText = otherConflicts[0] || "No rule conflicts";
+
+      const isBestMatch =
+        bestMatch && bestMatch.caregiverName === candidate.caregiverName;
+
+      let statusText = "Conflict";
+
+      if (isBestMatch) {
+        statusText = "Best match";
+      } else if (candidate.safe) {
+        statusText = "Safe";
+      }
+
+      return `
+        <article
+          class="
+            coverage-caregiver-row
+            ${isBestMatch ? "best-match" : ""}
+            ${candidate.safe ? "" : "unsafe-match"}
+          "
+        >
+          <div class="coverage-caregiver-person">
+            <div class="avatar">
+              ${candidate.caregiverName.charAt(0).toUpperCase()}
+            </div>
+
+            <div>
+              <strong>
+                ${candidate.caregiverName}
+              </strong>
+
+              <span>
+                ${getCaregiverRulesSummary(candidate.caregiverName)}
+              </span>
+            </div>
+          </div>
+
+          <div class="coverage-rule-column">
+            <span class="coverage-column-label">
+              Availability
+            </span>
+
+            <strong class="${isAvailable ? "rule-safe" : "rule-conflict"}">
+              ${isAvailable ? `✓ ${dayName}` : `× Unavailable ${dayName}`}
+            </strong>
+          </div>
+
+          <div class="coverage-rule-column">
+            <span class="coverage-column-label">
+              Shift
+            </span>
+
+            <strong class="${shiftAllowed ? "rule-safe" : "rule-conflict"}">
+              ${
+                shiftAllowed
+                  ? `✓ ${shift.name} allowed`
+                  : `× ${shift.name} not allowed`
+              }
+            </strong>
+          </div>
+
+          <div class="coverage-rule-column">
+            <span class="coverage-column-label">
+              Hours after
+            </span>
+
+            <strong class="${hoursSafe ? "rule-safe" : "rule-conflict"}">
+              ${formatHours(candidate.projectedHours)}
+              /
+              ${formatHours(candidate.maxHours)}
+            </strong>
+
+            <small>
+              ${formatHours(candidate.currentHours)}
+              currently
+            </small>
+          </div>
+
+          <div class="coverage-rule-column">
+            <span class="coverage-column-label">
+              Other rules
+            </span>
+
+            <strong class="${
+              otherConflicts.length === 0 ? "rule-safe" : "rule-conflict"
+            }">
+              ${
+                otherConflicts.length === 0
+                  ? `✓ ${otherRuleText}`
+                  : `× ${otherRuleText}`
+              }
+            </strong>
+          </div>
+
+          <div class="coverage-caregiver-action">
+            <span
+              class="
+                coverage-match-status
+                ${candidate.safe ? "safe" : "conflict"}
+              "
+            >
+              ${statusText}
+            </span>
+
+            <button
+              class="
+                coverage-comparison-assign-button
+                ${candidate.safe ? "" : "ghost-button"}
+              "
+              type="button"
+              data-day="${day.key}"
+              data-shift="${shift.name}"
+              data-caregiver="${candidate.caregiverName}"
+              data-safe="${candidate.safe}"
+            >
+              ${
+                candidate.safe
+                  ? `Assign ${candidate.caregiverName}`
+                  : "Assign anyway"
+              }
+            </button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  coverageComparisonPanel.innerHTML = `
+    <div class="coverage-selected-shift-header">
+      <div>
+        <span class="coverage-open-badge">
+          Selected open shift
+        </span>
+
+        <h3>
+          ${day.label} · ${shift.name}
+        </h3>
+
+        <p>
+          ${formatTime(shiftForDay.start)}
+          –
+          ${formatTime(shiftForDay.end)}
+          ·
+          ${formatHours(hours)}
+        </p>
+      </div>
+
+      <div
+        class="
+          coverage-selected-status
+          ${bestMatch ? "safe" : "conflict"}
+        "
+      >
+        ${
+          bestMatch ? `Best match: ${bestMatch.caregiverName}` : "No safe match"
+        }
+      </div>
+    </div>
+
+    <div class="coverage-comparison-heading">
+      <div>Caregiver</div>
+      <div>Availability</div>
+      <div>Shift rule</div>
+      <div>Hours</div>
+      <div>Other rules</div>
+      <div>Action</div>
+    </div>
+
+    <div class="coverage-caregiver-comparison">
+      ${candidateRows}
+    </div>
+  `;
+
+  coverageComparisonPanel
+    .querySelectorAll(".coverage-comparison-assign-button")
+    .forEach(function (button) {
+      button.addEventListener("click", function () {
+        const isSafe = button.dataset.safe === "true";
+
+        if (!isSafe) {
+          const shouldAssign = confirm(
+            `Assign ${button.dataset.caregiver} even though this conflicts with their rules?`,
+          );
+
+          if (!shouldAssign) {
+            return;
+          }
+        }
+
+        assignCoverageShift(
+          button.dataset.day,
+          button.dataset.shift,
+          button.dataset.caregiver,
+        );
+      });
+    });
+}
+
 /* weekly schedule */
+
+function attachOpenShiftToggleListeners() {
+  const openShiftCards = document.querySelectorAll(".open-day-summary");
+
+  openShiftCards.forEach(function (openShiftCard) {
+    const toggleButton = openShiftCard.querySelector(".open-day-toggle");
+
+    if (!toggleButton) {
+      return;
+    }
+
+    toggleButton.addEventListener("click", function () {
+      const isOpen = openShiftCard.classList.toggle("is-open");
+
+      toggleButton.setAttribute("aria-expanded", String(isOpen));
+    });
+  });
+}
 
 function renderWeeklySchedule(scheduleDays, activeShifts) {
   scheduleSection.className = "";
@@ -1338,35 +2034,44 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
       .join("");
 
     dayCell.innerHTML = `
-        <details class="open-day-summary">
-          <summary>
-            <div>
-              <strong>
-                ${openShiftsForDay.length}
-                open
-              </strong>
+  <div class="open-day-summary">
+    <button
+      class="open-day-toggle"
+      type="button"
+      aria-expanded="false"
+    >
+      <div>
+        <strong>
+          ${openShiftsForDay.length}
+          open
+        </strong>
 
-              <span>
-                ${openShiftNames}
-              </span>
-            </div>
+        <span>
+          ${openShiftNames}
+        </span>
+      </div>
 
-            <span class="open-chevron">
-              ⌄
-            </span>
-          </summary>
+      <span class="open-chevron">
+        ⌄
+      </span>
+    </button>
 
-          <div class="open-day-menu">
-            ${openShiftRows}
-          </div>
-        </details>
-      `;
+    <div class="open-day-menu">
+      <div class="open-day-menu-inner">
+        ${openShiftRows}
+      </div>
+    </div>
+  </div>
+`;
 
     careMapGrid.append(dayCell);
   });
 
   scheduleSection.append(careMapGrid);
 
+  scheduleSection.append(careMapGrid);
+
+  attachOpenShiftToggleListeners();
   attachCaregiverDragListeners();
 }
 
@@ -1785,6 +2490,8 @@ function renderSchedule() {
   attachAssignmentListeners();
 
   renderCoverageSummary(scheduleDays, activeShifts);
+
+  renderCoverageAssistant();
 }
 
 function attachAssignmentListeners() {
@@ -2561,62 +3268,57 @@ function setAppView(viewName) {
   });
 
   heroSection.classList.add("app-view-hidden");
+
   statsStrip.classList.add("app-view-hidden");
+
   scheduleArea.classList.add("app-view-hidden");
+
+  if (coverageArea) {
+    coverageArea.classList.add("app-view-hidden");
+  }
+
   dashboardGrid.classList.add("app-view-hidden");
+
   dashboardGrid.classList.remove("single-panel-view");
 
   if (viewName === "schedule") {
-    scheduleMode = "all";
-
     heroSection.classList.remove("app-view-hidden");
-    statsStrip.classList.remove("app-view-hidden");
-    scheduleArea.classList.remove("app-view-hidden");
 
-    renderSchedule();
+    statsStrip.classList.remove("app-view-hidden");
+
+    scheduleArea.classList.remove("app-view-hidden");
   }
 
   if (viewName === "open-shifts") {
-    scheduleMode = "open";
+    if (coverageArea) {
+      coverageArea.classList.remove("app-view-hidden");
+    }
 
-    scheduleViewSelect.value = "weekly";
-    updatePickerVisibility();
-
-    heroSection.classList.remove("app-view-hidden");
-    statsStrip.classList.remove("app-view-hidden");
-    scheduleArea.classList.remove("app-view-hidden");
-
-    renderSchedule();
+    renderCoverageAssistant();
   }
 
   if (viewName === "caregivers") {
     dashboardGrid.classList.remove("app-view-hidden");
 
-    if (caregiverPanel) {
-      caregiverPanel.classList.remove("app-view-hidden");
-    }
+    caregiverPanel.classList.remove("app-view-hidden");
 
-    if (hoursPanel) {
-      hoursPanel.classList.remove("app-view-hidden");
-    }
+    hoursPanel.classList.remove("app-view-hidden");
   }
 
   if (viewName === "reports") {
     dashboardGrid.classList.remove("app-view-hidden");
+
     dashboardGrid.classList.add("single-panel-view");
 
-    if (reportsPanel) {
-      reportsPanel.classList.remove("app-view-hidden");
-    }
+    reportsPanel.classList.remove("app-view-hidden");
   }
 
   if (viewName === "settings") {
     dashboardGrid.classList.remove("app-view-hidden");
+
     dashboardGrid.classList.add("single-panel-view");
 
-    if (settingsPanel) {
-      settingsPanel.classList.remove("app-view-hidden");
-    }
+    settingsPanel.classList.remove("app-view-hidden");
   }
 
   if (availableShiftsToast) {
@@ -2635,6 +3337,40 @@ function setAppView(viewName) {
       top: 0,
       behavior: "smooth",
     });
+  }
+}
+
+function closeDatePopovers() {
+  if (weekDatePopover) {
+    weekDatePopover.classList.add("hidden");
+  }
+
+  if (monthDatePopover) {
+    monthDatePopover.classList.add("hidden");
+  }
+
+  if (selectedWeekDisplayButton) {
+    selectedWeekDisplayButton.setAttribute("aria-expanded", "false");
+  }
+
+  if (selectedMonthDisplayButton) {
+    selectedMonthDisplayButton.setAttribute("aria-expanded", "false");
+  }
+}
+
+function toggleDatePopover(popover, button) {
+  if (!popover || !button) {
+    return;
+  }
+
+  const shouldOpen = popover.classList.contains("hidden");
+
+  closeDatePopovers();
+
+  if (shouldOpen) {
+    popover.classList.remove("hidden");
+
+    button.setAttribute("aria-expanded", "true");
   }
 }
 
@@ -2886,6 +3622,8 @@ document.addEventListener("keydown", function (event) {
     return;
   }
 
+  closeDatePopovers();
+
   if (!editTimeModal.classList.contains("hidden")) {
     closeEditTimeModal();
   }
@@ -2896,6 +3634,107 @@ document.addEventListener("keydown", function (event) {
   ) {
     closeCaregiverRulesModal();
   }
+});
+
+if (coveragePreviousWeekButton) {
+  coveragePreviousWeekButton.addEventListener("click", function () {
+    changeSelectedWeekByDays(-7);
+  });
+}
+
+if (coverageNextWeekButton) {
+  coverageNextWeekButton.addEventListener("click", function () {
+    changeSelectedWeekByDays(7);
+  });
+}
+
+if (coverageTodayButton) {
+  coverageTodayButton.addEventListener("click", function () {
+    weekStartDateInput.value = getTodayDateValue();
+
+    saveData();
+    updateWeekDisplay();
+    renderSchedule();
+  });
+}
+
+if (coverageOnlyNoMatch) {
+  coverageOnlyNoMatch.addEventListener("change", function () {
+    renderCoverageAssistant();
+  });
+}
+
+if (selectedWeekDisplayButton && weekDatePopover) {
+  selectedWeekDisplayButton.addEventListener("click", function (event) {
+    event.stopPropagation();
+
+    toggleDatePopover(weekDatePopover, selectedWeekDisplayButton);
+  });
+
+  weekDatePopover.addEventListener("click", function (event) {
+    event.stopPropagation();
+  });
+}
+
+if (selectedMonthDisplayButton && monthDatePopover) {
+  selectedMonthDisplayButton.addEventListener("click", function (event) {
+    event.stopPropagation();
+
+    toggleDatePopover(monthDatePopover, selectedMonthDisplayButton);
+  });
+
+  monthDatePopover.addEventListener("click", function (event) {
+    event.stopPropagation();
+  });
+}
+
+if (weekPickerTodayButton) {
+  weekPickerTodayButton.addEventListener("click", function () {
+    weekStartDateInput.value = getTodayDateValue();
+
+    saveData();
+    updateWeekDisplay();
+    renderSchedule();
+    closeDatePopovers();
+  });
+}
+
+if (weekPickerNextButton) {
+  weekPickerNextButton.addEventListener("click", function () {
+    changeSelectedWeekByDays(7);
+    closeDatePopovers();
+  });
+}
+
+if (monthPickerCurrentButton) {
+  monthPickerCurrentButton.addEventListener("click", function () {
+    monthPicker.value = getTodayMonthValue();
+
+    saveData();
+    updateMonthDisplay();
+    renderSchedule();
+    closeDatePopovers();
+  });
+}
+
+if (monthPickerNextButton) {
+  monthPickerNextButton.addEventListener("click", function () {
+    changeSelectedMonthByMonths(1);
+    closeDatePopovers();
+  });
+}
+
+weekStartDateInput.addEventListener("change", function () {
+  closeDatePopovers();
+});
+
+monthPicker.addEventListener("change", function () {
+  updateMonthDisplay();
+  closeDatePopovers();
+});
+
+document.addEventListener("click", function () {
+  closeDatePopovers();
 });
 
 sideNavLinks.forEach(function (link) {
