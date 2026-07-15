@@ -18,6 +18,7 @@ let draggedCaregiverName = null;
 let caregiverRules = {};
 let activeCaregiverRulesName = "";
 let selectedCoverageShiftKey = "";
+let customCalendarDate = new Date();
 let scheduleMode = "all";
 
 let caregiverMaxHours = {
@@ -75,6 +76,18 @@ const selectedWeekDisplayButton = document.querySelector(
 );
 
 const weekDatePopover = document.querySelector("#week-date-popover");
+
+const calendarPreviousMonthButton = document.querySelector(
+  "#calendar-previous-month",
+);
+
+const calendarNextMonthButton = document.querySelector("#calendar-next-month");
+
+const calendarMonthLabel = document.querySelector("#calendar-month-label");
+
+const calendarDays = document.querySelector("#calendar-days");
+
+const calendarTodayButton = document.querySelector("#calendar-today-button");
 
 const weekPickerTodayButton = document.querySelector("#week-picker-today");
 
@@ -3571,6 +3584,107 @@ function setAppView(viewName) {
   }
 }
 
+function getDateFromValue(dateValue) {
+  if (!dateValue) {
+    return new Date();
+  }
+
+  const [year, month, day] = dateValue.split("-").map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+function selectCalendarDate(date) {
+  weekStartDateInput.value = getDateKey(date);
+
+  customCalendarDate = new Date(date.getFullYear(), date.getMonth(), 1);
+
+  saveData();
+  updateWeekDisplay();
+  renderSchedule();
+  closeDatePopovers();
+}
+
+function renderCustomCalendar() {
+  if (!calendarDays || !calendarMonthLabel) {
+    return;
+  }
+
+  calendarDays.innerHTML = "";
+
+  const displayedYear = customCalendarDate.getFullYear();
+
+  const displayedMonth = customCalendarDate.getMonth();
+
+  calendarMonthLabel.textContent = customCalendarDate.toLocaleDateString(
+    "en-US",
+    {
+      month: "long",
+      year: "numeric",
+    },
+  );
+
+  const firstDayOfMonth = new Date(displayedYear, displayedMonth, 1);
+
+  const firstWeekday = firstDayOfMonth.getDay();
+
+  const calendarStartDate = new Date(
+    displayedYear,
+    displayedMonth,
+    1 - firstWeekday,
+  );
+
+  const selectedDateKey = weekStartDateInput.value;
+
+  const todayKey = getTodayDateValue();
+
+  for (let index = 0; index < 42; index += 1) {
+    const date = new Date(calendarStartDate);
+
+    date.setDate(calendarStartDate.getDate() + index);
+
+    const dateKey = getDateKey(date);
+
+    const dayButton = document.createElement("button");
+
+    dayButton.type = "button";
+
+    dayButton.classList.add("curavela-calendar-day");
+
+    dayButton.textContent = date.getDate();
+
+    if (date.getMonth() !== displayedMonth) {
+      dayButton.classList.add("outside-month");
+    }
+
+    if (dateKey === todayKey) {
+      dayButton.classList.add("today");
+    }
+
+    if (dateKey === selectedDateKey) {
+      dayButton.classList.add("selected");
+    }
+
+    dayButton.addEventListener("click", function () {
+      selectCalendarDate(date);
+    });
+
+    calendarDays.append(dayButton);
+  }
+}
+
+function openCustomCalendar() {
+  const selectedDate = getDateFromValue(weekStartDateInput.value);
+
+  customCalendarDate = new Date(
+    selectedDate.getFullYear(),
+    selectedDate.getMonth(),
+    1,
+  );
+
+  renderCustomCalendar();
+}
+
 function closeDatePopovers() {
   if (weekDatePopover) {
     weekDatePopover.classList.add("hidden");
@@ -3606,6 +3720,28 @@ function toggleDatePopover(popover, button) {
 }
 
 /* event listeners */
+
+if (calendarPreviousMonthButton) {
+  calendarPreviousMonthButton.addEventListener("click", function () {
+    customCalendarDate.setMonth(customCalendarDate.getMonth() - 1);
+
+    renderCustomCalendar();
+  });
+}
+
+if (calendarNextMonthButton) {
+  calendarNextMonthButton.addEventListener("click", function () {
+    customCalendarDate.setMonth(customCalendarDate.getMonth() + 1);
+
+    renderCustomCalendar();
+  });
+}
+
+if (calendarTodayButton) {
+  calendarTodayButton.addEventListener("click", function () {
+    selectCalendarDate(new Date());
+  });
+}
 
 addShiftButton.addEventListener("click", function () {
   const newShiftName = customShiftInput.value.trim();
@@ -3933,6 +4069,12 @@ if (coverageOnlyNoMatch) {
 if (selectedWeekDisplayButton && weekDatePopover) {
   selectedWeekDisplayButton.addEventListener("click", function (event) {
     event.stopPropagation();
+
+    const isOpening = weekDatePopover.classList.contains("hidden");
+
+    if (isOpening) {
+      openCustomCalendar();
+    }
 
     toggleDatePopover(weekDatePopover, selectedWeekDisplayButton);
   });

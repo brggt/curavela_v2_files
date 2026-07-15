@@ -114,14 +114,50 @@
                     </div>
                   </div>
 
-                  <label class="date-popover-field">
-                    Select date
-                    <input
-                      id="week-start-date"
-                      class="themed-date-input"
-                      type="date"
-                    />
-                  </label>
+                  <div class="curavela-calendar">
+                    <div class="curavela-calendar-header">
+                      <button
+                        id="calendar-previous-month"
+                        type="button"
+                        aria-label="Previous month"
+                      >
+                        ‹
+                      </button>
+
+                      <strong id="calendar-month-label"> Month </strong>
+
+                      <button
+                        id="calendar-next-month"
+                        type="button"
+                        aria-label="Next month"
+                      >
+                        ›
+                      </button>
+                    </div>
+
+                    <div class="curavela-calendar-weekdays">
+                      <span>Su</span>
+                      <span>Mo</span>
+                      <span>Tu</span>
+                      <span>We</span>
+                      <span>Th</span>
+                      <span>Fr</span>
+                      <span>Sa</span>
+                    </div>
+
+                    <div
+                      id="calendar-days"
+                      class="curavela-calendar-days"
+                    ></div>
+
+                    <div class="curavela-calendar-footer">
+                      <button id="calendar-today-button" type="button">
+                        Today
+                      </button>
+                    </div>
+                  </div>
+
+                  <input id="week-start-date" type="hidden" />
 
                   <div class="date-quick-actions">
                     <button id="week-picker-today" type="button">Today</button>
