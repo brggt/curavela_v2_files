@@ -4340,3 +4340,376 @@ select {
     font-size: 42px !important;
   }
 }
+
+/* custom Curavela calendar */
+
+.curavela-calendar {
+  width: 100%;
+}
+
+.curavela-calendar-header {
+  margin-bottom: 12px;
+
+  display: grid;
+  grid-template-columns:
+    34px
+    minmax(0, 1fr)
+    34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.curavela-calendar-header strong {
+  color: var(--text);
+  font-size: 12px;
+  text-align: center;
+}
+
+.curavela-calendar-header button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+
+  color: var(--text);
+  font-size: 17px;
+  box-shadow: none;
+}
+
+.curavela-calendar-header button:hover {
+  border-color: #cad8ff;
+  background: var(--blue-soft);
+  color: var(--blue);
+  transform: none;
+}
+
+.curavela-calendar-weekdays,
+.curavela-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.curavela-calendar-weekdays {
+  margin-bottom: 5px;
+}
+
+.curavela-calendar-weekdays span {
+  padding: 4px 0;
+
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.curavela-calendar-day {
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 32px;
+  padding: 0;
+
+  display: grid;
+  place-items: center;
+
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+
+  color: var(--text);
+  font-size: 9px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.curavela-calendar-day:hover {
+  background: var(--blue-soft);
+  color: var(--blue);
+  transform: none;
+}
+
+.curavela-calendar-day.outside-month {
+  color: #c2cad8;
+}
+
+.curavela-calendar-day.today {
+  border: 1px solid #b9cbff;
+  color: var(--blue);
+}
+
+.curavela-calendar-day.selected {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: white;
+
+  box-shadow: 0 6px 14px rgba(61, 99, 255, 0.25);
+}
+
+.curavela-calendar-day.selected:hover {
+  background: var(--blue);
+  color: white;
+}
+
+.curavela-calendar-footer {
+  margin-top: 12px;
+  padding-top: 10px;
+
+  display: flex;
+  justify-content: flex-end;
+
+  border-top: 1px solid var(--border);
+}
+
+.curavela-calendar-footer button {
+  min-height: 33px;
+  padding: 7px 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+
+  color: var(--blue);
+  font-size: 9px;
+  font-weight: 800;
+  box-shadow: none;
+}
+
+.curavela-calendar-footer button:hover {
+  border-color: #cad8ff;
+  background: var(--blue-soft);
+  transform: none;
+}
+
+#week-date-popover.date-popover {
+  width: 310px;
+}
+
+/* cleaner centered schedule toolbar */
+
+.hero-actions,
+.hero-controls,
+.top-controls {
+  width: 100%;
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+
+.hero-actions > *,
+.hero-controls > *,
+.top-controls > * {
+  margin: 0 !important;
+}
+
+#schedule-view {
+  width: 105px;
+  min-width: 105px;
+  height: 42px;
+  padding: 0 34px 0 15px;
+
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+#week-picker-section,
+#month-picker-section {
+  width: auto;
+  min-width: 0;
+
+  display: grid;
+  grid-template-columns:
+    42px
+    190px
+    42px
+    74px;
+  align-items: center;
+  gap: 8px;
+}
+
+#previous-week-button,
+#next-week-button,
+#previous-month-button,
+#next-month-button {
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 !important;
+
+  display: grid !important;
+  place-items: center;
+
+  border-radius: 12px !important;
+  font-size: 15px;
+}
+
+.date-picker-wrapper {
+  width: 190px;
+  min-width: 190px;
+
+  display: flex;
+  align-items: center;
+}
+
+.selected-date-button {
+  width: 190px !important;
+  min-width: 190px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 14px !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  border-radius: 12px !important;
+  white-space: nowrap;
+}
+
+#selected-week-display,
+#selected-month-display {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.date-picker-chevron {
+  width: 12px;
+  flex: 0 0 12px;
+  margin-left: 0;
+}
+
+#today-week-button,
+#current-month-button {
+  width: 74px !important;
+  min-width: 74px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 12px !important;
+
+  border-radius: 12px !important;
+}
+
+#quick-add-shift-button {
+  width: 116px;
+  min-width: 116px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0 15px;
+
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+#more-actions-button {
+  width: 96px;
+  min-width: 96px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0 14px;
+
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+/* keep the calendar centered under the date button */
+
+#week-date-popover,
+#month-date-popover {
+  top: calc(100% + 10px);
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+/* smaller desktop and tablet */
+
+@media (max-width: 1050px) {
+  .hero-actions,
+  .hero-controls,
+  .top-controls {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  #week-picker-section,
+  #month-picker-section {
+    grid-template-columns:
+      40px
+      minmax(150px, 190px)
+      40px
+      70px;
+  }
+
+  .date-picker-wrapper,
+  .selected-date-button {
+    width: 100% !important;
+    min-width: 150px !important;
+  }
+
+  #quick-add-shift-button {
+    width: auto;
+    min-width: 105px;
+  }
+}
+
+/* phone layout */
+
+@media (max-width: 600px) {
+  .hero-actions,
+  .hero-controls,
+  .top-controls {
+    display: grid !important;
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto;
+    gap: 8px;
+  }
+
+  #schedule-view {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #week-picker-section,
+  #month-picker-section {
+    grid-column: 1 / -1;
+
+    width: 100%;
+    grid-template-columns:
+      40px
+      minmax(0, 1fr)
+      40px;
+  }
+
+  #today-week-button,
+  #current-month-button {
+    grid-column: 1 / -1;
+    width: 100% !important;
+  }
+
+  .date-picker-wrapper,
+  .selected-date-button {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #quick-add-shift-button,
+  #more-actions-button {
+    width: 100%;
+    min-width: 0;
+  }
+}
