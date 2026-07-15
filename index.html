@@ -501,15 +501,71 @@
             </div>
           </article>
 
-          <article id="hours-panel" class="panel-card">
+          <article id="hours-panel" class="panel-card caregiver-insights-panel">
             <div class="section-header compact">
               <div>
-                <h3>Caregiver Hours</h3>
-                <p>Warnings appear when someone nears their limit.</p>
+                <h3>Caregiver Insights</h3>
+                <p>Hours, limits, and scheduling updates for this view.</p>
+              </div>
+
+              <span
+                id="caregiver-hours-status"
+                class="caregiver-hours-status safe"
+              >
+                All clear
+              </span>
+            </div>
+
+            <div class="team-pulse-card">
+              <div class="team-pulse-art" aria-hidden="true">
+                <span class="pulse-orbit"></span>
+                <span class="pulse-core">♡</span>
+                <span class="pulse-dot pulse-dot-one"></span>
+                <span class="pulse-dot pulse-dot-two"></span>
+                <span class="pulse-dot pulse-dot-three"></span>
+              </div>
+
+              <div class="team-pulse-copy">
+                <span>Team pulse</span>
+
+                <strong id="caregiver-insight-headline">
+                  Your team looks balanced
+                </strong>
+
+                <p id="caregiver-insight-message">
+                  Hours and caregiver rules will update automatically.
+                </p>
               </div>
             </div>
 
-            <ul id="caregiver-hours-list" class="clean-list"></ul>
+            <div class="caregiver-hours-heading">
+              <div>
+                <strong>Weekly hours</strong>
+                <span>Based on the selected schedule</span>
+              </div>
+            </div>
+
+            <ul
+              id="caregiver-hours-list"
+              class="clean-list caregiver-hours-list"
+            ></ul>
+
+            <div class="caregiver-updates-card">
+              <div class="caregiver-updates-header">
+                <div>
+                  <span class="caregiver-update-icon">!</span>
+
+                  <div>
+                    <strong>Schedule updater</strong>
+                    <span>Important team changes</span>
+                  </div>
+                </div>
+
+                <span id="caregiver-update-count"> 0 updates </span>
+              </div>
+
+              <ul id="caregiver-update-list"></ul>
+            </div>
           </article>
 
           <article id="open-shifts-panel" class="panel-card">

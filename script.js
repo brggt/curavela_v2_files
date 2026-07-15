@@ -166,6 +166,19 @@ const totalHoursCoveredElement = document.querySelector("#total-hours-covered");
 const openHoursElement = document.querySelector("#open-hours");
 const openShiftsCountElement = document.querySelector("#open-shifts-count");
 const caregiverHoursList = document.querySelector("#caregiver-hours-list");
+const caregiverHoursStatus = document.querySelector("#caregiver-hours-status");
+
+const caregiverInsightHeadline = document.querySelector(
+  "#caregiver-insight-headline",
+);
+
+const caregiverInsightMessage = document.querySelector(
+  "#caregiver-insight-message",
+);
+
+const caregiverUpdateCount = document.querySelector("#caregiver-update-count");
+
+const caregiverUpdateList = document.querySelector("#caregiver-update-list");
 const availableShiftsList = document.querySelector("#available-shifts-list");
 
 const coveragePercentElement = document.querySelector("#coverage-percent");
@@ -2174,6 +2187,134 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
 
 /* summaries and warnings */
 
+function renderCaregiverInsights(warnings, caregiverHours) {
+  if (
+    !caregiverHoursStatus ||
+    !caregiverInsightHeadline ||
+    !caregiverInsightMessage ||
+    !caregiverUpdateCount ||
+    !caregiverUpdateList
+  ) {
+    return;
+  }
+
+  caregiverUpdateList.innerHTML = "";
+
+  const highWarnings = warnings.filter(function (warning) {
+    return warning.level === "high";
+  });
+
+  const activeCaregiverCount = caregivers.filter(function (caregiverName) {
+    return (caregiverHours[caregiverName] || 0) > 0;
+  }).length;
+
+  const customRuleCount = caregivers.filter(function (caregiverName) {
+    const rules = getCaregiverRules(caregiverName);
+
+    return (
+      rules.availableDays.length < allWeekDays.length ||
+      rules.allowedShifts.length > 0 ||
+      rules.maxConsecutiveDays > 0 ||
+      rules.needsTwoConsecutiveDaysOff ||
+      Boolean(rules.note)
+    );
+  }).length;
+
+  caregiverHoursStatus.className = "caregiver-hours-status";
+
+  if (caregivers.length === 0) {
+    caregiverHoursStatus.classList.add("neutral");
+
+    caregiverHoursStatus.textContent = "No team";
+
+    caregiverInsightHeadline.textContent = "Start building your care team";
+
+    caregiverInsightMessage.textContent =
+      "Add caregivers to track hours, availability, and scheduling rules.";
+  } else if (highWarnings.length > 0) {
+    caregiverHoursStatus.classList.add("danger");
+
+    caregiverHoursStatus.textContent = `${highWarnings.length} priority`;
+
+    caregiverInsightHeadline.textContent = `${highWarnings.length} important ${
+      highWarnings.length === 1 ? "issue" : "issues"
+    }`;
+
+    caregiverInsightMessage.textContent =
+      "Review hour limits and caregiver rules before finalizing this schedule.";
+  } else if (warnings.length > 0) {
+    caregiverHoursStatus.classList.add("warning");
+
+    caregiverHoursStatus.textContent = `${warnings.length} updates`;
+
+    caregiverInsightHeadline.textContent = "A few details need attention";
+
+    caregiverInsightMessage.textContent =
+      "The schedule is workable, but some limits or rules should be reviewed.";
+  } else {
+    caregiverHoursStatus.classList.add("safe");
+
+    caregiverHoursStatus.textContent = "All clear";
+
+    caregiverInsightHeadline.textContent = "Your team looks balanced";
+
+    caregiverInsightMessage.textContent = `${activeCaregiverCount} of ${caregivers.length} caregivers are scheduled in this view.`;
+  }
+
+  let updates = warnings.slice(0, 3);
+
+  if (updates.length === 0 && caregivers.length > 0) {
+    updates = [
+      {
+        level: "safe",
+
+        text: `${activeCaregiverCount} of ${caregivers.length} caregivers have scheduled hours.`,
+      },
+
+      {
+        level: "safe",
+
+        text: `${customRuleCount} ${
+          customRuleCount === 1 ? "caregiver has" : "caregivers have"
+        } custom scheduling rules.`,
+      },
+
+      {
+        level: "safe",
+
+        text: "No caregivers are near or over their weekly limit.",
+      },
+    ];
+  }
+
+  if (caregivers.length === 0) {
+    updates = [
+      {
+        level: "neutral",
+
+        text: "Add your first caregiver to begin receiving scheduling updates.",
+      },
+    ];
+  }
+
+  caregiverUpdateCount.textContent = `${warnings.length} ${
+    warnings.length === 1 ? "update" : "updates"
+  }`;
+
+  updates.forEach(function (update) {
+    const updateItem = document.createElement("li");
+
+    updateItem.classList.add(`update-${update.level}`);
+
+    updateItem.innerHTML = `
+      <span class="update-status-dot"></span>
+      <span>${update.text}</span>
+    `;
+
+    caregiverUpdateList.append(updateItem);
+  });
+}
+
 function renderCoverageSummary(scheduleDays, activeShifts) {
   let totalHoursNeeded = 0;
   let totalHoursCovered = 0;
@@ -2254,7 +2395,10 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
     if (caregivers.length === 0) {
       const emptyCaregiverItem = document.createElement("li");
 
-      emptyCaregiverItem.textContent = "No caregivers added yet.";
+      emptyCaregiverItem.classList.add("caregiver-hours-empty");
+
+      emptyCaregiverItem.textContent =
+        "Add caregivers to begin tracking hours.";
 
       caregiverHoursList.append(emptyCaregiverItem);
     } else {
@@ -2265,16 +2409,19 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
 
         const maxHours = caregiverMaxHours[caregiverName] || 50;
 
+        const rawPercent = maxHours > 0 ? (hoursWorked / maxHours) * 100 : 0;
+
+        const progressPercent = Math.min(rawPercent, 100);
+
+        let statusText = "On track";
+        let statusClass = "safe";
+
         if (hoursWorked > maxHours) {
           const hoursOver = hoursWorked - maxHours;
 
-          caregiverHoursItem.classList.add("hours-over-limit");
+          statusText = `${formatHours(hoursOver)} over`;
 
-          caregiverHoursItem.textContent =
-            `${caregiverName}: ` +
-            `${formatHours(hoursWorked)} ` +
-            `⚠ over by ` +
-            `${formatHours(hoursOver)}`;
+          statusClass = "danger";
 
           warnings.push({
             level: "high",
@@ -2283,13 +2430,11 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
               `${caregiverName} is over their weekly maximum by ` +
               `${formatHours(hoursOver)}.`,
           });
-        } else if (hoursWorked >= maxHours - 5) {
-          caregiverHoursItem.classList.add("hours-near-limit");
 
-          caregiverHoursItem.textContent =
-            `${caregiverName}: ` +
-            `${formatHours(hoursWorked)} · near ` +
-            `${formatHours(maxHours)} limit`;
+          renderCaregiverInsights(warnings, caregiverHours);
+        } else if (hoursWorked >= maxHours - 5) {
+          statusText = "Near limit";
+          statusClass = "warning";
 
           warnings.push({
             level: "medium",
@@ -2298,12 +2443,43 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
               `${caregiverName} is close to their ` +
               `${formatHours(maxHours)} weekly limit.`,
           });
-        } else {
-          caregiverHoursItem.textContent =
-            `${caregiverName}: ` +
-            `${formatHours(hoursWorked)} / ` +
-            `${formatHours(maxHours)}`;
         }
+
+        caregiverHoursItem.classList.add(
+          "caregiver-hours-row",
+          `is-${statusClass}`,
+        );
+
+        caregiverHoursItem.innerHTML = `
+        <div class="caregiver-hours-row-top">
+          <div>
+            <strong>
+              ${caregiverName}
+            </strong>
+
+            <span>
+              ${formatHours(hoursWorked)}
+              of
+              ${formatHours(maxHours)}
+            </span>
+          </div>
+
+          <span
+            class="
+              caregiver-hour-state
+              ${statusClass}
+            "
+          >
+            ${statusText}
+          </span>
+        </div>
+
+        <div class="caregiver-hours-track">
+          <span
+            style="width: ${progressPercent}%"
+          ></span>
+        </div>
+      `;
 
         caregiverHoursList.append(caregiverHoursItem);
       });
@@ -2544,49 +2720,104 @@ function renderCaregiverList() {
     caregiverItem.classList.add("caregiver-list-item");
 
     caregiverItem.innerHTML = `
-        <div class="caregiver-list-copy">
-          <strong>
-            ${caregiverName}
-          </strong>
+  <div class="caregiver-card-identity">
+    <div class="caregiver-card-avatar">
+      ${caregiverName.charAt(0).toUpperCase()}
+    </div>
 
-          <span>
-            Max
-            ${caregiverMaxHours[caregiverName] || 50}
-            hrs ·
-            ${getCaregiverRulesSummary(caregiverName)}
-          </span>
-        </div>
+    <div class="caregiver-list-copy">
+      <strong>
+        ${caregiverName}
+      </strong>
 
-        <div class="caregiver-list-buttons">
-          <button
-            class="edit-caregiver-button"
-            type="button"
-          >
-            Edit Name
-          </button>
+      <span>
+        Max ${caregiverMaxHours[caregiverName] || 50} hrs
+      </span>
 
-          <button
-            class="edit-max-hours-button"
-            type="button"
-          >
-            Edit Max
-          </button>
+      <small>
+        ${getCaregiverRulesSummary(caregiverName)}
+      </small>
+    </div>
+  </div>
 
-          <button
-            class="edit-rules-button"
-            type="button"
-          >
-            Edit Rules
-          </button>
 
-          <button
-            class="remove-caregiver-button"
-            type="button"
-          >
-            Remove
-          </button>
-        </div>
-      `;
+  <div class="caregiver-manage-wrapper">
+    <button
+      class="manage-caregiver-button"
+      type="button"
+      aria-expanded="false"
+    >
+      Manage
+      <span>⌄</span>
+    </button>
+
+    <div class="caregiver-action-menu hidden">
+      <button
+        class="edit-caregiver-button"
+        type="button"
+      >
+        Edit name
+      </button>
+
+      <button
+        class="edit-max-hours-button"
+        type="button"
+      >
+        Edit max hours
+      </button>
+
+      <button
+        class="edit-rules-button"
+        type="button"
+      >
+        Edit rules
+      </button>
+
+      <button
+        class="remove-caregiver-button"
+        type="button"
+      >
+        Remove caregiver
+      </button>
+    </div>
+  </div>
+`;
+
+    const manageButton = caregiverItem.querySelector(
+      ".manage-caregiver-button",
+    );
+
+    const actionMenu = caregiverItem.querySelector(".caregiver-action-menu");
+
+    manageButton.addEventListener("click", function (event) {
+      event.stopPropagation();
+
+      document
+        .querySelectorAll(".caregiver-action-menu")
+        .forEach(function (otherMenu) {
+          if (otherMenu !== actionMenu) {
+            otherMenu.classList.add("hidden");
+          }
+        });
+
+      document
+        .querySelectorAll(".manage-caregiver-button")
+        .forEach(function (otherButton) {
+          if (otherButton !== manageButton) {
+            otherButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+      const isOpening = actionMenu.classList.contains("hidden");
+
+      actionMenu.classList.toggle("hidden");
+
+      manageButton.setAttribute("aria-expanded", String(isOpening));
+    });
+
+    actionMenu.addEventListener("click", function (event) {
+      event.stopPropagation();
+    });
 
     const editButton = caregiverItem.querySelector(".edit-caregiver-button");
 
@@ -3616,6 +3847,41 @@ if (
     }
   });
 }
+
+document.addEventListener("click", function (event) {
+  if (event.target.closest(".caregiver-manage-wrapper")) {
+    return;
+  }
+
+  document.querySelectorAll(".caregiver-action-menu").forEach(function (menu) {
+    menu.classList.add("hidden");
+  });
+
+  document
+    .querySelectorAll(".manage-caregiver-button")
+    .forEach(function (button) {
+      button.setAttribute("aria-expanded", "false");
+    });
+});
+
+document.addEventListener("keydown", function (event) {
+  if (event.key !== "Escape") {
+    return;
+  }
+
+  closeDatePopovers();
+
+  if (!editTimeModal.classList.contains("hidden")) {
+    closeEditTimeModal();
+  }
+
+  if (
+    caregiverRulesModal &&
+    !caregiverRulesModal.classList.contains("hidden")
+  ) {
+    closeCaregiverRulesModal();
+  }
+});
 
 document.addEventListener("keydown", function (event) {
   if (event.key !== "Escape") {
