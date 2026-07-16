@@ -12,6 +12,7 @@ let customShifts = ["Morning", "Afternoon", "Night"];
 let caregivers = [];
 let scheduleAssignments = {};
 let scheduleNote = "";
+let scheduleBriefs = {};
 let shiftTimeOverrides = {};
 let copiedWeekAssignments = null;
 let draggedCaregiverName = null;
@@ -93,7 +94,53 @@ const weekPickerTodayButton = document.querySelector("#week-picker-today");
 
 const weekPickerNextButton = document.querySelector("#week-picker-next");
 
-const scheduleNoteInput = document.querySelector("#schedule-note");
+const scheduleFocusInput = document.querySelector("#schedule-focus");
+
+const scheduleBriefRange = document.querySelector("#schedule-brief-range");
+
+const scheduleUpdateDaySelect = document.querySelector("#schedule-update-day");
+
+const scheduleUpdateTextInput = document.querySelector("#schedule-update-text");
+
+const addScheduleUpdateButton = document.querySelector(
+  "#add-schedule-update-button",
+);
+
+const scheduleUpdatesList = document.querySelector("#schedule-updates-list");
+
+const scheduleUpdateCount = document.querySelector("#schedule-update-count");
+
+const scheduleFollowupTextInput = document.querySelector(
+  "#schedule-followup-text",
+);
+
+const addScheduleFollowupButton = document.querySelector(
+  "#add-schedule-followup-button",
+);
+
+const scheduleFollowupsList = document.querySelector(
+  "#schedule-followups-list",
+);
+
+const scheduleFollowupCount = document.querySelector(
+  "#schedule-followup-count",
+);
+
+const briefPreviousWeekButton = document.querySelector(
+  "#brief-previous-week-button",
+);
+
+const briefNextWeekButton = document.querySelector("#brief-next-week-button");
+
+const briefTodayButton = document.querySelector("#brief-today-button");
+
+const copyPreviousBriefButton = document.querySelector(
+  "#copy-previous-brief-button",
+);
+
+const clearScheduleBriefButton = document.querySelector(
+  "#clear-schedule-brief-button",
+);
 const clearScheduleButton = document.querySelector("#clear-schedule-button");
 
 const exportDataButton = document.querySelector("#export-data-button");
@@ -304,7 +351,10 @@ function saveData() {
     JSON.stringify(scheduleAssignments),
   );
 
-  localStorage.setItem("curavelaScheduleNote", scheduleNote);
+  localStorage.setItem(
+    "curavelaScheduleBriefs",
+    JSON.stringify(scheduleBriefs),
+  );
 
   localStorage.setItem("curavelaShiftTimes", JSON.stringify(shiftTimes));
 
@@ -351,6 +401,8 @@ function loadData() {
     "kindshiftScheduleNote",
   );
 
+  const savedScheduleBriefs = localStorage.getItem("curavelaScheduleBriefs");
+
   const savedShiftTimes = getSavedItem(
     "curavelaShiftTimes",
     "kindshiftShiftTimes",
@@ -379,6 +431,16 @@ function loadData() {
 
   if (savedAssignments) {
     scheduleAssignments = JSON.parse(savedAssignments);
+  }
+
+  if (savedScheduleBriefs) {
+    try {
+      scheduleBriefs = JSON.parse(savedScheduleBriefs);
+    } catch (error) {
+      console.error("Could not load schedule briefs.", error);
+
+      scheduleBriefs = {};
+    }
   }
 
   if (savedScheduleNote) {
@@ -449,7 +511,7 @@ function exportCuravelaData() {
     caregiverMaxHours,
     caregiverRules,
     scheduleAssignments,
-    scheduleNote,
+    scheduleBriefs,
     shiftTimes,
     shiftTimeOverrides,
     scheduleView: scheduleViewSelect.value,
@@ -490,6 +552,8 @@ function importCuravelaData(file) {
 
       scheduleAssignments = backupData.scheduleAssignments || {};
 
+      scheduleBriefs = backupData.scheduleBriefs || {};
+
       scheduleNote = backupData.scheduleNote || "";
 
       shiftTimes = {
@@ -519,7 +583,7 @@ function importCuravelaData(file) {
         weekStartDateInput.value = backupData.weekStartDate;
       }
 
-      scheduleNoteInput.value = scheduleNote;
+      migrateLegacyScheduleNote();
 
       saveData();
       updateCustomShiftVisibility();
@@ -2681,6 +2745,7 @@ function renderSchedule() {
   renderCoverageSummary(scheduleDays, activeShifts);
 
   renderCoverageAssistant();
+  renderScheduleBrief();
 }
 
 function attachAssignmentListeners() {
@@ -3496,6 +3561,10 @@ function startAvailableShiftsAutoScroll() {
 /* navigation */
 
 function setAppView(viewName) {
+  if (mainContent) {
+    mainContent.classList.toggle("coverage-view", viewName === "open-shifts");
+  }
+
   const dashboardPanels = [
     caregiverPanel,
     hoursPanel,
@@ -3534,6 +3603,26 @@ function setAppView(viewName) {
   }
 
   if (viewName === "open-shifts") {
+    /*
+    Coverage Assistant is intentionally weekly.
+    Force weekly mode before displaying it.
+  */
+
+    if (scheduleViewSelect.value !== "weekly") {
+      scheduleViewSelect.value = "weekly";
+
+      updatePickerVisibility();
+      saveData();
+      renderSchedule();
+    }
+
+    /*
+    Keep the top heading and shared date
+    controls visible on Coverage.
+  */
+
+    heroSection.classList.remove("app-view-hidden");
+
     if (coverageArea) {
       coverageArea.classList.remove("app-view-hidden");
     }
@@ -3719,6 +3808,411 @@ function toggleDatePopover(popover, button) {
   }
 }
 
+/* weekly schedule brief */
+
+function createEmptyScheduleBrief() {
+  return {
+    focus: "",
+    updates: [],
+    followUps: [],
+  };
+}
+
+function getCurrentScheduleBriefKey() {
+  const scheduleDays = getDaysInSelectedWeek();
+
+  if (scheduleDays.length === 0) {
+    return getTodayDateValue();
+  }
+
+  return scheduleDays[0].key;
+}
+
+function getCurrentScheduleBrief() {
+  const weekKey = getCurrentScheduleBriefKey();
+
+  if (!scheduleBriefs[weekKey]) {
+    scheduleBriefs[weekKey] = createEmptyScheduleBrief();
+  }
+
+  const brief = scheduleBriefs[weekKey];
+
+  brief.focus = typeof brief.focus === "string" ? brief.focus : "";
+
+  brief.updates = Array.isArray(brief.updates) ? brief.updates : [];
+
+  brief.followUps = Array.isArray(brief.followUps) ? brief.followUps : [];
+
+  return brief;
+}
+
+function createScheduleBriefId(prefix) {
+  return (
+    `${prefix}-` + `${Date.now()}-` + `${Math.random().toString(16).slice(2)}`
+  );
+}
+
+function scheduleBriefIsEmpty(brief) {
+  return (
+    !brief.focus.trim() &&
+    brief.updates.length === 0 &&
+    brief.followUps.length === 0
+  );
+}
+
+function migrateLegacyScheduleNote() {
+  if (!scheduleNote.trim()) {
+    return;
+  }
+
+  const brief = getCurrentScheduleBrief();
+
+  if (scheduleBriefIsEmpty(brief)) {
+    brief.focus = scheduleNote.trim();
+  }
+
+  scheduleNote = "";
+
+  localStorage.removeItem("curavelaScheduleNote");
+
+  localStorage.removeItem("kindshiftScheduleNote");
+
+  saveData();
+}
+
+function getWeekDateKeys(weekKey) {
+  const [year, month, day] = weekKey.split("-").map(Number);
+
+  const startDate = new Date(year, month - 1, day);
+
+  const dateKeys = [];
+
+  for (let index = 0; index < 7; index += 1) {
+    const date = new Date(startDate);
+
+    date.setDate(startDate.getDate() + index);
+
+    dateKeys.push(getDateKey(date));
+  }
+
+  return dateKeys;
+}
+
+function getBriefUpdateDayLabel(dayKey, scheduleDays) {
+  if (dayKey === "general") {
+    return "General";
+  }
+
+  const matchingDay = scheduleDays.find(function (day) {
+    return day.key === dayKey;
+  });
+
+  if (!matchingDay) {
+    return "Schedule";
+  }
+
+  return `${matchingDay.shortLabel}, ` + `${matchingDay.dateLabel}`;
+}
+
+function renderScheduleBrief() {
+  if (
+    !scheduleFocusInput ||
+    !scheduleBriefRange ||
+    !scheduleUpdatesList ||
+    !scheduleFollowupsList
+  ) {
+    return;
+  }
+
+  const scheduleDays = getDaysInSelectedWeek();
+
+  const brief = getCurrentScheduleBrief();
+
+  scheduleBriefRange.textContent =
+    `${scheduleDays[0].dateLabel} – ` +
+    `${scheduleDays[scheduleDays.length - 1].dateLabel}`;
+
+  scheduleFocusInput.value = brief.focus;
+
+  const selectedDayValue = scheduleUpdateDaySelect.value || "general";
+
+  scheduleUpdateDaySelect.innerHTML = `
+    <option value="general">
+      General
+    </option>
+  `;
+
+  scheduleDays.forEach(function (day) {
+    const option = document.createElement("option");
+
+    option.value = day.key;
+
+    option.textContent = `${day.shortLabel} · ` + `${day.dateLabel}`;
+
+    scheduleUpdateDaySelect.append(option);
+  });
+
+  const selectedOptionStillExists = Array.from(
+    scheduleUpdateDaySelect.options,
+  ).some(function (option) {
+    return option.value === selectedDayValue;
+  });
+
+  scheduleUpdateDaySelect.value = selectedOptionStillExists
+    ? selectedDayValue
+    : "general";
+
+  scheduleUpdatesList.innerHTML = "";
+
+  scheduleUpdateCount.textContent = brief.updates.length;
+
+  if (brief.updates.length === 0) {
+    const emptyItem = document.createElement("li");
+
+    emptyItem.classList.add("schedule-brief-empty");
+
+    emptyItem.textContent = "No updates have been added for this week.";
+
+    scheduleUpdatesList.append(emptyItem);
+  }
+
+  brief.updates.forEach(function (update) {
+    const updateItem = document.createElement("li");
+
+    updateItem.classList.add("schedule-update-item");
+
+    const dayBadge = document.createElement("span");
+
+    dayBadge.classList.add("schedule-update-day");
+
+    dayBadge.textContent = getBriefUpdateDayLabel(update.dayKey, scheduleDays);
+
+    const updateText = document.createElement("span");
+
+    updateText.classList.add("schedule-brief-item-text");
+
+    updateText.textContent = update.text;
+
+    const removeButton = document.createElement("button");
+
+    removeButton.type = "button";
+    removeButton.classList.add("schedule-brief-remove");
+
+    removeButton.textContent = "×";
+    removeButton.title = "Remove update";
+
+    removeButton.addEventListener("click", function () {
+      brief.updates = brief.updates.filter(function (existingUpdate) {
+        return existingUpdate.id !== update.id;
+      });
+
+      saveData();
+      renderScheduleBrief();
+    });
+
+    updateItem.append(dayBadge, updateText, removeButton);
+
+    scheduleUpdatesList.append(updateItem);
+  });
+
+  scheduleFollowupsList.innerHTML = "";
+
+  const incompleteFollowUps = brief.followUps.filter(function (followUp) {
+    return !followUp.done;
+  }).length;
+
+  scheduleFollowupCount.textContent = incompleteFollowUps;
+
+  if (brief.followUps.length === 0) {
+    const emptyItem = document.createElement("li");
+
+    emptyItem.classList.add("schedule-brief-empty");
+
+    emptyItem.textContent = "No follow-ups for this week.";
+
+    scheduleFollowupsList.append(emptyItem);
+  }
+
+  brief.followUps.forEach(function (followUp) {
+    const followUpItem = document.createElement("li");
+
+    followUpItem.classList.add("schedule-followup-item");
+
+    if (followUp.done) {
+      followUpItem.classList.add("is-complete");
+    }
+
+    const checkbox = document.createElement("input");
+
+    checkbox.type = "checkbox";
+    checkbox.checked = Boolean(followUp.done);
+
+    checkbox.addEventListener("change", function () {
+      followUp.done = checkbox.checked;
+
+      saveData();
+      renderScheduleBrief();
+    });
+
+    const followUpText = document.createElement("span");
+
+    followUpText.classList.add("schedule-brief-item-text");
+
+    followUpText.textContent = followUp.text;
+
+    const removeButton = document.createElement("button");
+
+    removeButton.type = "button";
+    removeButton.classList.add("schedule-brief-remove");
+
+    removeButton.textContent = "×";
+    removeButton.title = "Remove follow-up";
+
+    removeButton.addEventListener("click", function () {
+      brief.followUps = brief.followUps.filter(function (existingFollowUp) {
+        return existingFollowUp.id !== followUp.id;
+      });
+
+      saveData();
+      renderScheduleBrief();
+    });
+
+    followUpItem.append(checkbox, followUpText, removeButton);
+
+    scheduleFollowupsList.append(followUpItem);
+  });
+}
+
+function addScheduleUpdate() {
+  const updateText = scheduleUpdateTextInput.value.trim();
+
+  if (!updateText) {
+    return;
+  }
+
+  const brief = getCurrentScheduleBrief();
+
+  brief.updates.push({
+    id: createScheduleBriefId("update"),
+    dayKey: scheduleUpdateDaySelect.value || "general",
+    text: updateText,
+  });
+
+  scheduleUpdateTextInput.value = "";
+
+  saveData();
+  renderScheduleBrief();
+
+  scheduleUpdateTextInput.focus();
+}
+
+function addScheduleFollowUp() {
+  const followUpText = scheduleFollowupTextInput.value.trim();
+
+  if (!followUpText) {
+    return;
+  }
+
+  const brief = getCurrentScheduleBrief();
+
+  brief.followUps.push({
+    id: createScheduleBriefId("followup"),
+    text: followUpText,
+    done: false,
+  });
+
+  scheduleFollowupTextInput.value = "";
+
+  saveData();
+  renderScheduleBrief();
+
+  scheduleFollowupTextInput.focus();
+}
+
+function copyPreviousScheduleBrief() {
+  const currentWeekKey = getCurrentScheduleBriefKey();
+
+  const [year, month, day] = currentWeekKey.split("-").map(Number);
+
+  const previousWeekDate = new Date(year, month - 1, day);
+
+  previousWeekDate.setDate(previousWeekDate.getDate() - 7);
+
+  const previousWeekKey = getDateKey(previousWeekDate);
+
+  const previousBrief = scheduleBriefs[previousWeekKey];
+
+  if (!previousBrief) {
+    alert("The previous week does not have a Schedule Brief.");
+
+    return;
+  }
+
+  const currentBrief = getCurrentScheduleBrief();
+
+  if (
+    !scheduleBriefIsEmpty(currentBrief) &&
+    !confirm("Replace this week's current brief with the previous week?")
+  ) {
+    return;
+  }
+
+  const previousDayKeys = getWeekDateKeys(previousWeekKey);
+
+  const currentDayKeys = getDaysInSelectedWeek().map(function (dayItem) {
+    return dayItem.key;
+  });
+
+  scheduleBriefs[currentWeekKey] = {
+    focus: previousBrief.focus || "",
+
+    updates: (previousBrief.updates || []).map(function (update) {
+      const previousDayIndex = previousDayKeys.indexOf(update.dayKey);
+
+      return {
+        id: createScheduleBriefId("update"),
+
+        dayKey:
+          update.dayKey === "general"
+            ? "general"
+            : currentDayKeys[previousDayIndex] || "general",
+
+        text: update.text,
+      };
+    }),
+
+    followUps: (previousBrief.followUps || []).map(function (followUp) {
+      return {
+        id: createScheduleBriefId("followup"),
+        text: followUp.text,
+        done: false,
+      };
+    }),
+  };
+
+  saveData();
+  renderScheduleBrief();
+}
+
+function clearCurrentScheduleBrief() {
+  const weekKey = getCurrentScheduleBriefKey();
+
+  const brief = getCurrentScheduleBrief();
+
+  if (scheduleBriefIsEmpty(brief)) {
+    return;
+  }
+
+  if (!confirm("Clear the Schedule Brief for this week?")) {
+    return;
+  }
+
+  delete scheduleBriefs[weekKey];
+
+  saveData();
+  renderScheduleBrief();
+}
+
 /* event listeners */
 
 if (calendarPreviousMonthButton) {
@@ -3840,11 +4334,71 @@ weekStartDateInput.addEventListener("change", function () {
   renderSchedule();
 });
 
-scheduleNoteInput.addEventListener("input", function () {
-  scheduleNote = scheduleNoteInput.value;
+if (scheduleFocusInput) {
+  scheduleFocusInput.addEventListener("input", function () {
+    const brief = getCurrentScheduleBrief();
 
-  saveData();
-});
+    brief.focus = scheduleFocusInput.value;
+
+    saveData();
+  });
+}
+
+if (addScheduleUpdateButton) {
+  addScheduleUpdateButton.addEventListener("click", addScheduleUpdate);
+}
+
+if (scheduleUpdateTextInput) {
+  scheduleUpdateTextInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addScheduleUpdate();
+    }
+  });
+}
+
+if (addScheduleFollowupButton) {
+  addScheduleFollowupButton.addEventListener("click", addScheduleFollowUp);
+}
+
+if (scheduleFollowupTextInput) {
+  scheduleFollowupTextInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addScheduleFollowUp();
+    }
+  });
+}
+
+if (briefPreviousWeekButton) {
+  briefPreviousWeekButton.addEventListener("click", function () {
+    changeSelectedWeekByDays(-7);
+  });
+}
+
+if (briefNextWeekButton) {
+  briefNextWeekButton.addEventListener("click", function () {
+    changeSelectedWeekByDays(7);
+  });
+}
+
+if (briefTodayButton) {
+  briefTodayButton.addEventListener("click", function () {
+    weekStartDateInput.value = getTodayDateValue();
+
+    saveData();
+    updateWeekDisplay();
+    renderSchedule();
+  });
+}
+
+if (copyPreviousBriefButton) {
+  copyPreviousBriefButton.addEventListener("click", copyPreviousScheduleBrief);
+}
+
+if (clearScheduleBriefButton) {
+  clearScheduleBriefButton.addEventListener("click", clearCurrentScheduleBrief);
+}
 
 clearScheduleButton.addEventListener("click", function () {
   if (confirm("Are you sure you want to clear the full schedule?")) {
@@ -4166,7 +4720,7 @@ if (weekStartDateInput.value === "") {
   weekStartDateInput.value = getTodayDateValue();
 }
 
-scheduleNoteInput.value = scheduleNote;
+migrateLegacyScheduleNote();
 
 updateCustomShiftVisibility();
 updatePickerVisibility();

@@ -640,19 +640,158 @@
             </div>
           </article>
 
-          <article id="reports-panel" class="panel-card wide">
-            <div class="section-header compact">
+          <article
+            id="reports-panel"
+            class="panel-card wide schedule-brief-panel"
+          >
+            <div class="schedule-brief-header">
               <div>
-                <h3>Schedule Notes</h3>
-                <p>Keep reminders visible for the selected schedule.</p>
+                <p class="eyebrow">Weekly planning</p>
+                <h3>Schedule Brief</h3>
+                <p>Keep weekly priorities, updates, and follow-ups together.</p>
+              </div>
+
+              <div class="schedule-brief-week-nav">
+                <button
+                  id="brief-previous-week-button"
+                  type="button"
+                  aria-label="Previous week"
+                >
+                  ‹
+                </button>
+
+                <div class="schedule-brief-range">
+                  <strong id="schedule-brief-range"> Selected week </strong>
+
+                  <span>weekly brief</span>
+                </div>
+
+                <button
+                  id="brief-next-week-button"
+                  type="button"
+                  aria-label="Next week"
+                >
+                  ›
+                </button>
+
+                <button
+                  id="brief-today-button"
+                  class="ghost-button"
+                  type="button"
+                >
+                  Today
+                </button>
               </div>
             </div>
 
-            <textarea
-              id="schedule-note"
-              rows="4"
-              placeholder="Add notes for this week..."
-            ></textarea>
+            <section class="schedule-brief-focus">
+              <div class="schedule-brief-section-heading">
+                <div>
+                  <strong>Weekly focus</strong>
+                  <span>The main priority for this schedule.</span>
+                </div>
+
+                <span class="schedule-brief-auto-save"> Auto-saved </span>
+              </div>
+
+              <textarea
+                id="schedule-focus"
+                rows="3"
+                placeholder="Example: Keep night coverage consistent while Shelyn is unavailable Thursday."
+              ></textarea>
+            </section>
+
+            <div class="schedule-brief-grid">
+              <section class="schedule-brief-section">
+                <div class="schedule-brief-section-heading">
+                  <div>
+                    <strong>Schedule updates</strong>
+                    <span>Connect updates to a specific day.</span>
+                  </div>
+
+                  <span id="schedule-update-count" class="schedule-brief-count">
+                    0
+                  </span>
+                </div>
+
+                <div class="schedule-update-form">
+                  <select id="schedule-update-day">
+                    <option value="general">General</option>
+                  </select>
+
+                  <input
+                    id="schedule-update-text"
+                    type="text"
+                    placeholder="Add a schedule update..."
+                  />
+
+                  <button
+                    id="add-schedule-update-button"
+                    class="primary-action"
+                    type="button"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <ul id="schedule-updates-list" class="schedule-brief-list"></ul>
+              </section>
+
+              <section class="schedule-brief-section">
+                <div class="schedule-brief-section-heading">
+                  <div>
+                    <strong>Follow-ups</strong>
+                    <span>Things that still need confirmation.</span>
+                  </div>
+
+                  <span
+                    id="schedule-followup-count"
+                    class="schedule-brief-count"
+                  >
+                    0
+                  </span>
+                </div>
+
+                <div class="schedule-followup-form">
+                  <input
+                    id="schedule-followup-text"
+                    type="text"
+                    placeholder="Add a follow-up..."
+                  />
+
+                  <button
+                    id="add-schedule-followup-button"
+                    class="primary-action"
+                    type="button"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <ul
+                  id="schedule-followups-list"
+                  class="schedule-brief-list"
+                ></ul>
+              </section>
+            </div>
+
+            <div class="schedule-brief-actions">
+              <button
+                id="copy-previous-brief-button"
+                class="ghost-button"
+                type="button"
+              >
+                Copy previous week
+              </button>
+
+              <button
+                id="clear-schedule-brief-button"
+                class="ghost-button danger"
+                type="button"
+              >
+                Clear this week
+              </button>
+            </div>
           </article>
         </section>
       </main>

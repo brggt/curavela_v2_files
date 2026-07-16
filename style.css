@@ -1199,63 +1199,6 @@ textarea {
   background: var(--red-soft);
 }
 
-/* curavela v2 — compact hero and toolbar */
-
-.hero {
-  grid-template-columns: minmax(420px, 1fr) minmax(440px, 620px);
-  align-items: start;
-  gap: 30px;
-  margin-bottom: 22px;
-}
-
-.hero-copy h2 {
-  max-width: 650px;
-  font-size: clamp(48px, 5vw, 68px);
-  line-height: 0.95;
-}
-
-.hero-copy > p:last-child {
-  margin-top: 14px;
-  max-width: 500px;
-  font-size: 14px;
-}
-
-.hero-actions {
-  max-width: 620px;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 9px;
-}
-
-.hero-actions > select {
-  width: 110px;
-}
-
-.date-control {
-  flex: 1;
-  min-width: 340px;
-  justify-content: flex-end;
-}
-
-#selected-week-display-button,
-#selected-month-display-button {
-  flex: 1;
-  min-width: 175px;
-}
-
-.primary-action {
-  min-width: 125px;
-}
-
-#more-actions-button {
-  min-width: 100px;
-}
-
-.stats-strip {
-  margin-top: 8px;
-}
-
 /* typography matching the mockup */
 
 body,
@@ -1669,231 +1612,6 @@ select {
   width: 34px;
   height: 34px;
   font-size: 12px;
-}
-
-/* curavela v2 — compact mockup-style hero */
-
-.main-content {
-  padding: 30px 32px 40px;
-}
-
-.hero {
-  display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(430px, 560px);
-  align-items: start;
-  gap: 36px;
-  margin-bottom: 24px;
-}
-
-.hero-copy {
-  padding-top: 6px;
-}
-
-.hero-copy .eyebrow {
-  margin-bottom: 10px;
-  font-size: 10px;
-}
-
-.hero-copy h2 {
-  max-width: 620px;
-  font-size: clamp(48px, 4.8vw, 66px);
-  line-height: 0.96;
-  letter-spacing: -0.065em;
-}
-
-.hero-copy > p:last-child {
-  max-width: 500px;
-  margin-top: 15px;
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-.hero-actions {
-  width: 100%;
-  max-width: 560px;
-  display: grid;
-  grid-template-columns: 110px minmax(290px, 1fr);
-  gap: 10px;
-  justify-self: end;
-}
-
-.hero-actions > #schedule-view {
-  width: 100%;
-}
-
-.date-control {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 42px minmax(160px, 1fr) 42px 76px;
-  gap: 7px;
-}
-
-#selected-week-display-button,
-#selected-month-display-button {
-  width: 100%;
-  min-width: 0;
-}
-
-.primary-action {
-  grid-column: 1 / 2;
-  width: 100%;
-}
-
-.more-actions {
-  grid-column: 2 / 3;
-  justify-self: end;
-}
-
-#more-actions-button {
-  min-width: 110px;
-}
-
-.hero-actions button,
-.hero-actions select {
-  min-height: 40px;
-  font-size: 12px;
-}
-
-.stats-strip {
-  margin-top: 0;
-}
-
-@media (max-width: 1180px) {
-  .hero {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-actions {
-    justify-self: stretch;
-    max-width: none;
-  }
-}
-
-@media (max-width: 760px) {
-  .main-content {
-    padding: 20px;
-  }
-
-  .hero-copy h2 {
-    font-size: 42px;
-  }
-
-  .hero-actions {
-    grid-template-columns: 1fr;
-  }
-
-  .date-control {
-    grid-template-columns: 42px minmax(140px, 1fr) 42px;
-  }
-
-  #today-week-button,
-  #current-month-button {
-    grid-column: 1 / -1;
-  }
-
-  .primary-action,
-  .more-actions {
-    grid-column: auto;
-    width: 100%;
-  }
-
-  #more-actions-button {
-    width: 100%;
-  }
-}
-
-/* keep top controls on one clean row */
-
-.hero {
-  grid-template-columns: minmax(420px, 1fr) minmax(560px, 700px);
-}
-
-.hero-actions {
-  max-width: 700px;
-  display: grid;
-  grid-template-columns:
-    105px
-    minmax(330px, 1fr)
-    115px
-    92px;
-  align-items: center;
-  gap: 9px;
-}
-
-.hero-actions > #schedule-view {
-  grid-column: 1;
-  width: 100%;
-}
-
-#week-picker-section,
-#month-picker-section {
-  grid-column: 2;
-  min-width: 0;
-}
-
-.primary-action {
-  grid-column: 3;
-  width: 100%;
-  min-width: 0;
-}
-
-.more-actions {
-  grid-column: 4;
-  width: 100%;
-  justify-self: stretch;
-}
-
-#more-actions-button {
-  width: 100%;
-  min-width: 0;
-}
-
-.date-control {
-  display: grid;
-  grid-template-columns: 40px minmax(165px, 1fr) 40px 70px;
-  width: 100%;
-  min-width: 0;
-}
-
-#selected-week-display-button,
-#selected-month-display-button {
-  width: 100%;
-  min-width: 0;
-}
-
-@media (max-width: 1300px) {
-  .hero {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-actions {
-    justify-self: stretch;
-    max-width: none;
-  }
-}
-
-@media (max-width: 760px) {
-  .hero-actions {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .hero-actions > #schedule-view {
-    grid-column: 1;
-  }
-
-  .primary-action {
-    grid-column: 2;
-  }
-
-  #week-picker-section,
-  #month-picker-section {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-
-  .more-actions {
-    grid-column: 1 / -1;
-  }
 }
 
 /* draggable caregiver rows */
@@ -4490,51 +4208,113 @@ select {
   width: 310px;
 }
 
-/* cleaner centered schedule toolbar */
+/* =========================================================
+   CURAVELA — SINGLE RESPONSIVE HERO TOOLBAR SYSTEM
+   Keep this as the only toolbar layout block.
+   ========================================================= */
 
-.hero-actions,
-.hero-controls,
-.top-controls {
-  width: 100%;
-  min-width: 0;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: nowrap;
-  gap: 10px;
+.hero {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 18px !important;
+  margin-bottom: 24px !important;
 }
 
-.hero-actions > *,
-.hero-controls > *,
-.top-controls > * {
+.hero-copy {
+  width: 100%;
+  max-width: 760px;
+  padding-top: 6px;
+}
+
+.hero-copy .eyebrow {
+  margin-bottom: 10px;
+  font-size: 10px;
+}
+
+.hero-copy h2 {
+  max-width: 620px;
+  font-size: clamp(48px, 4.8vw, 66px);
+  line-height: 0.96;
+  letter-spacing: -0.065em;
+}
+
+.hero-copy > p:last-child {
+  max-width: 500px;
+  margin-top: 15px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.hero-actions {
+  position: static !important;
+  inset: auto !important;
+
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+
+  display: grid !important;
+  grid-template-areas: "view prev date next today add more";
+  grid-template-columns:
+    104px
+    42px
+    minmax(180px, 220px)
+    42px
+    74px
+    116px
+    96px;
+  align-items: center !important;
+  justify-content: start !important;
+  gap: 8px !important;
+
+  overflow: visible !important;
+}
+
+.hero-actions > * {
+  min-width: 0 !important;
   margin: 0 !important;
 }
 
 #schedule-view {
-  width: 105px;
-  min-width: 105px;
-  height: 42px;
-  padding: 0 34px 0 15px;
+  grid-area: view;
 
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 700;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  min-height: 42px !important;
+
+  padding: 0 34px 0 14px !important;
+  border-radius: 12px !important;
+
+  font-size: 11px !important;
+  font-weight: 700 !important;
 }
 
-#week-picker-section,
-#month-picker-section {
-  width: auto;
-  min-width: 0;
+/* Let the active picker’s children become part of the toolbar grid. */
+#week-picker-section:not(.hidden),
+#month-picker-section:not(.hidden) {
+  display: contents !important;
+}
 
-  display: grid;
-  grid-template-columns:
-    42px
-    190px
-    42px
-    74px;
-  align-items: center;
-  gap: 8px;
+#week-picker-section.hidden,
+#month-picker-section.hidden {
+  display: none !important;
+}
+
+#previous-week-button,
+#previous-month-button {
+  grid-area: prev;
+}
+
+#next-week-button,
+#next-month-button {
+  grid-area: next;
 }
 
 #previous-week-button,
@@ -4548,168 +4328,604 @@ select {
   padding: 0 !important;
 
   display: grid !important;
-  place-items: center;
+  place-items: center !important;
 
   border-radius: 12px !important;
-  font-size: 15px;
+  font-size: 15px !important;
 }
 
 .date-picker-wrapper {
-  width: 190px;
-  min-width: 190px;
+  grid-area: date;
 
-  display: flex;
-  align-items: center;
+  position: relative;
+  width: 100% !important;
+  min-width: 0 !important;
 }
 
 .selected-date-button {
-  width: 190px !important;
-  min-width: 190px !important;
+  width: 100% !important;
+  min-width: 0 !important;
   height: 42px !important;
   min-height: 42px !important;
-  padding: 0 14px !important;
+  padding: 0 12px !important;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 14px !important;
+  align-items: center !important;
+  gap: 5px !important;
 
   border-radius: 12px !important;
-  white-space: nowrap;
 }
 
 #selected-week-display,
 #selected-month-display {
-  flex: 1;
-  text-align: center;
-  font-size: 10px;
-  font-weight: 800;
+  min-width: 0 !important;
+  overflow: hidden;
+
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+  text-overflow: ellipsis;
+  white-space: nowrap !important;
 }
 
 .date-picker-chevron {
-  width: 12px;
-  flex: 0 0 12px;
-  margin-left: 0;
+  width: 14px !important;
+  margin: 0 !important;
+
+  display: grid !important;
+  place-items: center !important;
 }
 
 #today-week-button,
 #current-month-button {
-  width: 74px !important;
-  min-width: 74px !important;
+  grid-area: today;
+
+  width: 100% !important;
+  min-width: 0 !important;
   height: 42px !important;
   min-height: 42px !important;
-  padding: 0 12px !important;
+  padding: 0 10px !important;
 
   border-radius: 12px !important;
 }
 
 #quick-add-shift-button {
-  width: 116px;
-  min-width: 116px;
-  height: 42px;
-  min-height: 42px;
-  padding: 0 15px;
+  grid-area: add;
 
-  border-radius: 12px;
-  white-space: nowrap;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 12px !important;
+
+  border-radius: 12px !important;
+  white-space: nowrap !important;
+}
+
+.more-actions {
+  grid-area: more;
+
+  position: relative;
+  width: 100% !important;
+  min-width: 0 !important;
+  justify-self: stretch !important;
 }
 
 #more-actions-button {
-  width: 96px;
-  min-width: 96px;
-  height: 42px;
-  min-height: 42px;
-  padding: 0 14px;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 12px !important;
 
-  border-radius: 12px;
-  white-space: nowrap;
+  border-radius: 12px !important;
+  white-space: nowrap !important;
 }
-
-/* keep the calendar centered under the date button */
 
 #week-date-popover,
 #month-date-popover {
-  top: calc(100% + 10px);
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%);
+  top: calc(100% + 10px) !important;
+  left: 50% !important;
+  right: auto !important;
+
+  width: min(310px, calc(100vw - 32px)) !important;
+  transform: translateX(-50%) !important;
 }
 
-/* smaller desktop and tablet */
+/* Medium screens: controls use two balanced rows. */
+@media (max-width: 1000px) {
+  .hero-actions {
+    grid-template-areas:
+      "view prev date next today"
+      "add add add more more";
+    grid-template-columns:
+      104px
+      42px
+      minmax(180px, 260px)
+      42px
+      74px;
+    width: max-content !important;
+    max-width: 100% !important;
+  }
+}
 
-@media (max-width: 1050px) {
-  .hero-actions,
-  .hero-controls,
-  .top-controls {
-    justify-content: flex-start;
+/* Small screens: one clear control group per row. */
+@media (max-width: 650px) {
+  .hero-copy h2 {
+    font-size: 42px;
+  }
+
+  .hero-actions {
+    width: 100% !important;
+
+    grid-template-areas:
+      "view view view"
+      "prev date next"
+      "today today today"
+      "add add add"
+      "more more more";
+    grid-template-columns:
+      42px
+      minmax(0, 1fr)
+      42px;
+  }
+
+  #schedule-view,
+  #today-week-button,
+  #current-month-button,
+  #quick-add-shift-button,
+  .more-actions,
+  #more-actions-button {
+    width: 100% !important;
+  }
+}
+
+/* control the Weekly / Monthly dropdown arrow */
+
+#schedule-view {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  width: 96px !important;
+  padding: 0 30px 0 14px !important;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--blue-dark) 50%),
+    linear-gradient(135deg, var(--blue-dark) 50%, transparent 50%);
+
+  background-position:
+    calc(100% - 17px) 18px,
+    calc(100% - 13px) 18px;
+
+  background-size:
+    4px 4px,
+    4px 4px;
+
+  background-repeat: no-repeat;
+}
+
+/* custom arrows for caregiver assignment dropdowns */
+
+.assignment-select,
+.month-assignment-select,
+.open-mini-shift select,
+.coverage-manual-assignment select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  padding-left: 9px !important;
+  padding-right: 26px !important;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--blue) 50%),
+    linear-gradient(135deg, var(--blue) 50%, transparent 50%);
+
+  background-position:
+    calc(100% - 15px) 50%,
+    calc(100% - 11px) 50%;
+
+  background-size:
+    4px 4px,
+    4px 4px;
+
+  background-repeat: no-repeat;
+}
+
+/* custom arrows for week-start and shift-style dropdowns */
+
+#week-start,
+#shift-style {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  padding-left: 14px !important;
+  padding-right: 32px !important;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--blue-dark) 50%),
+    linear-gradient(135deg, var(--blue-dark) 50%, transparent 50%);
+
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 14px) 50%;
+
+  background-size:
+    4px 4px,
+    4px 4px;
+
+  background-repeat: no-repeat;
+}
+
+/* remove unused sidebar bottom cards */
+
+.adaptive-card,
+.user-chip {
+  display: none !important;
+}
+
+.sidebar {
+  justify-content: flex-start;
+}
+
+/* Coverage uses the shared top date picker */
+
+.coverage-week-picker {
+  display: none !important;
+}
+
+.main-content.coverage-view #schedule-view {
+  display: none !important;
+}
+
+.main-content.coverage-view .hero-actions {
+  grid-template-areas: "prev date next today add more" !important;
+
+  grid-template-columns:
+    42px
+    minmax(180px, 220px)
+    42px
+    74px
+    116px
+    96px !important;
+}
+
+@media (max-width: 1000px) {
+  .main-content.coverage-view .hero-actions {
+    width: max-content !important;
+    max-width: 100% !important;
+
+    grid-template-areas:
+      "prev date next today"
+      "add add more more" !important;
+
+    grid-template-columns:
+      42px
+      minmax(180px, 250px)
+      42px
+      74px !important;
+  }
+}
+
+@media (max-width: 650px) {
+  .main-content.coverage-view .hero-actions {
+    width: 100% !important;
+
+    grid-template-areas:
+      "prev date next"
+      "today today today"
+      "add add add"
+      "more more more" !important;
+
+    grid-template-columns:
+      42px
+      minmax(0, 1fr)
+      42px !important;
+  }
+}
+/* weekly Schedule Brief */
+
+.schedule-brief-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.schedule-brief-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.schedule-brief-header h3 {
+  margin: 3px 0 5px;
+  font-size: 24px;
+}
+
+.schedule-brief-header > div:first-child > p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.schedule-brief-week-nav {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.schedule-brief-week-nav button {
+  min-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 11px;
+}
+
+.schedule-brief-range {
+  min-width: 125px;
+  padding: 0 9px;
+  text-align: center;
+}
+
+.schedule-brief-range strong,
+.schedule-brief-range span {
+  display: block;
+}
+
+.schedule-brief-range strong {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.schedule-brief-range span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.schedule-brief-focus,
+.schedule-brief-section {
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  background: #fbfdff;
+}
+
+.schedule-brief-focus {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(36, 93, 255, 0.08), transparent 35%),
+    #f8fbff;
+}
+
+.schedule-brief-section-heading {
+  margin-bottom: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.schedule-brief-section-heading strong,
+.schedule-brief-section-heading span {
+  display: block;
+}
+
+.schedule-brief-section-heading strong {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.schedule-brief-section-heading div > span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.schedule-brief-auto-save {
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #23846b;
+  background: var(--green-soft);
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.schedule-brief-count {
+  min-width: 26px;
+  height: 26px;
+  display: grid !important;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--blue);
+  background: var(--blue-soft);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+#schedule-focus {
+  min-height: 90px;
+  resize: vertical;
+  border-radius: 13px;
+  background: white;
+}
+
+.schedule-brief-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.schedule-update-form {
+  display: grid;
+  grid-template-columns:
+    105px
+    minmax(0, 1fr)
+    auto;
+  gap: 7px;
+}
+
+.schedule-followup-form {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto;
+  gap: 7px;
+}
+
+.schedule-update-form select,
+.schedule-update-form input,
+.schedule-update-form button,
+.schedule-followup-form input,
+.schedule-followup-form button {
+  min-height: 38px;
+  font-size: 9px;
+}
+
+.schedule-update-form button,
+.schedule-followup-form button {
+  padding: 0 13px;
+}
+
+.schedule-brief-list {
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+  list-style: none;
+}
+
+.schedule-brief-list li {
+  min-height: 42px;
+  padding: 9px 10px;
+  display: grid;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+}
+
+.schedule-update-item {
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    28px;
+}
+
+.schedule-followup-item {
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    28px;
+}
+
+.schedule-followup-item input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+
+.schedule-update-day {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: var(--blue);
+  background: var(--blue-soft);
+  font-size: 7px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.schedule-brief-item-text {
+  min-width: 0;
+  color: var(--text);
+  font-size: 9px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.schedule-followup-item.is-complete .schedule-brief-item-text {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.schedule-brief-remove {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  box-shadow: none;
+  font-size: 16px;
+}
+
+.schedule-brief-remove:hover {
+  color: var(--red);
+  background: var(--red-soft);
+  transform: none;
+}
+
+.schedule-brief-empty {
+  display: block !important;
+  min-height: 54px !important;
+  padding: 17px !important;
+  color: var(--muted);
+  border-style: dashed !important;
+  background: transparent !important;
+  font-size: 9px;
+  text-align: center;
+}
+
+.schedule-brief-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.schedule-brief-actions button {
+  min-height: 36px;
+  font-size: 9px;
+}
+
+@media (max-width: 850px) {
+  .schedule-brief-header {
+    flex-direction: column;
+  }
+
+  .schedule-brief-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .schedule-brief-week-nav {
+    width: 100%;
     flex-wrap: wrap;
   }
 
-  #week-picker-section,
-  #month-picker-section {
-    grid-template-columns:
-      40px
-      minmax(150px, 190px)
-      40px
-      70px;
+  .schedule-brief-range {
+    flex: 1;
   }
 
-  .date-picker-wrapper,
-  .selected-date-button {
-    width: 100% !important;
-    min-width: 150px !important;
-  }
-
-  #quick-add-shift-button {
-    width: auto;
-    min-width: 105px;
-  }
-}
-
-/* phone layout */
-
-@media (max-width: 600px) {
-  .hero-actions,
-  .hero-controls,
-  .top-controls {
-    display: grid !important;
+  .schedule-update-form {
     grid-template-columns:
       minmax(0, 1fr)
       auto;
-    gap: 8px;
   }
 
-  #schedule-view {
-    width: 100%;
-    min-width: 0;
-  }
-
-  #week-picker-section,
-  #month-picker-section {
+  #schedule-update-day {
     grid-column: 1 / -1;
+  }
 
+  .schedule-brief-actions {
+    flex-direction: column;
+  }
+
+  .schedule-brief-actions button {
     width: 100%;
-    grid-template-columns:
-      40px
-      minmax(0, 1fr)
-      40px;
-  }
-
-  #today-week-button,
-  #current-month-button {
-    grid-column: 1 / -1;
-    width: 100% !important;
-  }
-
-  .date-picker-wrapper,
-  .selected-date-button {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  #quick-add-shift-button,
-  #more-actions-button {
-    width: 100%;
-    min-width: 0;
   }
 }
