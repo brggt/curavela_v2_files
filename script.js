@@ -226,6 +226,13 @@ const totalHoursCoveredElement = document.querySelector("#total-hours-covered");
 const openHoursElement = document.querySelector("#open-hours");
 const openShiftsCountElement = document.querySelector("#open-shifts-count");
 const caregiverHoursList = document.querySelector("#caregiver-hours-list");
+const caregiverHoursHeadingLabel = document.querySelector(
+  ".caregiver-hours-heading strong",
+);
+
+const caregiverHoursHeadingDetail = document.querySelector(
+  ".caregiver-hours-heading span",
+);
 const caregiverHoursStatus = document.querySelector("#caregiver-hours-status");
 
 const caregiverInsightHeadline = document.querySelector(
@@ -2359,7 +2366,10 @@ function renderCaregiverInsights(warnings, caregiverHours) {
       {
         level: "safe",
 
-        text: "No caregivers are near or over their weekly limit.",
+        text:
+          scheduleViewSelect.value === "monthly"
+            ? "Monthly totals are shown without comparing them to a weekly limit."
+            : "No caregivers are near or over their weekly limit.",
       },
     ];
   }
@@ -2400,6 +2410,20 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
 
   const caregiverHours = {};
   const warnings = [];
+
+  const isMonthlyView = scheduleViewSelect.value === "monthly";
+
+  if (caregiverHoursHeadingLabel) {
+    caregiverHoursHeadingLabel.textContent = isMonthlyView
+      ? "Monthly hours"
+      : "Weekly hours";
+  }
+
+  if (caregiverHoursHeadingDetail) {
+    caregiverHoursHeadingDetail.textContent = isMonthlyView
+      ? "Totals for the selected month"
+      : "Based on the selected week";
+  }
 
   caregivers.forEach(function (caregiverName) {
     caregiverHours[caregiverName] = 0;
@@ -2485,15 +2509,16 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
         const hoursWorked = caregiverHours[caregiverName] || 0;
 
         const maxHours = caregiverMaxHours[caregiverName] || 50;
-
-        const rawPercent = maxHours > 0 ? (hoursWorked / maxHours) * 100 : 0;
+        const rawPercent =
+          !isMonthlyView && maxHours > 0 ? (hoursWorked / maxHours) * 100 : 0;
 
         const progressPercent = Math.min(rawPercent, 100);
 
-        let statusText = "On track";
+        let statusText = isMonthlyView ? "Monthly total" : "On track";
+
         let statusClass = "safe";
 
-        if (hoursWorked > maxHours) {
+        if (!isMonthlyView && hoursWorked > maxHours) {
           const hoursOver = hoursWorked - maxHours;
 
           statusText = `${formatHours(hoursOver)} over`;
@@ -2504,12 +2529,11 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
             level: "high",
 
             text:
-              `${caregiverName} is over their weekly maximum by ` +
+              `${caregiverName} is over their ` +
+              `weekly maximum by ` +
               `${formatHours(hoursOver)}.`,
           });
-
-          renderCaregiverInsights(warnings, caregiverHours);
-        } else if (hoursWorked >= maxHours - 5) {
+        } else if (!isMonthlyView && hoursWorked >= maxHours - 5) {
           statusText = "Near limit";
           statusClass = "warning";
 
@@ -2522,41 +2546,49 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
           });
         }
 
+        const hoursSummary = isMonthlyView
+          ? `${formatHours(hoursWorked)} this month`
+          : `${formatHours(hoursWorked)} of ` + `${formatHours(maxHours)}`;
+
         caregiverHoursItem.classList.add(
           "caregiver-hours-row",
           `is-${statusClass}`,
         );
 
         caregiverHoursItem.innerHTML = `
-        <div class="caregiver-hours-row-top">
-          <div>
-            <strong>
-              ${caregiverName}
-            </strong>
+  <div class="caregiver-hours-row-top">
+    <div>
+      <strong>
+        ${caregiverName}
+      </strong>
 
-            <span>
-              ${formatHours(hoursWorked)}
-              of
-              ${formatHours(maxHours)}
-            </span>
-          </div>
+      <span>
+        ${hoursSummary}
+      </span>
+    </div>
 
-          <span
-            class="
-              caregiver-hour-state
-              ${statusClass}
-            "
-          >
-            ${statusText}
-          </span>
-        </div>
+    <span
+      class="
+        caregiver-hour-state
+        ${statusClass}
+      "
+    >
+      ${statusText}
+    </span>
+  </div>
 
+  ${
+    isMonthlyView
+      ? ""
+      : `
         <div class="caregiver-hours-track">
           <span
             style="width: ${progressPercent}%"
           ></span>
         </div>
-      `;
+      `
+  }
+`;
 
         caregiverHoursList.append(caregiverHoursItem);
       });
@@ -2572,6 +2604,8 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
   }
 
   warnings.push(...getCaregiverRuleWarnings(scheduleDays, activeShifts));
+
+  renderCaregiverInsights(warnings, caregiverHours);
 
   if (warningCountElement) {
     warningCountElement.textContent = warnings.length;
