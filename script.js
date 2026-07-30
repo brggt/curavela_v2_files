@@ -188,7 +188,6 @@ const dashboardGrid = document.querySelector(".dashboard-grid");
 
 const caregiverPanel = document.querySelector("#caregiver-panel");
 const hoursPanel = document.querySelector("#hours-panel");
-const openShiftsPanel = document.querySelector("#open-shifts-panel");
 const warningsPanel = document.querySelector("#warnings-panel");
 const reportsPanel = document.querySelector("#reports-panel");
 const settingsPanel = document.querySelector("#settings-panel");
@@ -246,7 +245,6 @@ const caregiverInsightMessage = document.querySelector(
 const caregiverUpdateCount = document.querySelector("#caregiver-update-count");
 
 const caregiverUpdateList = document.querySelector("#caregiver-update-list");
-const availableShiftsList = document.querySelector("#available-shifts-list");
 
 const coveragePercentElement = document.querySelector("#coverage-percent");
 const coverageProgressFill = document.querySelector("#coverage-progress-fill");
@@ -260,18 +258,6 @@ const scheduleWarningSummary = document.querySelector(
 
 const scheduleWarningDetails = document.querySelector(
   "#schedule-warning-details",
-);
-
-const toastOpenShiftsCount = document.querySelector("#toast-open-shifts-count");
-
-const availableShiftsBody = document.querySelector(
-  "#open-shifts-panel .available-shifts-body",
-);
-
-const availableShiftsToast = document.querySelector(".available-shifts-toast");
-
-const minimizeAvailableShiftsButton = document.querySelector(
-  "#minimize-available-shifts-button",
 );
 
 const editTimeModal = document.querySelector("#edit-time-modal");
@@ -329,8 +315,6 @@ const cancelCaregiverRulesButton = document.querySelector(
 const saveCaregiverRulesButton = document.querySelector(
   "#save-caregiver-rules-button",
 );
-
-let availableShiftsScrollInterval;
 
 /* storage */
 
@@ -2429,9 +2413,6 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
     caregiverHours[caregiverName] = 0;
   });
 
-  if (availableShiftsList) {
-    availableShiftsList.innerHTML = "";
-  }
 
   scheduleDays.forEach(function (day) {
     activeShifts.forEach(function (shift) {
@@ -2445,30 +2426,6 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
 
       totalHoursNeeded += shiftHours;
 
-      if (assignedCaregiver === "Open") {
-        openHours += shiftHours;
-        openShiftsCount += 1;
-
-        if (availableShiftsList) {
-          const availableShiftItem = document.createElement("li");
-
-          availableShiftItem.innerHTML = `
-                <strong>
-                  ${day.label}
-                </strong>
-                <br>
-
-                ${shift.name}
-                ·
-                ${formatTime(shiftForDay.start)}
-                –
-                ${formatTime(shiftForDay.end)}
-                ·
-                ${formatHours(shiftHours)}
-              `;
-
-          availableShiftsList.append(availableShiftItem);
-        }
       } else {
         totalHoursCovered += shiftHours;
 
@@ -2486,9 +2443,6 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
 
   openShiftsCountElement.textContent = openShiftsCount;
 
-  if (toastOpenShiftsCount) {
-    toastOpenShiftsCount.textContent = openShiftsCount;
-  }
 
   if (caregiverHoursList) {
     caregiverHoursList.innerHTML = "";
@@ -2595,13 +2549,6 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
     }
   }
 
-  if (availableShiftsList && openShiftsCount === 0) {
-    const noOpenShiftsItem = document.createElement("li");
-
-    noOpenShiftsItem.textContent = "No available shifts.";
-
-    availableShiftsList.append(noOpenShiftsItem);
-  }
 
   warnings.push(...getCaregiverRuleWarnings(scheduleDays, activeShifts));
 
@@ -2642,8 +2589,6 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
     }
   }
 
-  startAvailableShiftsAutoScroll();
-}
 
 /* drag ordering */
 
@@ -3552,46 +3497,6 @@ function clearSelectedMonth() {
   alert("This month has been cleared.");
 }
 
-/* open-shift card */
-
-function updateAvailableShiftsMinimizedState() {
-  if (!availableShiftsToast || !minimizeAvailableShiftsButton) {
-    return;
-  }
-
-  const isMinimized =
-    localStorage.getItem("curavelaAvailableShiftsMinimized") === "true";
-
-  availableShiftsToast.classList.toggle("is-minimized", isMinimized);
-
-  minimizeAvailableShiftsButton.textContent = isMinimized ? "+" : "−";
-}
-
-function startAvailableShiftsAutoScroll() {
-  clearInterval(availableShiftsScrollInterval);
-
-  if (!availableShiftsBody) {
-    return;
-  }
-
-  availableShiftsBody.scrollTop = 0;
-
-  availableShiftsScrollInterval = setInterval(function () {
-    const maxScroll =
-      availableShiftsBody.scrollHeight - availableShiftsBody.clientHeight;
-
-    if (maxScroll <= 0) {
-      return;
-    }
-
-    if (availableShiftsBody.scrollTop >= maxScroll) {
-      availableShiftsBody.scrollTop = 0;
-    } else {
-      availableShiftsBody.scrollTop += 1;
-    }
-  }, 90);
-}
-
 /* navigation */
 
 function setAppView(viewName) {
@@ -3602,7 +3507,6 @@ function setAppView(viewName) {
   const dashboardPanels = [
     caregiverPanel,
     hoursPanel,
-    openShiftsPanel,
     warningsPanel,
     reportsPanel,
     settingsPanel,
@@ -3686,13 +3590,6 @@ function setAppView(viewName) {
     dashboardGrid.classList.add("single-panel-view");
 
     settingsPanel.classList.remove("app-view-hidden");
-  }
-
-  if (availableShiftsToast) {
-    availableShiftsToast.classList.toggle(
-      "app-view-hidden",
-      viewName === "open-shifts",
-    );
   }
 
   sideNavLinks.forEach(function (link) {
@@ -4489,19 +4386,6 @@ currentMonthButton.addEventListener("click", function () {
   renderSchedule();
 });
 
-if (minimizeAvailableShiftsButton && availableShiftsToast) {
-  minimizeAvailableShiftsButton.addEventListener("click", function () {
-    const isCurrentlyMinimized =
-      availableShiftsToast.classList.contains("is-minimized");
-
-    localStorage.setItem(
-      "curavelaAvailableShiftsMinimized",
-      String(!isCurrentlyMinimized),
-    );
-
-    updateAvailableShiftsMinimizedState();
-  });
-}
 
 if (moreActionsButton && moreActionsMenu) {
   moreActionsButton.addEventListener("click", function (event) {
@@ -4758,7 +4642,6 @@ migrateLegacyScheduleNote();
 
 updateCustomShiftVisibility();
 updatePickerVisibility();
-updateAvailableShiftsMinimizedState();
 renderShiftList();
 renderCaregiverList();
 renderShiftTimeList();
