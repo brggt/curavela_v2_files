@@ -834,57 +834,6 @@ textarea {
   border-top: 1px solid var(--border);
 }
 
-.available-shifts-body {
-  max-height: 300px;
-  overflow: auto;
-}
-
-.available-shifts-toast {
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  width: 320px;
-  z-index: 50;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: white;
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-
-.available-shifts-toast.is-minimized .available-shifts-body {
-  display: none;
-}
-
-.toast-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-}
-
-.toast-header strong {
-  margin-right: auto;
-}
-
-.toast-header span {
-  min-width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  color: white;
-  font-size: 12px;
-  font-weight: 950;
-  background: var(--orange);
-}
-
-#minimize-available-shifts-button {
-  width: 34px;
-  min-height: 34px;
-  padding: 0;
-}
-
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1118,12 +1067,6 @@ textarea {
   .time-grid {
     grid-template-columns: 1fr;
   }
-
-  .available-shifts-toast {
-    left: 14px;
-    right: 14px;
-    width: auto;
-  }
 }
 
 @media print {
@@ -1133,8 +1076,7 @@ textarea {
 
   .sidebar,
   .hero-actions,
-  .dashboard-grid,
-  .available-shifts-toast {
+  .dashboard-grid {
     display: none !important;
   }
 
@@ -3787,12 +3729,6 @@ select {
   .caregiver-list-copy small {
     max-width: 165px;
   }
-}
-
-/* remove floating open-shifts box */
-
-.available-shifts-toast {
-  display: none !important;
 }
 
 /* stable sidebar for tablet and smaller desktop widths */
