@@ -2413,7 +2413,6 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
     caregiverHours[caregiverName] = 0;
   });
 
-
   scheduleDays.forEach(function (day) {
     activeShifts.forEach(function (shift) {
       const shiftForDay = getShiftForDay(day.key, shift);
@@ -2426,6 +2425,9 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
 
       totalHoursNeeded += shiftHours;
 
+      if (assignedCaregiver === "Open") {
+        openHours += shiftHours;
+        openShiftsCount += 1;
       } else {
         totalHoursCovered += shiftHours;
 
@@ -2435,14 +2437,21 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
     });
   });
 
-  totalHoursNeededElement.textContent = formatHours(totalHoursNeeded);
+  if (totalHoursNeededElement) {
+    totalHoursNeededElement.textContent = formatHours(totalHoursNeeded);
+  }
 
-  totalHoursCoveredElement.textContent = formatHours(totalHoursCovered);
+  if (totalHoursCoveredElement) {
+    totalHoursCoveredElement.textContent = formatHours(totalHoursCovered);
+  }
 
-  openHoursElement.textContent = formatHours(openHours);
+  if (openHoursElement) {
+    openHoursElement.textContent = formatHours(openHours);
+  }
 
-  openShiftsCountElement.textContent = openShiftsCount;
-
+  if (openShiftsCountElement) {
+    openShiftsCountElement.textContent = openShiftsCount;
+  }
 
   if (caregiverHoursList) {
     caregiverHoursList.innerHTML = "";
@@ -2463,6 +2472,7 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
         const hoursWorked = caregiverHours[caregiverName] || 0;
 
         const maxHours = caregiverMaxHours[caregiverName] || 50;
+
         const rawPercent =
           !isMonthlyView && maxHours > 0 ? (hoursWorked / maxHours) * 100 : 0;
 
@@ -2483,8 +2493,8 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
             level: "high",
 
             text:
-              `${caregiverName} is over their ` +
-              `weekly maximum by ` +
+              `${caregiverName} is over ` +
+              `their weekly maximum by ` +
               `${formatHours(hoursOver)}.`,
           });
         } else if (!isMonthlyView && hoursWorked >= maxHours - 5) {
@@ -2495,8 +2505,10 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
             level: "medium",
 
             text:
-              `${caregiverName} is close to their ` +
-              `${formatHours(maxHours)} weekly limit.`,
+              `${caregiverName} is close ` +
+              `to their ` +
+              `${formatHours(maxHours)} ` +
+              `weekly limit.`,
           });
         }
 
@@ -2510,45 +2522,53 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
         );
 
         caregiverHoursItem.innerHTML = `
-  <div class="caregiver-hours-row-top">
-    <div>
-      <strong>
-        ${caregiverName}
-      </strong>
+            <div
+              class="caregiver-hours-row-top"
+            >
+              <div>
+                <strong>
+                  ${caregiverName}
+                </strong>
 
-      <span>
-        ${hoursSummary}
-      </span>
-    </div>
+                <span>
+                  ${hoursSummary}
+                </span>
+              </div>
 
-    <span
-      class="
-        caregiver-hour-state
-        ${statusClass}
-      "
-    >
-      ${statusText}
-    </span>
-  </div>
+              <span
+                class="
+                  caregiver-hour-state
+                  ${statusClass}
+                "
+              >
+                ${statusText}
+              </span>
+            </div>
 
-  ${
-    isMonthlyView
-      ? ""
-      : `
-        <div class="caregiver-hours-track">
-          <span
-            style="width: ${progressPercent}%"
-          ></span>
-        </div>
-      `
-  }
-`;
+            ${
+              isMonthlyView
+                ? ""
+                : `
+                  <div
+                    class="
+                      caregiver-hours-track
+                    "
+                  >
+                    <span
+                      style="
+                        width:
+                        ${progressPercent}%
+                      "
+                    ></span>
+                  </div>
+                `
+            }
+          `;
 
         caregiverHoursList.append(caregiverHoursItem);
       });
     }
   }
-
 
   warnings.push(...getCaregiverRuleWarnings(scheduleDays, activeShifts));
 
@@ -2588,7 +2608,7 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
       `;
     }
   }
-
+}
 
 /* drag ordering */
 
@@ -4385,7 +4405,6 @@ currentMonthButton.addEventListener("click", function () {
   updateMonthDisplay();
   renderSchedule();
 });
-
 
 if (moreActionsButton && moreActionsMenu) {
   moreActionsButton.addEventListener("click", function (event) {
