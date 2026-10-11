@@ -40,3 +40,26 @@ Curavela is a caregiving scheduling web app designed to make weekly and monthly 
 - Continue testing across browsers and screen sizes.
 - Refine mobile layouts and performance as the app grows.
 - Explore a future backend for account-based storage and multi-user scheduling.
+
+## Scheduling reliability and dated editing
+
+- The weekly calendar and Coverage Assistant share overlap, availability, rest, consecutive-day, and weekly-limit checks. Overlapping assignments are blocked; other rule warnings require confirmation.
+- Weekly limits are evaluated for every calendar week intersecting a monthly view, including the days outside a partial first or last week.
+- Use **Schedule Shift** or **Edit shift** to assign an existing template on a date, adjust only that occurrence's times, or move its assignment. Moving opens the original slot. This version does not add extra independent slots or split shifts.
+- Default-time changes preserve existing assigned occurrences. New dated edits and copied weeks retain their explicit times.
+- **Undo** and **Redo** restore up to 30 schedule changes during the current page session. They include assignments, dated times, templates, caregiver rules/profiles, and bulk paste/clear actions. Navigation and weekly brief text are outside schedule history. Reloading or importing a backup resets history.
+- Set an optional minimum rest period under caregiver rules. Its default is 0 (disabled). Availability applies to the day a shift starts. Consecutive-day and two-days-off checks include every day touched by overnight work.
+
+Hours remain scheduled wall-clock hours and are allocated to the week in which the shift starts, using the selected week-start day. They are not elapsed-time payroll calculations. Equal start/end times mean a 24-hour shift. The **Shifts filled** percentage measures configured shift hours assigned, not continuous care coverage; a required-care timeline remains future work.
+
+## Development checks
+
+No build or dependency installation is required. With Node.js 18 or newer:
+
+```sh
+npm test
+npm run check
+```
+
+The automated suite covers scheduling rules and application state transitions using isolated DOM/storage stubs. It does not replace real browser validation. Before merging this milestone, check the dated editor in weekly/monthly views, modal focus and keyboard shortcuts, and the layout on a phone.
+
