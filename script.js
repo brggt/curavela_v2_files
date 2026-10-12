@@ -526,7 +526,7 @@ function migrateCaregiverData() {
   return changed;
 }
 
-function saveData() {
+function saveData(label) {
   localStorage.setItem("curavelaCustomShifts", JSON.stringify(customShifts));
 
   localStorage.setItem("curavelaCaregivers", JSON.stringify(caregivers));
@@ -567,6 +567,8 @@ function saveData() {
   localStorage.setItem("curavelaMonth", monthPicker.value);
 
   localStorage.setItem("curavelaWeekStartDate", weekStartDateInput.value);
+
+  recordScheduleChange(label);
 }
 
 function loadData() {
@@ -839,6 +841,8 @@ function importCuravelaData(file) {
       renderShiftTimeList();
       renderSchedule();
 
+      resetScheduleHistory();
+      showScheduleNotice("Backup imported. Schedule undo history has been reset.");
       alert("Backup imported successfully.");
     } catch (error) {
       console.error(error);
@@ -1156,10 +1160,10 @@ function buildCaregiverOptions(assignedCaregiverId) {
 
     caregiverOptions += `
       <option
-        value="${caregiver.id}"
+        value="${escapeHTML(caregiver.id)}"
         ${selected}
       >
-        ${caregiver.name}
+        ${escapeHTML(caregiver.name)}
       </option>
     `;
   });
@@ -1201,6 +1205,7 @@ function getDefaultCaregiverRules() {
     availableDays: [...allWeekDays],
     allowedShifts: [],
     maxConsecutiveDays: 0,
+    minRestHours: 0,
     needsTwoConsecutiveDaysOff: false,
     note: "",
   };
@@ -1252,11 +1257,11 @@ function renderCaregiverRuleChoices(caregiverId) {
                 caregiver-rule-shift-checkbox
               "
               type="checkbox"
-              value="${shift.name}"
+              value="${escapeHTML(shift.name)}"
               ${isChecked ? "checked" : ""}
             />
 
-            <span>${shift.name}</span>
+            <span>${escapeHTML(shift.name)}</span>
           </label>
         `;
     })
@@ -1282,13 +1287,15 @@ function openCaregiverRulesModal(caregiverId) {
 
   caregiverMaxConsecutiveDaysInput.value = rules.maxConsecutiveDays || 0;
 
+  document.querySelector("#caregiver-min-rest-hours").value = rules.minRestHours || 0;
+
   caregiverNeedsTwoDaysOffInput.checked = rules.needsTwoConsecutiveDaysOff;
 
   caregiverRuleNoteInput.value = rules.note || "";
 
   renderCaregiverRuleChoices(caregiverId);
 
-  caregiverRulesModal.classList.remove("hidden");
+  openManagedDialog(caregiverRulesModal);
 }
 
 function closeCaregiverRulesModal() {
@@ -1296,13 +1303,20 @@ function closeCaregiverRulesModal() {
     return;
   }
 
-  caregiverRulesModal.classList.add("hidden");
+  closeManagedDialog(caregiverRulesModal);
 
   activeCaregiverRulesId = "";
 }
 
 function saveActiveCaregiverRules() {
   if (!activeCaregiverRulesId) {
+    return;
+  }
+
+  const restInput = document.querySelector("#caregiver-min-rest-hours");
+  if (!restInput.checkValidity() || !caregiverMaxConsecutiveDaysInput.checkValidity()) {
+    restInput.reportValidity();
+    caregiverMaxConsecutiveDaysInput.reportValidity();
     return;
   }
 
@@ -1325,12 +1339,14 @@ function saveActiveCaregiverRules() {
 
     maxConsecutiveDays: Number(caregiverMaxConsecutiveDaysInput.value) || 0,
 
+    minRestHours: Number(restInput.value) || 0,
+
     needsTwoConsecutiveDaysOff: caregiverNeedsTwoDaysOffInput.checked,
 
     note: caregiverRuleNoteInput.value.trim(),
   };
 
-  saveData();
+  saveData("caregiver rules");
   closeCaregiverRulesModal();
   renderCaregiverList();
   renderSchedule();
@@ -1374,98 +1390,12 @@ function hasTwoConsecutiveDaysOff(scheduledDays) {
 }
 
 function getCaregiverRuleWarnings(scheduleDays, activeShifts) {
-  const warningMap = new Map();
-
-  caregivers.forEach(function (caregiver) {
-    const caregiverId = caregiver.id;
-    const caregiverName = caregiver.name;
-
-    const rules = getCaregiverRules(caregiverId);
-
-    scheduleDays.forEach(function (day) {
-      const dayName = day.date.toLocaleDateString("en-US", {
-        weekday: "long",
-      });
-
-      activeShifts.forEach(function (shift) {
-        const assignmentKey = `${day.key}-${shift.name}`;
-
-        const assignedCaregiverId =
-          scheduleAssignments[assignmentKey] || "Open";
-
-        if (assignedCaregiverId !== caregiverId) {
-          return;
-        }
-
-        if (!rules.availableDays.includes(dayName)) {
-          warningMap.set(`${caregiverId}-unavailable-${day.key}`, {
-            level: "high",
-
-            text:
-              `${caregiverName} is scheduled ` +
-              `${day.label}, but ${dayName} ` +
-              `is unavailable.`,
-          });
-        }
-
-        if (
-          rules.allowedShifts.length > 0 &&
-          !rules.allowedShifts.includes(shift.name)
-        ) {
-          warningMap.set(`${caregiverId}-shift-` + `${day.key}-${shift.name}`, {
-            level: "high",
-
-            text:
-              `${caregiverName} is scheduled ` +
-              `for ${shift.name} on ` +
-              `${day.label}, but that shift ` +
-              `is not allowed.`,
-          });
-        }
-      });
-    });
-
-    const scheduledDays = getCaregiverScheduledDays(
-      caregiverId,
-      scheduleDays,
-      activeShifts,
-    );
-
-    const maxConsecutiveDays = Number(rules.maxConsecutiveDays);
-
-    if (maxConsecutiveDays > 0) {
-      const longestRun = getLongestConsecutiveRun(scheduledDays);
-
-      if (longestRun > maxConsecutiveDays) {
-        warningMap.set(`${caregiverId}-consecutive`, {
-          level: "medium",
-
-          text:
-            `${caregiverName} is scheduled ` +
-            `${longestRun} days in a row. ` +
-            `Their maximum is ` +
-            `${maxConsecutiveDays}.`,
-        });
-      }
-    }
-
-    if (
-      rules.needsTwoConsecutiveDaysOff &&
-      scheduleDays.length >= 2 &&
-      !hasTwoConsecutiveDaysOff(scheduledDays)
-    ) {
-      warningMap.set(`${caregiverId}-two-days-off`, {
-        level: "medium",
-
-        text:
-          `${caregiverName} does not ` +
-          `have two consecutive days off ` +
-          `in this schedule.`,
-      });
-    }
-  });
-
-  return Array.from(warningMap.values());
+  if (!scheduleDays.length) return [];
+  return CuravelaScheduling.getWarnings(
+    getSchedulingModel(activeShifts),
+    scheduleDays[0].key,
+    scheduleDays[scheduleDays.length - 1].key,
+  );
 }
 
 function renderScheduleWarningStrip(warnings) {
@@ -1535,111 +1465,12 @@ function getCoverageOpenShifts(scheduleDays, activeShifts) {
   return openShifts;
 }
 
-function evaluateCoverageCandidate(
-  caregiverId,
-  day,
-  shift,
-  scheduleDays,
-  activeShifts,
-  caregiverHours,
-) {
-  const caregiver = getCaregiverById(caregiverId);
-
-  if (!caregiver) {
-    return null;
-  }
-
-  const caregiverName = caregiver.name;
-
-  const rules = getCaregiverRules(caregiverId);
-
-  const dayName = day.date.toLocaleDateString("en-US", {
-    weekday: "long",
+function evaluateCoverageCandidate(caregiverId, day, shift, scheduleDays, activeShifts) {
+  const times = getShiftForDay(day.key, shift);
+  return CuravelaScheduling.evaluate(getSchedulingModel(activeShifts), {
+    caregiverId, dayKey: day.key, shiftName: shift.name,
+    start: times.start, end: times.end,
   });
-
-  const shiftForDay = getShiftForDay(day.key, shift);
-
-  const shiftHours = getShiftHours(shiftForDay);
-
-  const currentHours = caregiverHours[caregiverId] || 0;
-
-  const maxHours = caregiverMaxHours[caregiverId] || 50;
-
-  const projectedHours = currentHours + shiftHours;
-
-  const conflicts = [];
-  const checks = [];
-
-  if (rules.availableDays.includes(dayName)) {
-    checks.push(`Available ${dayName}`);
-  } else {
-    conflicts.push(`Unavailable ${dayName}`);
-  }
-
-  if (
-    rules.allowedShifts.length === 0 ||
-    rules.allowedShifts.includes(shift.name)
-  ) {
-    checks.push(`${shift.name} shift allowed`);
-  } else {
-    conflicts.push(`${shift.name} shift not allowed`);
-  }
-
-  if (projectedHours <= maxHours) {
-    checks.push(
-      `${formatHours(projectedHours)} ` + `of ${formatHours(maxHours)}`,
-    );
-  } else {
-    conflicts.push(
-      `Would exceed max hours by ` +
-        `${formatHours(projectedHours - maxHours)}`,
-    );
-  }
-
-  const scheduledDays = getCaregiverScheduledDays(
-    caregiverId,
-    scheduleDays,
-    activeShifts,
-  );
-
-  const selectedDayIndex = scheduleDays.findIndex(function (scheduleDay) {
-    return scheduleDay.key === day.key;
-  });
-
-  if (selectedDayIndex !== -1) {
-    scheduledDays[selectedDayIndex] = true;
-  }
-
-  const maxConsecutiveDays = Number(rules.maxConsecutiveDays) || 0;
-
-  if (maxConsecutiveDays > 0) {
-    const longestRun = getLongestConsecutiveRun(scheduledDays);
-
-    if (longestRun > maxConsecutiveDays) {
-      conflicts.push(`Would create ${longestRun} ` + `consecutive days`);
-    } else {
-      checks.push("Consecutive-day rule stays safe");
-    }
-  }
-
-  if (rules.needsTwoConsecutiveDaysOff) {
-    if (hasTwoConsecutiveDaysOff(scheduledDays)) {
-      checks.push("Keeps two consecutive days off");
-    } else {
-      conflicts.push("Would remove two consecutive days off");
-    }
-  }
-
-  return {
-    caregiverId,
-    caregiverName,
-    currentHours,
-    projectedHours,
-    maxHours,
-    conflicts,
-    checks,
-    safe: conflicts.length === 0,
-  };
 }
 
 function getCoverageCandidates(
@@ -1677,16 +1508,12 @@ function getCoverageCandidates(
 }
 
 function assignCoverageShift(dayKey, shiftName, caregiverId) {
-  if (!caregiverId || !caregiverIdExists(caregiverId)) {
-    return;
-  }
-
-  const assignmentKey = `${dayKey}-${shiftName}`;
-
-  scheduleAssignments[assignmentKey] = caregiverId;
-
-  saveData();
-  renderSchedule();
+  const shift = getActiveShifts().find(function (item) { return item.name === shiftName; });
+  if (!shift) return;
+  const times = getShiftForDay(dayKey, shift);
+  return commitOccurrenceChange({
+    dayKey, shiftName, caregiverId, start: times.start, end: times.end,
+  });
 }
 
 function buildCoverageCaregiverOptions() {
@@ -1698,8 +1525,8 @@ function buildCoverageCaregiverOptions() {
 
   caregivers.forEach(function (caregiver) {
     options += `
-        <option value="${caregiver.id}">
-          ${caregiver.name}
+        <option value="${escapeHTML(caregiver.id)}">
+          ${escapeHTML(caregiver.name)}
         </option>
       `;
   });
@@ -1816,7 +1643,7 @@ function renderCoverageAssistant() {
 
     coverageShiftsList.innerHTML = `
       <div class="coverage-small-empty">
-        Every open shift has a safe match.
+        Every open shift has a match within the configured rules.
       </div>
     `;
 
@@ -1889,7 +1716,7 @@ function renderCoverageAssistant() {
           <strong>${formatHours(hours)}</strong>
 
           <span class="${bestMatch ? "safe-label" : "conflict-label"}">
-            ${bestMatch ? `Best: ${bestMatch.caregiverName}` : "No safe match"}
+            ${bestMatch ? `Best: ${escapeHTML(bestMatch.caregiverName)}` : "Needs review"}
           </span>
         </div>
       `;
@@ -1936,13 +1763,11 @@ function renderCoverageComparison(recommendation) {
 
       const hoursSafe = candidate.projectedHours <= candidate.maxHours;
 
-      const otherConflicts = candidate.conflicts.filter(function (conflict) {
-        return (
-          !conflict.startsWith("Unavailable") &&
-          !conflict.includes("shift not allowed") &&
-          !conflict.startsWith("Would exceed max hours")
-        );
-      });
+      const otherConflicts = candidate.warnings
+        .filter(function (warning) {
+          return !["unavailable", "shift-rule", "hours"].includes(warning.code);
+        })
+        .map(function (warning) { return warning.text; });
 
       const otherRuleText = otherConflicts[0] || "No rule conflicts";
 
@@ -1954,7 +1779,7 @@ function renderCoverageComparison(recommendation) {
       if (isBestMatch) {
         statusText = "Best match";
       } else if (candidate.safe) {
-        statusText = "Safe";
+        statusText = "Within rules";
       }
 
       return `
@@ -1972,11 +1797,11 @@ function renderCoverageComparison(recommendation) {
 
             <div>
               <strong>
-                ${candidate.caregiverName}
+                ${escapeHTML(candidate.caregiverName)}
               </strong>
 
               <span>
-                ${getCaregiverRulesSummary(candidate.caregiverId)}
+                ${escapeHTML(getCaregiverRulesSummary(candidate.caregiverId))}
               </span>
             </div>
           </div>
@@ -1999,8 +1824,8 @@ function renderCoverageComparison(recommendation) {
             <strong class="${shiftAllowed ? "rule-safe" : "rule-conflict"}">
               ${
                 shiftAllowed
-                  ? `✓ ${shift.name} allowed`
-                  : `× ${shift.name} not allowed`
+                  ? `✓ ${escapeHTML(shift.name)} allowed`
+                  : `× ${escapeHTML(shift.name)} not allowed`
               }
             </strong>
           </div>
@@ -2032,8 +1857,8 @@ function renderCoverageComparison(recommendation) {
             }">
               ${
                 otherConflicts.length === 0
-                  ? `✓ ${otherRuleText}`
-                  : `× ${otherRuleText}`
+                  ? `✓ ${escapeHTML(otherRuleText)}`
+                  : `× ${escapeHTML(otherRuleText)}`
               }
             </strong>
           </div>
@@ -2055,14 +1880,15 @@ function renderCoverageComparison(recommendation) {
               "
               type="button"
               data-day="${day.key}"
-              data-shift="${shift.name}"
+              data-shift="${escapeHTML(shift.name)}"
               data-caregiver-id="${candidate.caregiverId}"
               data-safe="${candidate.safe}"
+              ${candidate.blocked ? "disabled" : ""}
             >
               ${
                 candidate.safe
-                  ? `Assign ${candidate.caregiverName}`
-                  : "Assign anyway"
+                  ? `Assign ${escapeHTML(candidate.caregiverName)}`
+                  : candidate.blocked ? "Overlapping shift" : "Assign with warnings"
               }
             </button>
           </div>
@@ -2079,7 +1905,7 @@ function renderCoverageComparison(recommendation) {
         </span>
 
         <h3>
-          ${day.label} · ${shift.name}
+          ${day.label} · ${escapeHTML(shift.name)}
         </h3>
 
         <p>
@@ -2098,7 +1924,7 @@ function renderCoverageComparison(recommendation) {
         "
       >
         ${
-          bestMatch ? `Best match: ${bestMatch.caregiverName}` : "No safe match"
+          bestMatch ? `Best match: ${escapeHTML(bestMatch.caregiverName)}` : "Needs review"
         }
       </div>
     </div>
@@ -2121,18 +1947,6 @@ function renderCoverageComparison(recommendation) {
     .querySelectorAll(".coverage-comparison-assign-button")
     .forEach(function (button) {
       button.addEventListener("click", function () {
-        const isSafe = button.dataset.safe === "true";
-
-        if (!isSafe) {
-          const shouldAssign = confirm(
-            `Assign ${getCaregiverName(button.dataset.caregiverId)} even though this conflicts with their rules?`,
-          );
-
-          if (!shouldAssign) {
-            return;
-          }
-        }
-
         assignCoverageShift(
           button.dataset.day,
           button.dataset.shift,
@@ -2235,7 +2049,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
         <div>
           <span class="caregiver-name">
-            ${caregiverName}
+            ${escapeHTML(caregiverName)}
           </span>
 
           <span class="caregiver-meta">
@@ -2256,7 +2070,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
         shiftStack.classList.add("shift-stack");
 
         activeShifts.forEach(function (shift) {
-          const assignmentKey = `${day.key}-${shift.name}`;
+          const assignmentKey = `${day.key}-${escapeHTML(shift.name)}`;
 
           const assignedCaregiverId =
             scheduleAssignments[assignmentKey] || "Open";
@@ -2279,16 +2093,21 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
                 </strong>
 
                 <span>
-                  ${shift.name}
+                  ${escapeHTML(shift.name)}
                 </span>
 
                 <select
                   class="assignment-select"
                   data-day="${day.key}"
-                  data-shift="${shift.name}"
+                  data-shift="${escapeHTML(shift.name)}"
                 >
                   ${buildCaregiverOptions(assignedCaregiverId)}
                 </select>
+                <button class="edit-occurrence-button" type="button"
+                  data-day="${day.key}" data-shift="${escapeHTML(shift.name)}"
+                  aria-label="Edit ${escapeHTML(shift.name)} on ${day.key}">
+                  Edit shift
+                </button>
               `;
 
           shiftStack.append(shiftPill);
@@ -2311,7 +2130,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
   const totalOpenShifts = scheduleDays.reduce(function (total, day) {
     const openShiftsForDay = activeShifts.filter(function (shift) {
-      const assignmentKey = `${day.key}-${shift.name}`;
+      const assignmentKey = `${day.key}-${escapeHTML(shift.name)}`;
 
       return (scheduleAssignments[assignmentKey] || "Open") === "Open";
     });
@@ -2351,7 +2170,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
     dayCell.classList.add("care-map-cell", "open-summary-cell");
 
     const openShiftsForDay = activeShifts.filter(function (shift) {
-      const assignmentKey = `${day.key}-${shift.name}`;
+      const assignmentKey = `${day.key}-${escapeHTML(shift.name)}`;
 
       return (scheduleAssignments[assignmentKey] || "Open") === "Open";
     });
@@ -2383,7 +2202,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
                 <div class="open-mini-shift">
                   <div class="open-mini-shift-info">
                     <strong>
-                      ${shift.name}
+                      ${escapeHTML(shift.name)}
                     </strong>
 
                     <span>
@@ -2396,10 +2215,15 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
                   <select
                     class="assignment-select"
                     data-day="${day.key}"
-                    data-shift="${shift.name}"
+                    data-shift="${escapeHTML(shift.name)}"
                   >
                     ${buildCaregiverOptions("Open")}
                   </select>
+                <button class="edit-occurrence-button" type="button"
+                  data-day="${day.key}" data-shift="${escapeHTML(shift.name)}"
+                  aria-label="Edit ${escapeHTML(shift.name)} on ${day.key}">
+                  Edit shift
+                </button>
                 </div>
               `;
       })
@@ -2495,7 +2319,7 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
     let shiftRows = "";
 
     activeShifts.forEach(function (shift) {
-      const assignmentKey = `${day.key}-${shift.name}`;
+      const assignmentKey = `${day.key}-${escapeHTML(shift.name)}`;
 
       const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
 
@@ -2505,7 +2329,7 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
             <div class="month-shift-row">
               <div class="month-shift-info">
                 <span>
-                  ${shift.name}
+                  ${escapeHTML(shift.name)}
                 </span>
 
                 <span>
@@ -2516,10 +2340,15 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
               <select
                 class="assignment-select month-assignment-select"
                 data-day="${day.key}"
-                data-shift="${shift.name}"
+                data-shift="${escapeHTML(shift.name)}"
               >
                 ${buildCaregiverOptions(assignedCaregiver)}
               </select>
+                <button class="edit-occurrence-button" type="button"
+                  data-day="${day.key}" data-shift="${escapeHTML(shift.name)}"
+                  aria-label="Edit ${escapeHTML(shift.name)} on ${day.key}">
+                  Edit shift
+                </button>
             </div>
           `;
     });
@@ -2574,6 +2403,7 @@ function renderCaregiverInsights(warnings, caregiverHours) {
       rules.availableDays.length < allWeekDays.length ||
       rules.allowedShifts.length > 0 ||
       rules.maxConsecutiveDays > 0 ||
+      rules.minRestHours > 0 ||
       rules.needsTwoConsecutiveDaysOff ||
       Boolean(rules.note)
     );
@@ -2643,7 +2473,7 @@ function renderCaregiverInsights(warnings, caregiverHours) {
 
         text:
           scheduleViewSelect.value === "monthly"
-            ? "Monthly totals are shown without comparing them to a weekly limit."
+            ? "Weekly limits have been checked across the selected month."
             : "No caregivers are near or over their weekly limit.",
       },
     ];
@@ -2670,7 +2500,7 @@ function renderCaregiverInsights(warnings, caregiverHours) {
 
     updateItem.innerHTML = `
       <span class="update-status-dot"></span>
-      <span>${update.text}</span>
+      <span>${escapeHTML(update.text)}</span>
     `;
 
     caregiverUpdateList.append(updateItem);
@@ -2684,7 +2514,7 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
   let openShiftsCount = 0;
 
   const caregiverHours = {};
-  const warnings = [];
+  const warnings = getCaregiverRuleWarnings(scheduleDays, activeShifts);
 
   const isMonthlyView = scheduleViewSelect.value === "monthly";
 
@@ -2710,7 +2540,7 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
 
       const shiftHours = getShiftHours(shiftForDay);
 
-      const assignmentKey = `${day.key}-${shift.name}`;
+      const assignmentKey = `${day.key}-${escapeHTML(shift.name)}`;
 
       const assignedCaregiverId = scheduleAssignments[assignmentKey] || "Open";
 
@@ -2774,25 +2604,24 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
 
           statusClass = "danger";
 
-          warnings.push({
-            level: "high",
-
-            text:
-              `${caregiverName} is over their ` +
-              `weekly maximum by ` +
-              `${formatHours(hoursOver)}.`,
-          });
         } else if (!isMonthlyView && hoursWorked >= maxHours - 5) {
           statusText = "Near limit";
           statusClass = "warning";
 
-          warnings.push({
-            level: "medium",
+        }
 
-            text:
-              `${caregiverName} is close to their ` +
-              `${formatHours(maxHours)} weekly limit.`,
-          });
+        const personWarnings = warnings.filter(function (warning) {
+          return warning.caregiverId === caregiverId;
+        });
+        if (personWarnings.some(function (warning) { return warning.blocking; })) {
+          statusText = "Shift conflict";
+          statusClass = "danger";
+        } else if (isMonthlyView && personWarnings.some(function (warning) { return warning.code === "hours"; })) {
+          statusText = "Weekly limit exceeded";
+          statusClass = "danger";
+        } else if (personWarnings.length && statusClass === "safe") {
+          statusText = "Review rules";
+          statusClass = personWarnings.some(function (warning) { return warning.level === "high"; }) ? "danger" : "warning";
         }
 
         const hoursSummary = isMonthlyView
@@ -2808,7 +2637,7 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
   <div class="caregiver-hours-row-top">
     <div>
       <strong>
-        ${caregiverName}
+        ${escapeHTML(caregiverName)}
       </strong>
 
       <span>
@@ -2844,7 +2673,6 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
     }
   }
 
-  warnings.push(...getCaregiverRuleWarnings(scheduleDays, activeShifts));
 
   renderCaregiverInsights(warnings, caregiverHours);
 
@@ -3020,6 +2848,7 @@ function renderSchedule() {
   }
 
   attachAssignmentListeners();
+  attachOccurrenceEditListeners();
 
   renderCoverageSummary(scheduleDays, activeShifts);
 
@@ -3029,18 +2858,19 @@ function renderSchedule() {
 
 function attachAssignmentListeners() {
   document.querySelectorAll(".assignment-select").forEach(function (select) {
+    select.setAttribute("aria-label", "Caregiver for " + select.dataset.shift + " on " + select.dataset.day);
     select.addEventListener("change", function () {
-      const assignmentKey = `${select.dataset.day}-${select.dataset.shift}`;
-
-      scheduleAssignments[assignmentKey] = select.value;
-
-      saveData();
-      renderSchedule();
+      const shift = getActiveShifts().find(function (item) { return item.name === select.dataset.shift; });
+      const times = getShiftForDay(select.dataset.day, shift);
+      const saved = commitOccurrenceChange({
+        dayKey: select.dataset.day, shiftName: shift.name, caregiverId: select.value,
+        start: times.start, end: times.end,
+        sourceKey: select.dataset.day + "-" + shift.name,
+      });
+      if (!saved) renderSchedule();
     });
   });
 }
-
-/* caregivers */
 
 function getCaregiverRulesSummary(caregiverId) {
   const rules = getCaregiverRules(caregiverId);
@@ -3057,6 +2887,10 @@ function getCaregiverRulesSummary(caregiverId) {
 
   if (rules.maxConsecutiveDays > 0) {
     summaryParts.push(`max ${rules.maxConsecutiveDays} days in a row`);
+  }
+
+  if (rules.minRestHours > 0) {
+    summaryParts.push(rules.minRestHours + " hours between shifts");
   }
 
   if (rules.needsTwoConsecutiveDaysOff) {
@@ -3088,7 +2922,7 @@ function renderCaregiverList() {
 
           <div class="caregiver-list-copy">
             <strong>
-              ${caregiverName}
+              ${escapeHTML(caregiverName)}
             </strong>
 
             <span>
@@ -3096,7 +2930,7 @@ function renderCaregiverList() {
             </span>
 
             <small>
-              ${getCaregiverRulesSummary(caregiverId)}
+              ${escapeHTML(getCaregiverRulesSummary(caregiverId))}
             </small>
           </div>
         </div>
@@ -3237,7 +3071,7 @@ function renderCaregiverList() {
       const currentMaxHours = caregiverMaxHours[caregiverId] || 50;
 
       const updatedMaxHours = prompt(
-        `Set max weekly hours for ${caregiverName}:`,
+        `Set max weekly hours for ${escapeHTML(caregiverName)}:`,
         currentMaxHours,
       );
 
@@ -3265,7 +3099,7 @@ function renderCaregiverList() {
     });
 
     removeButton.addEventListener("click", function () {
-      if (!confirm(`Remove ${caregiverName}?`)) {
+      if (!confirm(`Remove ${escapeHTML(caregiverName)}?`)) {
         return;
       }
 
@@ -3319,7 +3153,7 @@ function addCaregiver() {
 
   caregiverInput.value = "";
 
-  saveData();
+  saveData("add caregiver");
   renderCaregiverList();
   renderSchedule();
 }
@@ -3336,7 +3170,7 @@ function renderShiftList() {
 
     shiftItem.innerHTML = `
         <span>
-          ${shiftName}
+          ${escapeHTML(shiftName)}
         </span>
 
         <div class="shift-list-buttons">
@@ -3471,7 +3305,7 @@ function renderShiftTimeList() {
     shiftTimeRow.innerHTML = `
         <div>
           <strong>
-            ${shift.name}
+            ${escapeHTML(shift.name)}
           </strong>
 
           <span class="clean-shift-time-text">
@@ -3486,7 +3320,7 @@ function renderShiftTimeList() {
         <button
           class="edit-default-time-button"
           type="button"
-          data-shift="${shift.name}"
+          data-shift="${escapeHTML(shift.name)}"
         >
           Edit default
         </button>
@@ -3627,18 +3461,18 @@ function editDefaultShiftTime(shift) {
   editTimeTitle.textContent = `Edit ${shift.name}`;
 
   editTimeSubtitle.textContent =
-    `This changes ${shift.name} everywhere unless ` +
-    `a date has a custom time.`;
+    `Update unassigned ${shift.name} shifts. Existing assignments ` +
+    `keep their saved times.`;
 
   setPrettyStartTime(shift.start);
 
   setPrettyEndTime(shift.end);
 
-  editTimeModal.classList.remove("hidden");
+  openManagedDialog(editTimeModal);
 }
 
 function closeEditTimeModal() {
-  editTimeModal.classList.add("hidden");
+  closeManagedDialog(editTimeModal);
 
   activeTimeEdit = {
     mode: "date",
@@ -3668,12 +3502,14 @@ function saveEditedShiftTime() {
 
   const shiftName = activeTimeEdit.shift.name;
 
+  preserveAssignedShiftTimes(shiftName);
+
   shiftTimes[shiftName] = {
     start: newStart,
     end: newEnd,
   };
 
-  saveData();
+  saveData("default shift times");
   closeEditTimeModal();
   renderShiftTimeList();
   renderSchedule();
@@ -3700,6 +3536,7 @@ function copySelectedWeek() {
 
       copiedWeekAssignments.push({
         dayIndex,
+        times: { ...getShiftForDay(day.key, shift) },
 
         shiftName: shift.name,
 
@@ -3712,35 +3549,43 @@ function copySelectedWeek() {
 }
 
 function pasteCopiedWeek() {
-  if (scheduleViewSelect.value !== "weekly") {
-    alert("Switch to Weekly view before pasting a week.");
-
+  if (scheduleViewSelect.value !== "weekly" || !copiedWeekAssignments) {
+    alert("Select Weekly view and copy a week before pasting.");
     return;
   }
-
-  if (!copiedWeekAssignments) {
-    alert("Copy a week first.");
-
-    return;
-  }
-
-  const weekDays = getDaysInSelectedWeek();
-
-  copiedWeekAssignments.forEach(function (copiedShift) {
-    const targetDay = weekDays[copiedShift.dayIndex];
-
-    if (!targetDay) {
-      return;
-    }
-
-    scheduleAssignments[`${targetDay.key}-${copiedShift.shiftName}`] =
-      copiedShift.caregiver;
+  const days = getDaysInSelectedWeek();
+  const assignments = { ...scheduleAssignments };
+  const overrides = { ...shiftTimeOverrides };
+  const active = new Set(getActiveShifts().map(function (shift) { return shift.name; }));
+  let changed = 0, replaced = 0;
+  copiedWeekAssignments.forEach(function (copy) {
+    const day = days[copy.dayIndex];
+    if (!day || !active.has(copy.shiftName)) return;
+    const key = day.key + "-" + copy.shiftName;
+    const person = caregiverIdExists(copy.caregiver) ? copy.caregiver : "Open";
+    if (assignments[key] && assignments[key] !== "Open") replaced += 1;
+    assignments[key] = person;
+    overrides[getShiftOverrideKey(day.key, copy.shiftName)] = {
+      start: copy.times.start, end: copy.times.end,
+    };
+    changed += 1;
   });
-
-  saveData();
+  if (!changed) { alert("The copied week has no templates in the current shift style."); return; }
+  const warnings = CuravelaScheduling.getWarnings({
+    ...getSchedulingModel(), assignments, overrides,
+  }, days[0].key, days[6].key).filter(function (warning) { return warning.code !== "near-hours"; });
+  if (warnings.some(function (warning) { return warning.blocking; })) {
+    alert("This week cannot be pasted because shifts overlap.\n\n" +
+      warnings.filter(function (warning) { return warning.blocking; }).map(function (warning) { return warning.text; }).join("\n"));
+    return;
+  }
+  const detail = warnings.length ? "\n\nWarnings:\n" + warnings.map(function (warning) { return warning.text; }).join("\n") : "";
+  if (!confirm("Paste " + changed + " shift slots into " + days[0].dateLabel + "–" + days[6].dateLabel +
+    "? This replaces " + replaced + " assigned slots. You can undo this." + detail)) return;
+  scheduleAssignments = assignments;
+  shiftTimeOverrides = overrides;
+  saveData("paste week");
   renderSchedule();
-
-  alert("Copied week pasted to the selected week.");
 }
 
 function clearSelectedWeek() {
@@ -3764,7 +3609,7 @@ function clearSelectedWeek() {
     });
   });
 
-  saveData();
+  saveData("clear week");
   renderSchedule();
 
   alert("This week has been cleared.");
@@ -3791,7 +3636,7 @@ function clearSelectedMonth() {
     });
   });
 
-  saveData();
+  saveData("clear month");
   renderSchedule();
 
   alert("This month has been cleared.");
@@ -4704,18 +4549,7 @@ if (moreActionsButton && moreActionsMenu) {
 
 if (quickAddShiftButton) {
   quickAddShiftButton.addEventListener("click", function () {
-    setAppView("settings");
-
-    shiftStyleSelect.value = "custom";
-
-    updateCustomShiftVisibility();
-    renderShiftTimeList();
-    saveData();
-    renderSchedule();
-
-    setTimeout(function () {
-      customShiftInput.focus();
-    }, 250);
+    openOccurrenceEditor();
   });
 }
 
@@ -4931,3 +4765,6 @@ renderSchedule();
 updateWeekDisplay();
 updateMonthDisplay();
 setAppView("schedule");
+
+
+resetScheduleHistory();

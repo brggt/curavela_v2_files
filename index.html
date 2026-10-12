@@ -12,6 +12,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="enhancements.css" />
   </head>
 
   <body>
@@ -247,7 +248,7 @@
               class="primary-action"
               type="button"
             >
-              + Add Shift
+              + Schedule Shift
             </button>
 
             <div class="more-actions">
@@ -293,6 +294,14 @@
           </div>
         </header>
 
+        <div class="schedule-history" aria-label="Schedule history">
+          <p id="schedule-notice" role="status" aria-live="polite">
+            Saved on this device. Undo lasts until this page is reloaded.
+          </p>
+          <button id="undo-schedule-button" class="ghost-button" type="button" disabled>↶ Undo</button>
+          <button id="redo-schedule-button" class="ghost-button" type="button" disabled>↷ Redo</button>
+        </div>
+
         <section class="stats-strip" aria-label="Schedule summary">
           <article class="stat-card">
             <div class="stat-icon blue">♡</div>
@@ -337,7 +346,7 @@
             <div class="coverage-track">
               <div id="coverage-progress-fill"></div>
             </div>
-            <p>Coverage</p>
+              <p title="The share of configured shift hours assigned to caregivers. Gaps between shift templates are not measured.">Shifts filled</p>
           </article>
         </section>
 
@@ -418,8 +427,8 @@
               <p class="eyebrow">Smart coverage</p>
               <h2>Coverage Assistant</h2>
               <p>
-                Find the safest caregiver match for every open shift based on
-                availability, rules, and current hours.
+                Compare open shifts against availability, overlapping assignments,
+                rest preferences, and weekly limits.
               </p>
             </div>
 
@@ -468,12 +477,12 @@
             </article>
 
             <article class="coverage-summary-card">
-              <span>Safe matches</span>
+              <span>Matches within rules</span>
               <strong id="coverage-safe-count">0</strong>
             </article>
 
             <article class="coverage-summary-card attention">
-              <span>No safe match</span>
+              <span>Need review</span>
               <strong id="coverage-no-match-count">0</strong>
             </article>
           </div>
@@ -487,7 +496,7 @@
             <label class="coverage-filter-toggle">
               <input id="coverage-only-no-match" type="checkbox" />
 
-              <span>Show only shifts with no safe match</span>
+              <span>Show only shifts with no match within rules</span>
             </label>
           </div>
 
@@ -784,14 +793,37 @@
       </main>
     </div>
 
-    <div id="edit-time-modal" class="modal-backdrop hidden">
+    <div id="occurrence-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="occurrence-title" aria-describedby="occurrence-help">
+      <form id="occurrence-form" class="modal-card occurrence-card">
+        <div class="modal-header">
+          <h3 id="occurrence-title">Edit this shift</h3>
+          <button type="button" data-close-occurrence aria-label="Close shift editor">×</button>
+        </div>
+        <p id="occurrence-help">Choose a shift template and edit this date's assignment and times. Moving an assignment leaves its original slot open.</p>
+        <div class="occurrence-fields">
+          <label>Date<input id="occurrence-date" type="date" required /></label>
+          <label>Shift template<select id="occurrence-shift" required></select></label>
+          <label class="occurrence-caregiver-field">Caregiver<select id="occurrence-caregiver" required></select></label>
+          <label>Starts<input id="occurrence-start" type="time" step="60" required /></label>
+          <label>Ends<input id="occurrence-end" type="time" step="60" required /></label>
+        </div>
+        <p id="occurrence-duration" class="occurrence-duration"></p>
+        <p id="occurrence-error" class="occurrence-error" role="alert" aria-live="assertive"></p>
+        <div class="modal-actions">
+          <button class="ghost-button" type="button" data-close-occurrence>Cancel</button>
+          <button type="submit">Save shift</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="edit-time-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="edit-time-title">
       <div class="modal-card">
         <div class="modal-header">
           <div>
             <h3 id="edit-time-title">Edit Shift Time</h3>
             <p id="edit-time-subtitle">Choose a start and end time.</p>
           </div>
-          <button id="close-edit-time-button" type="button">×</button>
+          <button id="close-edit-time-button" type="button" aria-label="Close default shift editor">×</button>
         </div>
 
         <div class="time-grid">
@@ -840,7 +872,7 @@
       </div>
     </div>
 
-    <div id="caregiver-rules-modal" class="modal-backdrop hidden">
+    <div id="caregiver-rules-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="caregiver-rules-title">
       <div class="modal-card caregiver-rules-modal-card">
         <div class="modal-header">
           <div>
@@ -864,7 +896,7 @@
           <section class="rule-section">
             <div>
               <strong>Available days</strong>
-              <p>Uncheck any day this caregiver cannot work.</p>
+              <p>Choose the days this caregiver can start a shift.</p>
             </div>
 
             <div id="caregiver-rule-days" class="rule-choice-grid"></div>
@@ -883,7 +915,7 @@
             <label for="caregiver-max-consecutive-days">
               <strong>Maximum consecutive days</strong>
 
-              <span> Use 0 when there is no limit. </span>
+              <span> Use 0 when there is no limit. Overnight work counts on each day it touches. </span>
             </label>
 
             <input
@@ -902,6 +934,12 @@
               <strong>Needs two consecutive days off</strong>
               <small> Warn when the selected week has no two-day break. </small>
             </span>
+          </label>
+
+          <label class="rule-number-section">
+            <strong>Minimum hours between shifts</strong>
+            <span>Use 0 to turn off rest warnings. Overlapping shifts are always blocked.</span>
+            <input id="caregiver-min-rest-hours" type="number" min="0" max="48" step="0.5" value="0" />
           </label>
 
           <label class="rule-note">
@@ -931,6 +969,9 @@
       </div>
     </div>
 
+    <script src="scheduling.js"></script>
+    <script src="editing.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
+

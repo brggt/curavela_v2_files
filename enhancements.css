@@ -1,0 +1,55 @@
+/* Schedule editing and history controls. */
+.schedule-history {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 18px;
+}
+.schedule-history p {
+  flex: 1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.schedule-history .is-error { color: #ad2635; }
+.schedule-history button { min-height: 36px; padding: 7px 12px; }
+button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.edit-occurrence-button {
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #d8e4fb;
+  border-radius: 8px;
+  color: #214fd3;
+  background: #fff;
+  font-size: 11px;
+  line-height: 1.3;
+  box-shadow: none;
+}
+.shift-pill .edit-occurrence-button { width: 100%; margin-top: 4px; }
+.open-mini-shift .edit-occurrence-button { flex-shrink: 0; }
+.month-shift-row { flex-wrap: wrap; }
+.month-shift-row .edit-occurrence-button { width: 100%; }
+.occurrence-card { width: min(540px, 100%); max-height: 90vh; overflow-y: auto; }
+.occurrence-card h3 { margin: 0; }
+#occurrence-help { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 0 0 20px; }
+.occurrence-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.occurrence-fields label { display: grid; gap: 7px; font-size: 13px; font-weight: 600; min-width: 0; }
+.occurrence-fields input, .occurrence-fields select { width: 100%; min-height: 44px; min-width: 0; }
+.occurrence-caregiver-field { grid-column: 1 / -1; }
+.occurrence-duration { color: var(--muted); font-size: 13px; }
+.occurrence-error { color: #ad2635; white-space: pre-line; font-size: 13px; line-height: 1.6; }
+.occurrence-error:empty { display: none; }
+.modal-backdrop :focus-visible, .edit-occurrence-button:focus-visible,
+.schedule-history button:focus-visible { outline: 3px solid #2e63e9; outline-offset: 3px; }
+#caregiver-min-rest-hours { width: 110px; min-height: 42px; }
+@media (max-width: 560px) {
+  .schedule-history p { flex-basis: 100%; }
+  .occurrence-fields { grid-template-columns: 1fr; }
+  .occurrence-caregiver-field { grid-column: auto; }
+}
+@media print {
+  .schedule-history, .edit-occurrence-button, #occurrence-modal { display: none !important; }
+}

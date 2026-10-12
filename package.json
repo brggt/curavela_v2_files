@@ -1,0 +1,11 @@
+{
+  "name": "curavela",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Curavela caregiving scheduler",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "check": "node --check scheduling.js && node --check editing.js && node --check script.js"
+  },
+  "engines": { "node": ">=18" }
+}
