@@ -13,9 +13,11 @@
     />
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="enhancements.css" />
+    <link rel="stylesheet" href="responsive.css" />
   </head>
 
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand-block">
@@ -42,15 +44,18 @@
             Caregivers
           </a>
 
-          <a class="side-nav-link" href="#" data-view="reports">
+          <a class="side-nav-link" href="#" data-view="brief">
             <span>◌</span>
-            Reports
+            Brief
           </a>
 
           <a class="side-nav-link" href="#" data-view="settings">
             <span>⚙</span>
             Settings
           </a>
+          <a class="side-nav-link" href="#" data-view="reports">Reports</a>
+          <a class="side-nav-link" href="#" data-view="team">Team</a>
+          <a class="side-nav-link" href="#" data-view="help">Help</a>
         </nav>
 
         <div class="sidebar-card adaptive-card">
@@ -64,13 +69,13 @@
         <div class="user-chip">
           <div class="avatar">B</div>
           <div>
-            <strong>Brody</strong>
+            <strong>Local workspace</strong>
             <span>Scheduler</span>
           </div>
         </div>
       </aside>
 
-      <main class="main-content">
+      <main id="main-content" class="main-content" tabindex="-1">
         <header class="hero">
           <div class="hero-copy">
             <p class="eyebrow">Adaptive scheduling</p>
@@ -83,6 +88,7 @@
 
           <div class="hero-actions">
             <select id="schedule-view" aria-label="Schedule view">
+              <option value="agenda">Agenda</option>
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
             </select>
@@ -538,7 +544,7 @@
 
             <div class="inline-form">
               <input
-                id="caregiver-name"
+                aria-label="Caregiver name" id="caregiver-name"
                 type="text"
                 placeholder="Add caregiver name"
               />
@@ -626,7 +632,7 @@
             <div id="custom-shift-section" class="custom-shift-box hidden">
               <div class="inline-form">
                 <input
-                  id="custom-shift-name"
+                  aria-label="Custom shift name" id="custom-shift-name"
                   type="text"
                   placeholder="Custom shift name"
                 />
@@ -691,7 +697,7 @@
               </div>
 
               <textarea
-                id="schedule-focus"
+                aria-label="Weekly priorities" id="schedule-focus"
                 rows="3"
                 placeholder="Example: Keep night coverage consistent while Shelyn is unavailable Thursday."
               ></textarea>
@@ -711,12 +717,12 @@
                 </div>
 
                 <div class="schedule-update-form">
-                  <select id="schedule-update-day">
+                  <select aria-label="Update date" id="schedule-update-day">
                     <option value="general">General</option>
                   </select>
 
                   <input
-                    id="schedule-update-text"
+                    aria-label="Schedule update" id="schedule-update-text"
                     type="text"
                     placeholder="Add a schedule update..."
                   />
@@ -750,7 +756,7 @@
 
                 <div class="schedule-followup-form">
                   <input
-                    id="schedule-followup-text"
+                    aria-label="Follow-up" id="schedule-followup-text"
                     type="text"
                     placeholder="Add a follow-up..."
                   />
@@ -969,9 +975,44 @@
       </div>
     </div>
 
+    <div id="caregiver-time-off-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="caregiver-time-off-title" aria-describedby="time-off-help">
+      <div class="modal-card time-off-card">
+        <div class="modal-header">
+          <h3 id="caregiver-time-off-title">Caregiver time off</h3>
+          <button type="button" data-close-time-off aria-label="Close caregiver time off">×</button>
+        </div>
+        <p id="time-off-help">Block full days when this caregiver cannot work. Both dates are included. Overnight shifts that touch these dates are also blocked.</p>
+        <form id="time-off-form">
+          <div class="occurrence-fields">
+            <label for="time-off-start">First day<input id="time-off-start" type="date" required /></label>
+            <label for="time-off-end">Last day<input id="time-off-end" type="date" required /></label>
+          </div>
+          <p id="time-off-error" class="occurrence-error" role="alert"></p>
+          <div class="time-off-form-actions">
+            <button id="save-time-off-button" type="submit">Add time off</button>
+            <button id="cancel-time-off-edit" class="ghost-button" type="button" hidden>Cancel edit</button>
+          </div>
+        </form>
+        <p id="time-off-status" class="time-off-status" role="status" aria-live="polite"></p>
+        <h4>Saved time off</h4>
+        <p id="time-off-empty">No time off recorded.</p>
+        <ul id="time-off-list" class="time-off-list"></ul>
+        <section id="time-off-conflicts" class="time-off-conflicts" hidden>
+          <h4>Shifts to review</h4>
+          <p id="time-off-conflict-summary"></p>
+          <ul id="time-off-conflict-list" class="time-off-list"></ul>
+        </section>
+        <div class="modal-actions"><button type="button" data-close-time-off>Done</button></div>
+      </div>
+    </div>
+
     <script src="scheduling.js"></script>
+    <script src="workspace.js"></script>
     <script src="editing.js"></script>
+    <script src="timeoff.js"></script>
     <script src="script.js"></script>
+    <script src="team.js"></script>
+    <script src="workspace-ui.js"></script>
   </body>
 </html>
 

@@ -45,11 +45,30 @@ button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 .modal-backdrop :focus-visible, .edit-occurrence-button:focus-visible,
 .schedule-history button:focus-visible { outline: 3px solid #2e63e9; outline-offset: 3px; }
 #caregiver-min-rest-hours { width: 110px; min-height: 42px; }
+.time-off-card { width: min(640px, 100%); max-height: 90vh; overflow-y: auto; }
+.time-off-card h3, .time-off-card h4 { margin: 0; }
+.time-off-card h4 { margin-top: 20px; font-size: 14px; }
+.time-off-card p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+.time-off-card .occurrence-error { color: #ad2635; }
+.time-off-form-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.time-off-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.time-off-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid #e0e7f2; font-size: 13px; }
+.time-off-list li > span { min-width: 0; overflow-wrap: anywhere; }
+.time-off-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.time-off-list button { min-height: 40px; padding: 8px 12px; font-size: 12px; }
+.time-off-conflicts { padding: 0 14px 12px; border: 1px solid #edbfbd; background: #fff8f6; border-radius: 12px; }
+.time-off-day-label { margin: 4px 0; padding: 6px 8px; border-radius: 8px; color: #654477; background: #f1eafa; font-size: 11px; font-weight: 600; text-align: center; }
+.has-time-off-conflict { border: 1px solid #cd7680 !important; background: #fff4f4 !important; }
+.time-off-conflict-label { color: #a42032 !important; font-size: 11px; font-weight: 600; }
+.time-off-card [hidden] { display: none !important; }
 @media (max-width: 560px) {
   .schedule-history p { flex-basis: 100%; }
   .occurrence-fields { grid-template-columns: 1fr; }
   .occurrence-caregiver-field { grid-column: auto; }
+  .time-off-list li { align-items: flex-start; flex-direction: column; }
+  .time-off-item-actions { width: 100%; }
+  .time-off-item-actions button { flex: 1; }
 }
 @media print {
-  .schedule-history, .edit-occurrence-button, #occurrence-modal { display: none !important; }
+  .schedule-history, .edit-occurrence-button, #occurrence-modal, #caregiver-time-off-modal { display: none !important; }
 }

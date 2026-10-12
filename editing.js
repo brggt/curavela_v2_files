@@ -1,3 +1,19 @@
+let workspaceState = {extraShifts:[],series:[],care:{enabled:false,start:"00:00",end:"00:00",count:1},history:[]};
+function getWorkspaceSnapshot() {
+  return {app:"Curavela",version:6,...JSON.parse(captureScheduleState()),workspace:workspaceState,scheduleBriefs,
+    scheduleView:scheduleViewSelect.value,weekStart:weekStartSelect.value,month:monthPicker.value,weekStartDate:weekStartDateInput.value};
+}
+function applyWorkspaceSnapshot(state) {
+  customShifts=state.customShifts;caregivers=state.caregivers;caregiverMaxHours=state.caregiverMaxHours;
+  caregiverRules=state.caregiverRules;scheduleAssignments=state.scheduleAssignments;shiftTimes=state.shiftTimes;
+  shiftTimeOverrides=state.shiftTimeOverrides;scheduleBriefs=state.scheduleBriefs||{};
+  workspaceState=state.workspace||{extraShifts:[],series:[],care:{enabled:false,start:"00:00",end:"00:00",count:1},history:[]};
+  shiftStyleSelect.value=state.shiftStyle;weekStartSelect.value=state.weekStart||"Sunday";
+  scheduleViewSelect.value=state.scheduleView||"weekly";monthPicker.value=state.month||"";weekStartDateInput.value=state.weekStartDate||"";
+}
+function getShiftsForDay(dayKey, shifts) {
+  return (shifts || getActiveShifts()).concat(workspaceState.extraShifts.filter(function (shift) { return shift.dayKey===dayKey; }));
+}
 /* Dated shift editing and reversible schedule changes. */
 const scheduleUndoStack = [];
 const scheduleRedoStack = [];
@@ -26,6 +42,7 @@ function escapeHTML(value) {
 function getSchedulingModel(activeShifts) {
   return {
     shifts: activeShifts || getActiveShifts(),
+    extraShifts: workspaceState.extraShifts,
     assignments: scheduleAssignments,
     overrides: shiftTimeOverrides,
     caregivers,
@@ -45,6 +62,7 @@ function captureScheduleState() {
     customShifts, caregivers, caregiverMaxHours, caregiverRules,
     scheduleAssignments, shiftTimes, shiftTimeOverrides,
     shiftStyle: shiftStyleSelect.value,
+    workspace: {extraShifts:workspaceState.extraShifts,series:workspaceState.series,care:workspaceState.care},
   });
 }
 
@@ -86,6 +104,7 @@ function restoreScheduleState(serialized) {
   shiftTimes = state.shiftTimes;
   shiftTimeOverrides = state.shiftTimeOverrides;
   shiftStyleSelect.value = state.shiftStyle;
+  if (state.workspace) workspaceState = {...workspaceState,...state.workspace};
   restoringScheduleState = true;
   try {
     saveData();
@@ -146,7 +165,7 @@ function updateOccurrenceDuration() {
 }
 
 function loadOccurrenceFields() {
-  const shift = getActiveShifts().find(function (item) { return item.name === occurrenceShift.value; });
+  const shift = getShiftsForDay(occurrenceDate.value).find(function (item) { return item.name === occurrenceShift.value; });
   if (!shift) return;
   const times = getShiftForDay(occurrenceDate.value, shift);
   occurrenceStart.value = times.start;
@@ -157,7 +176,7 @@ function loadOccurrenceFields() {
 
 function openOccurrenceEditor(dayKey, shiftName) {
   const days = scheduleViewSelect.value === "monthly" ? getDaysInSelectedMonth() : getDaysInSelectedWeek();
-  const activeShifts = getActiveShifts();
+  const activeShifts = getShiftsForDay(dayKey || getTodayDateValue());
   if (!activeShifts.length) {
     showScheduleNotice("Add a shift template in Settings first.", true);
     return;
@@ -183,13 +202,16 @@ function openOccurrenceEditor(dayKey, shiftName) {
   });
   document.querySelector("#occurrence-title").textContent = occurrenceSourceKey ? "Edit this shift" : "Schedule a shift";
   occurrenceError.textContent = "";
+  const scope = document.querySelector("#occurrence-scope");
+  if (scope) scope.value = "one";
   loadOccurrenceFields();
   openManagedDialog(occurrenceModal);
 }
 
 function commitOccurrenceChange(proposal, reportError) {
   const fail = reportError || function (message) { showScheduleNotice(message, true); };
-  const shift = getActiveShifts().find(function (item) { return item.name === proposal.shiftName; });
+  if (proposal.scope === "future" && typeof commitFutureSeries === "function") return commitFutureSeries(proposal, fail);
+  const shift = getShiftsForDay(proposal.dayKey).find(function (item) { return item.name === proposal.shiftName; }) || getShiftsForDay((proposal.sourceKey || "").slice(0,10)).find(function (item) { return item.name === proposal.shiftName; });
   const span = CuravelaScheduling.interval(proposal.dayKey, proposal.start, proposal.end);
   if (!shift || !span || (proposal.caregiverId !== "Open" && !caregiverIdExists(proposal.caregiverId))) {
     fail("Choose a valid date, shift, caregiver, and start and end time.");
@@ -209,7 +231,21 @@ function commitOccurrenceChange(proposal, reportError) {
     if (!confirm("Replace " + getCaregiverName(existing) + "'s " + proposal.shiftName +
       " assignment on " + proposal.dayKey + "?")) return false;
   }
-  if (proposal.sourceKey && proposal.sourceKey !== targetKey) scheduleAssignments[proposal.sourceKey] = "Open";
+  if (proposal.sourceKey && proposal.sourceKey !== targetKey) {
+    const extra = workspaceState.extraShifts.find(function (s) { return s.dayKey + "-" + s.name === proposal.sourceKey; });
+    if (extra && getShiftsForDay(proposal.dayKey).some(function (s) { return s.name === extra.name; })) {
+      fail("A shift with that name already exists on the destination date.");
+      return false;
+    }
+    scheduleAssignments[proposal.sourceKey] = "Open";
+    if (extra) {
+      extra.dayKey = proposal.dayKey;
+      delete scheduleAssignments[proposal.sourceKey];
+    }
+    workspaceState.series.forEach(function (series) {
+      series.keys = series.keys.map(function (key) { return key === proposal.sourceKey ? targetKey : key; });
+    });
+  }
   scheduleAssignments[targetKey] = proposal.caregiverId;
   shiftTimeOverrides[getShiftOverrideKey(proposal.dayKey, proposal.shiftName)] = { start: proposal.start, end: proposal.end };
   saveData(proposal.sourceKey && proposal.sourceKey !== targetKey ? "move shift" : "edit shift");
@@ -232,6 +268,7 @@ occurrenceForm.addEventListener("submit", function (event) {
     dayKey: occurrenceDate.value, shiftName: occurrenceShift.value,
     caregiverId: occurrenceCaregiver.value, start: occurrenceStart.value, end: occurrenceEnd.value,
     sourceKey: occurrenceSourceKey,
+    scope: document.querySelector("#occurrence-scope")?.value || "one",
   }, function (message) { occurrenceError.textContent = message; });
   if (saved) closeManagedDialog(occurrenceModal);
 });
@@ -260,10 +297,12 @@ document.addEventListener("keydown", function (event) {
       event.stopImmediatePropagation();
       if (modal === occurrenceModal) closeManagedDialog(modal);
       else if (modal.id === "edit-time-modal") closeEditTimeModal();
-      else closeCaregiverRulesModal();
+      else if (modal.id === "caregiver-time-off-modal") closeCaregiverTimeOffModal();
+      else if (modal.id === "caregiver-rules-modal") closeCaregiverRulesModal();
+      else closeManagedDialog(modal);
     } else if (event.key === "Tab") {
       const controls = Array.from(modal.querySelectorAll("button, input, select, textarea, [tabindex]"))
-        .filter(function (element) { return !element.disabled && element.tabIndex >= 0; });
+        .filter(function (element) { return !element.disabled && element.tabIndex >= 0 && !element.hidden && !element.closest("[hidden]"); });
       const first = controls[0], last = controls[controls.length - 1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }

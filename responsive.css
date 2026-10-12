@@ -1,0 +1,104 @@
+/* The single responsive layout layer. Breakpoints follow available space. */
+:root { --muted: #52617a; --green: #147352; --red: #b62439; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid #174dbb; outline-offset: 3px; }
+.skip-link { position: fixed; top: -100px; left: 16px; z-index: 10000; background: white; color: #123a88; padding: 14px; }
+.skip-link:focus { top: 8px; }
+button, .side-nav-link { min-height: 44px !important; }
+input, select, textarea { max-width: 100%; }
+.hero-actions { grid-template-columns: 110px 44px minmax(170px, 220px) 44px 76px minmax(150px, auto) 100px !important; }
+.hero-copy h2 { font-size: clamp(30px, 4vw, 56px); line-height: 1.12; }
+.side-nav-link { font-size: 14px !important; height: auto !important; white-space: normal !important; }
+.side-nav-link[aria-current="page"] { color: #1649b0; background: #e9efff; }
+.modal-card { max-height: 90vh; max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain; }
+.modal-actions { flex-wrap: wrap; }
+.main-content { min-width: 0; }
+.care-map-grid { min-width: 1000px; }
+#schedule { overflow-x: auto; }
+.care-map-cell { min-width: 0; }
+.caregiver-cell { position: sticky; left: 0; background: #f8faff; z-index: 1; }
+.caregiver-reorder { display: flex; gap: 4px; }
+.caregiver-reorder button { min-width: 44px; padding: 5px; }
+.workspace-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin: 16px 0; }
+.workspace-tools label { display: grid; gap: 5px; font-size: 13px; }
+.workspace-tools input, .workspace-tools select { min-height: 44px; }
+.workspace-panel { margin: 20px 0; padding: 24px; border: 1px solid #dce4f2; border-radius: 20px; background: white; }
+.workspace-panel h2 { font-size: 24px; margin: 0 0 14px; }
+.workspace-panel p { line-height: 1.6; }
+.workspace-panel input, .workspace-panel select { min-height: 44px; }
+.workspace-panel table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.workspace-panel th, .workspace-panel td { padding: 12px 8px; border-bottom: 1px solid #dce4f2; text-align: left; }
+.table-scroll { overflow-x: auto; }
+.agenda-day { border: 1px solid #dce4f2; border-radius: 16px; margin-bottom: 14px; padding: 16px; background: white; }
+.agenda-day h3 { font-size: 17px; margin: 0 0 10px; }
+.agenda-card { display: flex; gap: 12px; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid #e5eaf2; }
+.agenda-card strong, .agenda-card span { display: block; line-height: 1.6; }
+.agenda-card .is-conflict, .workspace-error { color: #a51c31; }
+.agenda-card button { flex-shrink: 0; }
+.help-steps { padding-left: 24px; line-height: 1.8; }
+.help-steps li { margin-bottom: 8px; }
+.muted { color: var(--muted); }
+.workspace-form { display: grid; gap: 14px; max-width: 650px; }
+.workspace-form label { display: grid; gap: 6px; }
+.workspace-form textarea { min-height: 90px; }
+.workspace-form .checkbox-label { display: flex; align-items: center; gap: 10px; }
+.workspace-status { padding: 10px 0; line-height: 1.5; }
+.request-card { padding: 16px 0; border-bottom: 1px solid #dce4f2; }
+.request-card button { margin: 6px 6px 0 0; }
+.setup-banner { padding: 14px; border-radius: 12px; background: #edf3ff; line-height: 1.6; }
+.time-off-conflict-label { font-size: 13px; }
+@media (max-width: 1100px) {
+  .app-shell { width: 100% !important; display: block !important; margin: 0; border-radius: 0; min-height: 100vh; }
+  .app-shell .sidebar { width: 100% !important; min-width: 0 !important; max-width: none !important; min-height: 0 !important; padding: 18px 24px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .sidebar .side-nav { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0 !important; }
+  .sidebar .side-nav-link { justify-content: center; padding: 10px !important; width: 100% !important; }
+  .sidebar .adaptive-card, .sidebar .user-chip { display: none; }
+  .app-shell .main-content { padding: 24px !important; width: 100% !important; }
+  .hero { grid-template-columns: 1fr !important; }
+  .hero-actions { width: 100% !important; grid-template-areas: "view prev date next today" "add add add more more" !important; grid-template-columns: 110px 44px minmax(160px,1fr) 44px 80px !important; }
+  .main-content.coverage-view .hero-actions { grid-template-areas: "prev date next today" "add add more more" !important; grid-template-columns: 44px minmax(160px,1fr) 44px 80px !important; }
+  .dashboard-grid, .coverage-workspace { grid-template-columns: 1fr !important; }
+  .coverage-comparison-heading { display: none; }
+  .coverage-caregiver-row { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .coverage-column-label { display: block; }
+  .stats-strip { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .monthly-schedule-grid { min-width: 850px; }
+}
+@media (max-width: 700px) {
+  body { font-size: 16px; }
+  .app-shell .sidebar { padding: 12px 16px; gap: 14px; }
+  .app-shell .main-content { padding: 16px !important; }
+  .sidebar .side-nav-link { font-size: 12px !important; gap: 4px; }
+  .sidebar .side-nav-link span { display: none; }
+  .hero-copy h2 { font-size: clamp(28px,8vw,42px) !important; letter-spacing: -.04em; }
+  .hero-copy > p:last-child { font-size: 15px; }
+  .hero-actions, .main-content.coverage-view .hero-actions { grid-template-areas: "view view view" "prev date next" "today today today" "add add add" "more more more" !important; grid-template-columns: 44px minmax(0,1fr) 44px !important; width: 100% !important; }
+  .main-content.coverage-view .hero-actions { grid-template-areas: "prev date next" "today today today" "add add add" "more more more" !important; }
+  #quick-add-shift-button, #more-actions-button, #schedule-view { width: 100% !important; font-size: 16px !important; }
+  #selected-week-display, #selected-month-display { font-size: 14px !important; }
+  .stats-strip { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .coverage-summary-grid, .coverage-caregiver-row, .schedule-brief-grid { grid-template-columns: 1fr !important; }
+  .coverage-header, .coverage-toolbar, .section-header, .schedule-brief-header { flex-wrap: wrap; gap: 12px; }
+  .modal-backdrop { padding: 12px; padding-bottom: max(12px,env(safe-area-inset-bottom)); }
+  .modal-card { width: 100%; padding: 20px; }
+  .occurrence-fields, .rule-choice-grid, .time-grid { grid-template-columns: 1fr !important; }
+  input, textarea, select { font-size: 16px !important; min-height: 44px; }
+  .workspace-panel { padding: 16px; }
+  .workspace-tools label { width: 100%; }
+  .agenda-card { align-items: flex-start; flex-wrap: wrap; }
+  .agenda-card button { width: 100%; }
+  .schedule-history p { flex-basis: 100%; font-size: 13px; }
+  .time-off-list li { flex-direction: column; align-items: flex-start; }
+  .time-off-item-actions { width: 100%; }
+  .time-off-item-actions button { flex: 1; }
+  #week-date-popover, #month-date-popover { width: min(310px,calc(100vw - 32px)) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}
+@media print {
+  .workspace-tools, #team-workspace-panel, #help-workspace-panel, .skip-link, .caregiver-reorder, .workspace-form { display: none !important; }
+  .workspace-panel { border: 0; box-shadow: none; }
+  .care-map-grid { min-width: 0; }
+  .agenda-card { break-inside: avoid; }
+}

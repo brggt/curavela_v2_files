@@ -526,52 +526,45 @@ function migrateCaregiverData() {
   return changed;
 }
 
+let savedWorkspaceUnreadable = false;
 function saveData(label) {
-  localStorage.setItem("curavelaCustomShifts", JSON.stringify(customShifts));
-
-  localStorage.setItem("curavelaCaregivers", JSON.stringify(caregivers));
-
-  localStorage.setItem(
-    "curavelaCaregiverMaxHours",
-    JSON.stringify(caregiverMaxHours),
-  );
-
-  localStorage.setItem(
-    "curavelaCaregiverRules",
-    JSON.stringify(caregiverRules),
-  );
-
-  localStorage.setItem(
-    "curavelaAssignments",
-    JSON.stringify(scheduleAssignments),
-  );
-
-  localStorage.setItem(
-    "curavelaScheduleBriefs",
-    JSON.stringify(scheduleBriefs),
-  );
-
-  localStorage.setItem("curavelaShiftTimes", JSON.stringify(shiftTimes));
-
-  localStorage.setItem(
-    "curavelaShiftTimeOverrides",
-    JSON.stringify(shiftTimeOverrides),
-  );
-
-  localStorage.setItem("curavelaScheduleView", scheduleViewSelect.value);
-
-  localStorage.setItem("curavelaShiftStyle", shiftStyleSelect.value);
-
-  localStorage.setItem("curavelaWeekStart", weekStartSelect.value);
-
-  localStorage.setItem("curavelaMonth", monthPicker.value);
-
-  localStorage.setItem("curavelaWeekStartDate", weekStartDateInput.value);
-
-  recordScheduleChange(label);
+  const before = lastSavedScheduleState;
+  const changed = before !== null && before !== captureScheduleState();
+  if (changed && !restoringScheduleState) {
+    workspaceState.history.push({at:new Date().toISOString(), action:label || "Schedule changed", actor:"Local scheduler"});
+    workspaceState.history = workspaceState.history.slice(-200);
+  }
+  const snapshot = getWorkspaceSnapshot();
+  try {
+    if (typeof CuravelaTeam !== "undefined" && CuravelaTeam.isConnected()) {
+      CuravelaTeam.markDirty();
+    } else {
+      if (savedWorkspaceUnreadable) throw new Error("Preserving unreadable saved workspace until an explicit restore.");
+      localStorage.setItem("curavelaWorkspaceV6", JSON.stringify(snapshot));
+    }
+    recordScheduleChange(label);
+    if (typeof CuravelaTeam !== "undefined" && CuravelaTeam.isConnected()) showScheduleNotice("Team draft changed. Use Team → Sync draft to share your changes.");
+    return true;
+  } catch (error) {
+    recordScheduleChange(label);
+    showScheduleNotice("Could not save on this device. Keep this page open and export a backup from More.", true);
+    return false;
+  }
 }
 
 function loadData() {
+  try {
+    const current = localStorage.getItem("curavelaWorkspaceV6");
+    if (current) {
+      applyWorkspaceSnapshot(CuravelaWorkspace.validateBackup(JSON.parse(current)));
+      return;
+    }
+  } catch (error) {
+    savedWorkspaceUnreadable = true;
+    showScheduleNotice("The saved workspace could not be loaded. Your stored copy has been kept; restore a backup from More.", true);
+    return;
+  }
+
   const savedCustomShifts = getSavedItem(
     "curavelaCustomShifts",
     "kindshiftCustomShifts",
@@ -749,24 +742,7 @@ function loadData() {
 }
 
 function exportCuravelaData() {
-  const backupData = {
-    app: "Curavela",
-    version: 4,
-    exportedAt: new Date().toISOString(),
-    customShifts,
-    caregivers,
-    caregiverMaxHours,
-    caregiverRules,
-    scheduleAssignments,
-    scheduleBriefs,
-    shiftTimes,
-    shiftTimeOverrides,
-    scheduleView: scheduleViewSelect.value,
-    shiftStyle: shiftStyleSelect.value,
-    weekStart: weekStartSelect.value,
-    month: monthPicker.value,
-    weekStartDate: weekStartDateInput.value,
-  };
+  const backupData = {...getWorkspaceSnapshot(), exportedAt:new Date().toISOString()};
 
   const backupBlob = new Blob([JSON.stringify(backupData, null, 2)], {
     type: "application/json",
@@ -787,53 +763,17 @@ function importCuravelaData(file) {
 
   reader.addEventListener("load", function () {
     try {
-      const backupData = JSON.parse(reader.result);
-
-      customShifts = backupData.customShifts || customShifts;
-
-      caregivers = backupData.caregivers || caregivers;
-
-      caregiverMaxHours = backupData.caregiverMaxHours || caregiverMaxHours;
-
-      caregiverRules = backupData.caregiverRules || {};
-
-      scheduleAssignments = backupData.scheduleAssignments || {};
-
-      scheduleBriefs = backupData.scheduleBriefs || {};
-
-      scheduleNote = backupData.scheduleNote || "";
-
-      shiftTimes = {
-        ...shiftTimes,
-        ...(backupData.shiftTimes || {}),
-      };
-
-      shiftTimeOverrides = backupData.shiftTimeOverrides || {};
-
-      if (backupData.scheduleView) {
-        scheduleViewSelect.value = backupData.scheduleView;
-      }
-
-      if (backupData.shiftStyle) {
-        shiftStyleSelect.value = backupData.shiftStyle;
-      }
-
-      if (backupData.weekStart) {
-        weekStartSelect.value = backupData.weekStart;
-      }
-
-      if (backupData.month) {
-        monthPicker.value = backupData.month;
-      }
-
-      if (backupData.weekStartDate) {
-        weekStartDateInput.value = backupData.weekStartDate;
-      }
-
+      const backupData = CuravelaWorkspace.validateBackup(JSON.parse(reader.result));
+      const count = Object.values(backupData.scheduleAssignments).filter(id => id !== "Open").length;
+      if (!confirm("Replace this workspace with " + backupData.caregivers.length + " caregivers and " + count + " assignments? A recovery copy of this workspace will be saved first.")) return;
+      localStorage.setItem("curavelaBeforeImport", JSON.stringify(getWorkspaceSnapshot()));
+      if (savedWorkspaceUnreadable) localStorage.setItem("curavelaUnreadableWorkspace", localStorage.getItem("curavelaWorkspaceV6") || "");
+      applyWorkspaceSnapshot(backupData);
+      savedWorkspaceUnreadable = false;
       migrateCaregiverData();
       migrateLegacyScheduleNote();
 
-      saveData();
+      const persisted = saveData();
       updateCustomShiftVisibility();
       updatePickerVisibility();
       renderShiftList();
@@ -842,12 +782,16 @@ function importCuravelaData(file) {
       renderSchedule();
 
       resetScheduleHistory();
+      if (!persisted) {
+        alert("Backup loaded into memory but could not be saved. Export it before closing this page. The pre-import recovery copy is still available.");
+        return;
+      }
       showScheduleNotice("Backup imported. Schedule undo history has been reset.");
       alert("Backup imported successfully.");
     } catch (error) {
       console.error(error);
 
-      alert("That backup file could not be imported.");
+      alert("That backup file could not be imported: " + error.message);
     }
   });
 
@@ -1179,7 +1123,7 @@ function getCaregiverHoursForDays(scheduleDays, activeShifts) {
   });
 
   scheduleDays.forEach(function (day) {
-    activeShifts.forEach(function (shift) {
+    getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
       const assignmentKey = `${day.key}-${shift.name}`;
 
       const assignedCaregiverId = scheduleAssignments[assignmentKey] || "Open";
@@ -1207,6 +1151,7 @@ function getDefaultCaregiverRules() {
     maxConsecutiveDays: 0,
     minRestHours: 0,
     needsTwoConsecutiveDaysOff: false,
+    timeOff: [],
     note: "",
   };
 }
@@ -1333,6 +1278,7 @@ function saveActiveCaregiverRules() {
   });
 
   caregiverRules[activeCaregiverRulesId] = {
+    ...getCaregiverRules(activeCaregiverRulesId),
     availableDays: selectedDays,
 
     allowedShifts: selectedShifts,
@@ -1431,6 +1377,12 @@ function renderScheduleWarningStrip(warnings) {
     );
 
     warningItem.textContent = warning.text;
+    if (warning.keys && warning.keys.length) {
+      const edit = document.createElement("button");
+      edit.type = "button"; edit.textContent = "Review shift";
+      edit.addEventListener("click", function () { openOccurrenceEditor(warning.keys[0].slice(0,10),warning.keys[0].slice(11)); });
+      warningItem.append(edit);
+    }
 
     scheduleWarningDetails.append(warningItem);
   });
@@ -1442,7 +1394,7 @@ function getCoverageOpenShifts(scheduleDays, activeShifts) {
   const openShifts = [];
 
   scheduleDays.forEach(function (day) {
-    activeShifts.forEach(function (shift) {
+    getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
       const assignmentKey = `${day.key}-${shift.name}`;
 
       const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
@@ -1508,7 +1460,7 @@ function getCoverageCandidates(
 }
 
 function assignCoverageShift(dayKey, shiftName, caregiverId) {
-  const shift = getActiveShifts().find(function (item) { return item.name === shiftName; });
+  const shift = getShiftsForDay(dayKey).find(function (item) { return item.name === shiftName; });
   if (!shift) return;
   const times = getShiftForDay(dayKey, shift);
   return commitOccurrenceChange({
@@ -1703,7 +1655,7 @@ function renderCoverageAssistant() {
 
     shiftButton.innerHTML = `
         <div>
-          <strong>${shift.name}</strong>
+          <strong>${escapeHTML(shift.name)}</strong>
 
           <span>
             ${formatTime(shiftForDay.start)}
@@ -1755,7 +1707,8 @@ function renderCoverageComparison(recommendation) {
     .map(function (candidate) {
       const rules = getCaregiverRules(candidate.caregiverId);
 
-      const isAvailable = rules.availableDays.includes(dayName);
+      const hasTimeOff = candidate.warnings.some(function (warning) { return warning.code === "time-off"; });
+      const isAvailable = rules.availableDays.includes(dayName) && !hasTimeOff;
 
       const shiftAllowed =
         rules.allowedShifts.length === 0 ||
@@ -1812,7 +1765,7 @@ function renderCoverageComparison(recommendation) {
             </span>
 
             <strong class="${isAvailable ? "rule-safe" : "rule-conflict"}">
-              ${isAvailable ? `✓ ${dayName}` : `× Unavailable ${dayName}`}
+              ${hasTimeOff ? "× Time off" : isAvailable ? `✓ ${dayName}` : `× Unavailable ${dayName}`}
             </strong>
           </div>
 
@@ -1888,7 +1841,7 @@ function renderCoverageComparison(recommendation) {
               ${
                 candidate.safe
                   ? `Assign ${escapeHTML(candidate.caregiverName)}`
-                  : candidate.blocked ? "Overlapping shift" : "Assign with warnings"
+                  : candidate.blocked ? (hasTimeOff ? "Time off" : "Shift conflict") : "Assign with warnings"
               }
             </button>
           </div>
@@ -2044,7 +1997,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
         </span>
 
         <div class="avatar">
-          ${caregiverName.charAt(0).toUpperCase()}
+          ${escapeHTML(caregiverName.charAt(0).toUpperCase())}
         </div>
 
         <div>
@@ -2065,12 +2018,16 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
         dayCell.classList.add("care-map-cell");
 
+        const timeOffToday = CuravelaScheduling.getTimeOffConflicts(
+          getCaregiverRules(caregiverId), CuravelaScheduling.interval(day.key, "00:00", "00:00"),
+        ).length > 0;
+
         const shiftStack = document.createElement("div");
 
         shiftStack.classList.add("shift-stack");
 
-        activeShifts.forEach(function (shift) {
-          const assignmentKey = `${day.key}-${escapeHTML(shift.name)}`;
+        getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
+          const assignmentKey = `${day.key}-${shift.name}`;
 
           const assignedCaregiverId =
             scheduleAssignments[assignmentKey] || "Open";
@@ -2085,6 +2042,11 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
           shiftPill.classList.add("shift-pill");
 
+          const timeOffConflict = CuravelaScheduling.getTimeOffConflicts(
+            getCaregiverRules(caregiverId), CuravelaScheduling.interval(day.key, shiftForDay.start, shiftForDay.end),
+          ).length > 0;
+          if (timeOffConflict) shiftPill.classList.add("has-time-off-conflict");
+
           shiftPill.innerHTML = `
                 <strong>
                   ${formatTime(shiftForDay.start)}
@@ -2095,6 +2057,8 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
                 <span>
                   ${escapeHTML(shift.name)}
                 </span>
+
+                ${timeOffConflict ? '<span class="time-off-conflict-label">Time off conflict</span>' : ""}
 
                 <select
                   class="assignment-select"
@@ -2115,11 +2079,17 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
         if (shiftStack.children.length === 0) {
           dayCell.innerHTML = `
-              <div class="empty-cell">
-                —
+              <div class="${timeOffToday ? "time-off-day-label" : "empty-cell"}">
+                ${timeOffToday ? "Time off" : "—"}
               </div>
             `;
         } else {
+          if (timeOffToday) {
+            const badge = document.createElement("div");
+            badge.classList.add("time-off-day-label");
+            badge.textContent = "Time off";
+            dayCell.append(badge);
+          }
           dayCell.append(shiftStack);
         }
 
@@ -2129,8 +2099,8 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
   }
 
   const totalOpenShifts = scheduleDays.reduce(function (total, day) {
-    const openShiftsForDay = activeShifts.filter(function (shift) {
-      const assignmentKey = `${day.key}-${escapeHTML(shift.name)}`;
+    const openShiftsForDay = getShiftsForDay(day.key, activeShifts).filter(function (shift) {
+      const assignmentKey = `${day.key}-${shift.name}`;
 
       return (scheduleAssignments[assignmentKey] || "Open") === "Open";
     });
@@ -2169,8 +2139,8 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
     dayCell.classList.add("care-map-cell", "open-summary-cell");
 
-    const openShiftsForDay = activeShifts.filter(function (shift) {
-      const assignmentKey = `${day.key}-${escapeHTML(shift.name)}`;
+    const openShiftsForDay = getShiftsForDay(day.key, activeShifts).filter(function (shift) {
+      const assignmentKey = `${day.key}-${shift.name}`;
 
       return (scheduleAssignments[assignmentKey] || "Open") === "Open";
     });
@@ -2318,15 +2288,19 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
 
     let shiftRows = "";
 
-    activeShifts.forEach(function (shift) {
-      const assignmentKey = `${day.key}-${escapeHTML(shift.name)}`;
+    getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
+      const assignmentKey = `${day.key}-${shift.name}`;
 
       const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
 
       const shiftForDay = getShiftForDay(day.key, shift);
 
+      const timeOffConflict = assignedCaregiver !== "Open" && CuravelaScheduling.getTimeOffConflicts(
+        getCaregiverRules(assignedCaregiver), CuravelaScheduling.interval(day.key, shiftForDay.start, shiftForDay.end),
+      ).length > 0;
+
       shiftRows += `
-            <div class="month-shift-row">
+            <div class="month-shift-row ${timeOffConflict ? "has-time-off-conflict" : ""}">
               <div class="month-shift-info">
                 <span>
                   ${escapeHTML(shift.name)}
@@ -2336,6 +2310,8 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
                   ${formatTime(shiftForDay.start)}
                 </span>
               </div>
+
+              ${timeOffConflict ? '<span class="time-off-conflict-label">Time off conflict</span>' : ""}
 
               <select
                 class="assignment-select month-assignment-select"
@@ -2405,6 +2381,7 @@ function renderCaregiverInsights(warnings, caregiverHours) {
       rules.maxConsecutiveDays > 0 ||
       rules.minRestHours > 0 ||
       rules.needsTwoConsecutiveDaysOff ||
+      (Array.isArray(rules.timeOff) && rules.timeOff.length > 0) ||
       Boolean(rules.note)
     );
   }).length;
@@ -2535,12 +2512,12 @@ function renderCoverageSummary(scheduleDays, activeShifts) {
   });
 
   scheduleDays.forEach(function (day) {
-    activeShifts.forEach(function (shift) {
+    getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
       const shiftForDay = getShiftForDay(day.key, shift);
 
       const shiftHours = getShiftHours(shiftForDay);
 
-      const assignmentKey = `${day.key}-${escapeHTML(shift.name)}`;
+      const assignmentKey = `${day.key}-${shift.name}`;
 
       const assignedCaregiverId = scheduleAssignments[assignmentKey] || "Open";
 
@@ -2816,7 +2793,12 @@ function renderSchedule() {
 
   let scheduleDays = [];
 
-  if (selectedView === "monthly") {
+  if (selectedView === "agenda" && typeof renderAgendaSchedule === "function") {
+    scheduleDays = getDaysInSelectedWeek();
+    scheduleTitle.textContent = "Weekly Agenda";
+    weekLabel.textContent = scheduleDays[0].label + " – " + scheduleDays[6].label;
+    renderAgendaSchedule(scheduleDays, activeShifts);
+  } else if (selectedView === "monthly") {
     scheduleTitle.textContent = "Monthly Care Map";
 
     scheduleDays = getDaysInSelectedMonth();
@@ -2854,13 +2836,14 @@ function renderSchedule() {
 
   renderCoverageAssistant();
   renderScheduleBrief();
+  if (typeof renderWorkspaceExtras === "function") renderWorkspaceExtras();
 }
 
 function attachAssignmentListeners() {
   document.querySelectorAll(".assignment-select").forEach(function (select) {
     select.setAttribute("aria-label", "Caregiver for " + select.dataset.shift + " on " + select.dataset.day);
     select.addEventListener("change", function () {
-      const shift = getActiveShifts().find(function (item) { return item.name === select.dataset.shift; });
+      const shift = getShiftsForDay(select.dataset.day).find(function (item) { return item.name === select.dataset.shift; });
       const times = getShiftForDay(select.dataset.day, shift);
       const saved = commitOccurrenceChange({
         dayKey: select.dataset.day, shiftName: shift.name, caregiverId: select.value,
@@ -2897,6 +2880,11 @@ function getCaregiverRulesSummary(caregiverId) {
     summaryParts.push("needs 2 days off");
   }
 
+  const upcomingTimeOff = (Array.isArray(rules.timeOff) ? rules.timeOff : []).filter(function (record) {
+    return CuravelaScheduling.timeOffInterval(record) && record.endDate >= getTodayDateValue();
+  });
+  if (upcomingTimeOff.length) summaryParts.push(upcomingTimeOff.length + " time-off period" + (upcomingTimeOff.length === 1 ? "" : "s"));
+
   return summaryParts.length > 0
     ? summaryParts.join(" · ")
     : "No special rules";
@@ -2917,7 +2905,7 @@ function renderCaregiverList() {
     caregiverItem.innerHTML = `
         <div class="caregiver-card-identity">
           <div class="caregiver-card-avatar">
-            ${caregiverName.charAt(0).toUpperCase()}
+            ${escapeHTML(caregiverName.charAt(0).toUpperCase())}
           </div>
 
           <div class="caregiver-list-copy">
@@ -2980,6 +2968,8 @@ function renderCaregiverList() {
             >
               Remove caregiver
             </button>
+
+            <button class="edit-time-off-button" type="button">Time off</button>
           </div>
         </div>
       `;
@@ -3027,6 +3017,12 @@ function renderCaregiverList() {
     );
 
     const editRulesButton = caregiverItem.querySelector(".edit-rules-button");
+
+    caregiverItem.querySelector(".edit-time-off-button").addEventListener("click", function () {
+      actionMenu.classList.add("hidden");
+      manageButton.setAttribute("aria-expanded", "false");
+      openCaregiverTimeOffModal(caregiverId);
+    });
 
     const removeButton = caregiverItem.querySelector(
       ".remove-caregiver-button",
@@ -3531,7 +3527,7 @@ function copySelectedWeek() {
   copiedWeekAssignments = [];
 
   weekDays.forEach(function (day, dayIndex) {
-    activeShifts.forEach(function (shift) {
+    getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
       const assignmentKey = `${day.key}-${shift.name}`;
 
       copiedWeekAssignments.push({
@@ -3545,7 +3541,7 @@ function copySelectedWeek() {
     });
   });
 
-  alert("This week has been copied.");
+  alert("This week has been copied. Additional dated shifts are included when the destination has the same shift name.");
 }
 
 function pasteCopiedWeek() {
@@ -3575,7 +3571,7 @@ function pasteCopiedWeek() {
     ...getSchedulingModel(), assignments, overrides,
   }, days[0].key, days[6].key).filter(function (warning) { return warning.code !== "near-hours"; });
   if (warnings.some(function (warning) { return warning.blocking; })) {
-    alert("This week cannot be pasted because shifts overlap.\n\n" +
+    alert("This week cannot be pasted because it contains blocking scheduling conflicts.\n\n" +
       warnings.filter(function (warning) { return warning.blocking; }).map(function (warning) { return warning.text; }).join("\n"));
     return;
   }
@@ -3604,7 +3600,7 @@ function clearSelectedWeek() {
   const activeShifts = getActiveShifts();
 
   weekDays.forEach(function (day) {
-    activeShifts.forEach(function (shift) {
+    getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
       delete scheduleAssignments[`${day.key}-${shift.name}`];
     });
   });
@@ -3631,7 +3627,7 @@ function clearSelectedMonth() {
   const activeShifts = getActiveShifts();
 
   monthDays.forEach(function (day) {
-    activeShifts.forEach(function (shift) {
+    getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
       delete scheduleAssignments[`${day.key}-${shift.name}`];
     });
   });
@@ -3648,6 +3644,10 @@ function setAppView(viewName) {
   if (mainContent) {
     mainContent.classList.toggle("coverage-view", viewName === "open-shifts");
   }
+
+  document.querySelectorAll(".workspace-panel").forEach(function (panel) { panel.hidden = true; });
+  const extensionPanel = document.querySelector("#" + viewName + "-workspace-panel");
+  if (extensionPanel) extensionPanel.hidden = false;
 
   const dashboardPanels = [
     caregiverPanel,
@@ -3723,7 +3723,7 @@ function setAppView(viewName) {
     hoursPanel?.classList.remove("app-view-hidden");
   }
 
-  if (viewName === "reports") {
+  if (viewName === "brief") {
     dashboardGrid?.classList.remove("app-view-hidden");
     dashboardGrid?.classList.add("single-panel-view");
     reportsPanel?.classList.remove("app-view-hidden");
@@ -3737,12 +3737,14 @@ function setAppView(viewName) {
 
   sideNavLinks.forEach(function (link) {
     link.classList.toggle("active", link.dataset.view === viewName);
+    if (link.dataset.view === viewName) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
   });
 
   if (mainContent) {
     mainContent.scrollTo({
       top: 0,
-      behavior: "smooth",
+      behavior: "auto",
     });
   }
 }
