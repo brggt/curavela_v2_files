@@ -43,9 +43,10 @@ function app() {
     allowConfirm: true,
   });
   function run(code) { return vm.runInContext(code, context); }
-  for (const file of ["scheduling.js", "editing.js", "script.js"]) {
+  for (const file of ["scheduling.js", "workspace.js", "editing.js", "timeoff.js", "script.js", "workspace-ui.js"]) {
     let source = fs.readFileSync(path.join(__dirname, "..", file), "utf8");
     if (file === "script.js") source = source.split("/* event listeners */")[0];
+    if (file === "workspace-ui.js") source = source.split("(function initializeWorkspaceUI()")[0];
     run(source);
   }
   run([
@@ -62,6 +63,7 @@ function app() {
     'renderCaregiverList = function() {};',
     'renderShiftTimeList = function() {};',
     'renderCaregiverInsights = function() {};',
+    'refreshWorkspace = function() {};',
     'resetScheduleHistory();',
   ].join("\n"));
   return {
@@ -209,4 +211,63 @@ test("HTML-like names are rendered as text in assignment options", function () {
   const options = fixture.run('buildCaregiverOptions("alex")');
   assert.ok(options.includes("&lt;img"));
   assert.ok(!options.includes("<img"));
+});
+
+
+test("time off add/edit/remove is preserved by rules and reversible", function () {
+  const f=app();
+  assert.equal(f.run('saveCaregiverTimeOff("alex","2026-10-05","2026-10-06").saved'),true);
+  assert.equal(f.data().caregiverRules.alex.timeOff.length,1);
+  assert.equal(f.run('saveCaregiverTimeOff("alex","2026-10-06","2026-10-07").saved'),undefined);
+  assert.equal(f.run('saveCaregiverTimeOff("alex","2026-10-07","2026-10-07",0).saved'),true);
+  f.run('removeCaregiverTimeOff("alex",0);changeScheduleHistory(scheduleUndoStack,scheduleRedoStack,"Undid")');
+  assert.equal(f.data().caregiverRules.alex.timeOff[0].startDate,"2026-10-07");
+});
+test("time off blocks direct assignment and coverage assignment without warning override", function () {
+  const f=app();f.run('saveCaregiverTimeOff("alex","2026-10-04","2026-10-04")');
+  assert.equal(f.edit({}),false);assert.equal(f.run('assignCoverageShift("2026-10-04","Morning","alex")'),false);
+  assert.equal(f.confirmations.length,0);
+});
+test("recurring batch validates all dates before making any changes", function () {
+  const f=app();f.run('saveCaregiverTimeOff("alex","2026-10-11","2026-10-11")');const before=f.data();
+  assert.throws(()=>f.run('createShiftSeries({date:"2026-10-04",until:"2026-10-18",repeat:1,name:"Morning",additional:false,caregiver:"alex",start:"08:00",end:"12:00"})'),/time off/);
+  assert.deepEqual(f.data(),before);
+});
+test("a recurring series and future edits are each a single undo step",function(){
+ const f=app();f.run('createShiftSeries({date:"2026-10-04",until:"2026-10-18",repeat:1,name:"Morning",additional:false,caregiver:"alex",start:"08:00",end:"12:00"})');
+ assert.equal(f.run('scheduleUndoStack.length'),1);
+ assert.equal(f.edit({dayKey:"2026-10-11",sourceKey:"2026-10-11-Morning",scope:"future",start:"09:00",end:"12:00",caregiverId:"sam"}),true);
+ assert.equal(f.data().scheduleAssignments['2026-10-04-Morning'],'alex');assert.equal(f.data().scheduleAssignments['2026-10-18-Morning'],'sam');
+ f.run('changeScheduleHistory(scheduleUndoStack,scheduleRedoStack,"Undid")');assert.equal(f.data().scheduleAssignments['2026-10-18-Morning'],'alex');
+});
+test("splitting an overnight shift preserves total hours and dates",function(){
+ const f=app();f.edit({shiftName:'Night',start:'19:00',end:'07:00'});
+ assert.equal(f.run('splitOccurrence("2026-10-04","Night","02:00")'),true);
+ const state=f.data();assert.equal(state.workspace.extraShifts[0].dayKey,'2026-10-05');assert.equal(state.shiftTimeOverrides['2026-10-04__Night'].end,'02:00');
+ assert.equal(f.run('CuravelaScheduling.buildEntries(getSchedulingModel()).reduce((n,e)=>n+e.hours,0)'),12);
+});
+test("a failed local save retains the in-memory draft and gives recovery instructions",function(){
+ const f=app();f.context.localStorage.setItem=()=>{throw new Error('Quota exceeded');};assert.equal(f.edit({}),true);
+ assert.equal(f.data().scheduleAssignments['2026-10-04-Morning'],'alex');assert.match(f.nodes.get('#schedule-notice').textContent,/Could not save/);
+});
+test("atomic storage survives reload and preserves time off and additional shifts",function(){
+ const f=app();f.run('saveCaregiverTimeOff("alex","2026-10-07","2026-10-07");createShiftSeries({date:"2026-10-04",name:"Extra care",additional:true,caregiver:"sam",start:"09:00",end:"11:00"})');
+ const before=f.data();f.run('scheduleAssignments={};workspaceState.extraShifts=[];loadData()');assert.deepEqual(f.data(),before);
+});
+test("a rejected extra-shift move leaves the source and history unchanged",function(){
+ const f=app();
+ f.run('createShiftSeries({date:"2026-10-04",name:"Extra",additional:true,caregiver:"alex",start:"09:00",end:"11:00"});createShiftSeries({date:"2026-10-05",name:"Extra",additional:true,caregiver:"sam",start:"09:00",end:"11:00"})');
+ const before=f.data(),undo=f.run('scheduleUndoStack.length');
+ assert.equal(f.edit({dayKey:'2026-10-05',shiftName:'Extra',sourceKey:'2026-10-04-Extra',start:'09:00',end:'11:00'}),false);
+ assert.deepEqual(f.data(),before);assert.equal(f.run('scheduleUndoStack.length'),undo);
+});
+test("moving an extra occurrence updates its recurrence membership",function(){
+ const f=app();f.run('createShiftSeries({date:"2026-10-04",until:"2026-10-11",repeat:1,name:"Extra",additional:true,caregiver:"alex",start:"09:00",end:"11:00"})');
+ assert.equal(f.edit({dayKey:'2026-10-05',shiftName:'Extra',sourceKey:'2026-10-04-Extra',start:'09:00',end:'11:00'}),true);
+ assert.deepEqual(f.data().workspace.series[0].keys,['2026-10-05-Extra','2026-10-11-Extra']);
+});
+test("an unreadable saved workspace is not silently overwritten by later edits",function(){
+ const f=app();f.saved.set('curavelaWorkspaceV6','{broken');f.run('loadData()');
+ f.edit({});assert.equal(f.saved.get('curavelaWorkspaceV6'),'{broken');
+ assert.match(f.nodes.get('#schedule-notice').textContent,/Could not save/);
 });

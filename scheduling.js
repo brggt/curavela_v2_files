@@ -58,7 +58,7 @@
     return Object.entries(model.assignments).flatMap(function (pair) {
       const key = pair[0], caregiverId = pair[1];
       const dayKey = key.slice(0, 10), shiftName = key.slice(11);
-      const shift = shifts.get(shiftName);
+      const shift = (model.extraShifts || []).find(function (item) { return item.dayKey === dayKey && item.name === shiftName; }) || shifts.get(shiftName);
       if (!shift || caregiverId === "Open" || !caregiverId || !Number.isFinite(dateNumber(dayKey))) return [];
       const times = model.overrides[dayKey + "__" + shiftName] || shift;
       const span = interval(dayKey, times.start, times.end);
@@ -108,6 +108,21 @@
     return entry.start < dateNumber(addDays(last, 1)) && entry.end > dateNumber(first);
   }
 
+  function timeOffInterval(record) {
+    if (!record || typeof record !== "object") return null;
+    const start = dateNumber(record.startDate), last = dateNumber(record.endDate);
+    if (!Number.isFinite(start) || !Number.isFinite(last) || last < start) return null;
+    return { start, end: last + DAY };
+  }
+
+  function getTimeOffConflicts(rules, span) {
+    if (!span || !Array.isArray(rules.timeOff)) return [];
+    return rules.timeOff.filter(function (record) {
+      const away = timeOffInterval(record);
+      return away && span.start < away.end && span.end > away.start;
+    });
+  }
+
   function getWarnings(model, first, last, suppliedEntries) {
     const entries = suppliedEntries || buildEntries(model);
     const warnings = [];
@@ -126,6 +141,16 @@
         warnings.push({ code, text, caregiverId: id, level: "high", blocking: false, keys: [], ...extra });
       }
       personEntries.forEach(function (entry) {
+        if (!entry.invalid && intersects(entry, first, last)) {
+          const timeOff = getTimeOffConflicts(rules, entry);
+          if (timeOff.length) {
+            const dates = timeOff.map(function (record) {
+              return record.startDate === record.endDate ? record.startDate : record.startDate + "–" + record.endDate;
+            }).join(", ");
+            warn("time-off", name + " has time off " + dates + ", overlapping " + entry.dayKey +
+              " " + entry.shiftName + ". Reassign or open this shift.", { blocking: true, keys: [entry.key] });
+          }
+        }
         if (entry.dayKey < first || entry.dayKey > last) return;
         const label = entry.dayKey + " " + entry.shiftName;
         if (entry.invalid) {
@@ -214,11 +239,12 @@
       caregiverId: caregiver.id, caregiverName: caregiver.name,
       currentHours, projectedHours: currentHours + span.hours, maxHours,
       conflicts: warnings.map(function (warning) { return warning.text; }),
-      checks: warnings.length ? [] : ["Fits availability, shift, rest, and consecutive-day rules"],
+      checks: warnings.length ? [] : ["Fits availability, time off, shift, rest, and consecutive-day rules"],
       warnings, blocked: warnings.some(function (warning) { return warning.blocking; }),
       safe: warnings.length === 0,
     };
   }
 
-  return { dateNumber, addDays, interval, weekStart, buildEntries, workedDays, weeklyHours, getWarnings, evaluate };
+  return { dateNumber, addDays, interval, weekStart, buildEntries, workedDays, weeklyHours,
+    timeOffInterval, getTimeOffConflicts, getWarnings, evaluate };
 });
