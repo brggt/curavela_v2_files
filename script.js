@@ -2901,6 +2901,7 @@ function renderCaregiverList() {
     const caregiverItem = document.createElement("li");
 
     caregiverItem.classList.add("caregiver-list-item");
+    caregiverItem.dataset.caregiverId = caregiverId;
 
     caregiverItem.innerHTML = `
         <div class="caregiver-card-identity">
@@ -2979,6 +2980,25 @@ function renderCaregiverList() {
     );
 
     const actionMenu = caregiverItem.querySelector(".caregiver-action-menu");
+
+    ["Move earlier in schedule", "Move later in schedule"].forEach(function (label, direction) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.disabled = direction === 0 ? index === 0 : index === caregivers.length - 1;
+      button.addEventListener("click", function () {
+        const current = caregivers.findIndex(function (person) { return person.id === caregiverId; });
+        const target = current + (direction === 0 ? -1 : 1);
+        if (current < 0 || target < 0 || target >= caregivers.length) return;
+        [caregivers[current], caregivers[target]] = [caregivers[target], caregivers[current]];
+        saveData("reorder caregivers");
+        renderCaregiverList();
+        renderSchedule();
+        const row = Array.from(caregiverList.children).find(function (item) { return item.dataset.caregiverId === caregiverId; });
+        if (row) row.querySelector(".manage-caregiver-button").focus();
+      });
+      actionMenu.append(button);
+    });
 
     manageButton.addEventListener("click", function (event) {
       event.stopPropagation();
