@@ -271,3 +271,16 @@ test("an unreadable saved workspace is not silently overwritten by later edits",
  f.edit({});assert.equal(f.saved.get('curavelaWorkspaceV6'),'{broken');
  assert.match(f.nodes.get('#schedule-notice').textContent,/Could not save/);
 });
+test("automatic briefs follow edit and undo while written notes stay intact",function(){
+ const f=app();
+ f.run('scheduleBriefs["2026-10-04"]={focus:"Keep this written note",updates:[],followUps:[]};renderSchedule=function(){renderScheduleBrief();};');
+ f.edit({start:'09:00',end:'12:00'});
+ assert.match(f.nodes.get('#automatic-brief-status').textContent,/3 hrs/);
+ assert.match(f.nodes.get('#automatic-caregiver-briefs').children[0].children[1].textContent,/Alex has 1 shift/);
+ f.edit({caregiverId:'sam',start:'09:00',end:'13:00'});
+ assert.match(f.nodes.get('#automatic-caregiver-briefs').children[0].children[1].textContent,/no shifts/);
+ assert.match(f.nodes.get('#automatic-caregiver-briefs').children[1].children[1].textContent,/4 hrs/);
+ f.run('changeScheduleHistory(scheduleUndoStack,scheduleRedoStack,"Undid")');
+ assert.match(f.nodes.get('#automatic-caregiver-briefs').children[0].children[1].textContent,/3 hrs/);
+ assert.equal(f.run('scheduleBriefs["2026-10-04"].focus'),'Keep this written note');
+});

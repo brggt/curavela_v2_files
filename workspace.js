@@ -122,5 +122,24 @@
     assert([1,2,4].includes(Number(everyWeeks)),'Repeat every 1, 2, or 4 weeks.');
     const dates=[];for(let day=first;day<=last;day=rules.addDays(day,Number(everyWeeks)*7)){dates.push(day);assert(dates.length<=52,'A series can contain up to 52 shifts.');}return dates;
   }
-  return {validateBackup,templates,model,occurrences,coverageGaps,recurrence,validTime};
+  function caregiverBriefs(data,first,last) {
+    const rows=occurrences(data,first,last);
+    const warnings=rules.getWarnings(model(data),first,last);
+    return {
+      first,last,
+      assignedHours:rows.filter(row=>row.caregiverId!=='Open').reduce((sum,row)=>sum+row.hours,0),
+      openShifts:rows.filter(row=>row.caregiverId==='Open').length,
+      people:data.caregivers.map(person=>{
+        const shifts=rows.filter(row=>row.caregiverId===person.id).sort((a,b)=>a.start-b.start||a.shiftName.localeCompare(b.shiftName));
+        return {
+          id:person.id,name:person.name,shifts,
+          hours:shifts.reduce((sum,row)=>sum+row.hours,0),
+          days:new Set(shifts.map(row=>row.dayKey)).size,
+          weeklyLimit:data.caregiverMaxHours[person.id],
+          warnings:warnings.filter(warning=>warning.caregiverId===person.id),
+        };
+      }),
+    };
+  }
+  return {validateBackup,templates,model,occurrences,coverageGaps,recurrence,validTime,caregiverBriefs};
 });

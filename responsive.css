@@ -13,6 +13,22 @@ input, select, textarea { max-width: 100%; }
 .modal-card { max-height: 90vh; max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain; }
 .modal-actions { flex-wrap: wrap; }
 .main-content { min-width: 0; }
+.main-content .app-view-hidden { display: none !important; }
+.hero-copy { transition: opacity 160ms ease, transform 160ms ease, visibility 160ms; }
+.headline-scrolled .hero-copy { opacity: 0; transform: translateY(-12px); visibility: hidden; }
+/* Keep headline space in normal flow to avoid scroll jumps or collapse loops. */
+.automatic-brief { padding: 22px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+.automatic-brief h3 { font-size: 19px; margin: 0 0 8px; }
+.automatic-brief-description, .automatic-brief-limit { color: var(--muted); }
+.automatic-brief p { font-size: 14px; line-height: 1.6; }
+.automatic-caregiver-briefs { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 16px; margin-top: 16px; }
+.automatic-caregiver-card { padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: #fbfcff; min-width: 0; overflow-wrap: anywhere; }
+.automatic-caregiver-card h4 { margin: 0 0 8px; font-size: 17px; }
+.automatic-caregiver-card p { margin: 8px 0; }
+.automatic-caregiver-card summary { cursor: pointer; min-height: 44px; padding: 12px 0; font-size: 14px; font-weight: 600; }
+.automatic-caregiver-card ul { padding-left: 20px; font-size: 13px; line-height: 1.65; }
+.automatic-caregiver-card li + li { margin-top: 8px; }
+.automatic-brief-warnings { color: #a51c31; }
 .care-map-grid { min-width: 1000px; grid-template-columns: 176px repeat(var(--day-count), minmax(0, 1fr)) !important; }
 #schedule { overflow-x: auto; }
 .care-map-cell { min-width: 0; }
@@ -21,6 +37,17 @@ input, select, textarea { max-width: 100%; }
 .caregiver-cell > div:last-child { min-width: 0; }
 .caregiver-name { overflow-wrap: anywhere; }
 .caregiver-drag-handle { flex-shrink: 0; }
+.care-map-grid .caregiver-cell:not(.care-map-header) { align-self: start; }
+/* A quiet day must not stretch its cards to the height of a busier day. */
+.care-map-grid .shift-stack { height: auto; grid-auto-rows: max-content; align-content: start; align-items: start; gap: 8px; }
+.care-map-grid .compact-shift { display: grid; align-self: start; align-content: start; gap: 4px; min-height: 72px !important; height: auto; padding: 10px; text-align: left; box-shadow: none; }
+.care-map-grid .compact-shift strong { font-size: 12px; line-height: 1.35; }
+.care-map-grid .compact-shift span { font-size: 11px; line-height: 1.4; }
+.month-shift-row.compact-shift { display: grid; width: 100%; height: auto; min-height: 54px !important; gap: 5px; padding: 8px; text-align: left; box-shadow: none; }
+.month-shift-row.compact-shift .month-shift-info { font-size: 11px; line-height: 1.4; }
+.month-assignee { color: #174dbb; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.compact-shift:hover { border-color: #7b9bff; background: #edf2ff; }
+.compact-shift, .compact-shift:hover { transform: none; transition: background-color 160ms ease, border-color 160ms ease; }
 #schedule-filters { align-items: end; gap: 12px; margin: 20px 0 24px; }
 #schedule-filters .schedule-search-field { flex: 1 1 220px; max-width: 360px; }
 .schedule-control-label, .schedule-filter-fields label { color: var(--muted); font-size: 12px; font-weight: 600; }

@@ -118,6 +118,20 @@ function renderWorkspaceExtras() {
 }
 (function initializeWorkspaceUI(){
   const main=document.querySelector('.main-content');
+  const headline=document.querySelector('.hero-copy');
+  let headlineHidden=false,scrollFrame=0;
+  function updateHeadline(){
+    scrollFrame=0;
+    const distance=Math.max(window.scrollY||0,main.scrollTop||0);
+    if(distance>24)headlineHidden=true;
+    else if(distance<=2)headlineHidden=false;
+    main.classList.toggle('headline-scrolled',headlineHidden);
+    if(headline)headline.setAttribute('aria-hidden',String(headlineHidden));
+  }
+  function queueHeadlineUpdate(){if(!scrollFrame)scrollFrame=window.requestAnimationFrame(updateHeadline);}
+  window.addEventListener('scroll',queueHeadlineUpdate,{passive:true});
+  main.addEventListener('scroll',queueHeadlineUpdate,{passive:true});
+  updateHeadline();
   const tools=document.createElement('div');tools.className='workspace-tools';tools.id='schedule-filters';
   tools.innerHTML='<label class="schedule-search-field"><span class="schedule-control-label">Search this week</span><input id="schedule-search" type="search" placeholder="Caregiver or shift name" /></label><details class="schedule-filter-options"><summary>Filters</summary><div class="schedule-filter-fields"><label>Show<select id="schedule-status-filter"><option value="all">All shifts</option><option value="open">Open shifts</option><option value="conflicts">Conflicts</option></select></label><label>Specific date<input id="schedule-date-filter" type="date" /></label><button id="clear-schedule-filters" type="button">Clear filters</button></div></details><button id="open-batch-shifts" type="button">Add / repeat shifts</button>';
   document.querySelector('#schedule-area').insertBefore(tools,document.querySelector('#schedule'));
