@@ -13,3 +13,20 @@ test('care gaps count unique caregivers and exclude dated time off',()=>{const d
 test('care coverage includes an overnight assignment from the previous day',()=>{const data=snapshot();data.workspace.care={enabled:true,start:'00:00',end:'07:00',count:1};data.scheduleAssignments['2026-10-03-Night']='alex';assert.deepEqual(W.coverageGaps(data,'2026-10-04','2026-10-04'),[]);});
 test('recurrences cross DST and year boundaries and remain bounded',()=>{assert.deepEqual(W.recurrence('2026-12-27','2027-01-10',1),['2026-12-27','2027-01-03','2027-01-10']);assert.throws(()=>W.recurrence('2026-10-04','2030-10-04',1));assert.throws(()=>W.recurrence('2026-10-04','2026-10-01',1));});
 module.exports={snapshot};
+test('caregiver briefs recompute when shifts are reassigned or their hours change',()=>{
+ const data=snapshot();data.scheduleAssignments['2026-10-04-Morning']='alex';
+ let brief=W.caregiverBriefs(data,'2026-10-04','2026-10-10');
+ assert.equal(brief.people[0].hours,6.5);assert.equal(brief.people[1].hours,0);assert.equal(brief.openShifts,20);
+ data.scheduleAssignments['2026-10-04-Morning']='sam';data.shiftTimeOverrides['2026-10-04__Morning']={start:'09:00',end:'12:00'};
+ brief=W.caregiverBriefs(data,'2026-10-04','2026-10-10');
+ assert.equal(brief.people[0].shifts.length,0);assert.equal(brief.people[1].hours,3);assert.equal(brief.assignedHours,3);
+});
+test('caregiver briefs include additional and overnight shifts, limits, and date-specific warnings',()=>{
+ const data=snapshot();data.scheduleAssignments['2026-10-04-Night']='alex';
+ data.workspace.extraShifts.push({dayKey:'2026-10-06',name:'Extra',start:'09:00',end:'11:00'});data.scheduleAssignments['2026-10-06-Extra']='alex';
+ data.caregiverRules.alex.timeOff=[{startDate:'2026-10-05',endDate:'2026-10-05'}];
+ const brief=W.caregiverBriefs(data,'2026-10-04','2026-10-10');
+ assert.equal(brief.people[0].hours,14);assert.equal(brief.people[0].days,2);assert.equal(brief.people[0].weeklyLimit,50);
+ assert.ok(brief.people[0].warnings.some(w=>w.code==='time-off'));
+ assert.equal(W.caregiverBriefs(data,'2026-10-11','2026-10-17').people[0].hours,0);
+});

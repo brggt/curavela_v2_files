@@ -2038,14 +2038,21 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
           const shiftForDay = getShiftForDay(day.key, shift);
 
-          const shiftPill = document.createElement("div");
-
-          shiftPill.classList.add("shift-pill");
+          const shiftPill = document.createElement("button");
+          shiftPill.type = "button";
+          shiftPill.classList.add("shift-pill", "edit-occurrence-button", "compact-shift");
+          shiftPill.dataset.day = day.key;
+          shiftPill.dataset.shift = shift.name;
 
           const timeOffConflict = CuravelaScheduling.getTimeOffConflicts(
             getCaregiverRules(caregiverId), CuravelaScheduling.interval(day.key, shiftForDay.start, shiftForDay.end),
           ).length > 0;
           if (timeOffConflict) shiftPill.classList.add("has-time-off-conflict");
+          shiftPill.setAttribute("aria-label",
+            "Edit " + shift.name + " for " + caregiverName + " on " + day.key +
+            ", " + formatTime(shiftForDay.start) + " to " + formatTime(shiftForDay.end) +
+            (shiftForDay.end <= shiftForDay.start ? ", ends next day" : "") +
+            (timeOffConflict ? ", time off conflict" : ""));
 
           shiftPill.innerHTML = `
                 <strong>
@@ -2060,18 +2067,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
                 ${timeOffConflict ? '<span class="time-off-conflict-label">Time off conflict</span>' : ""}
 
-                <select
-                  class="assignment-select"
-                  data-day="${day.key}"
-                  data-shift="${escapeHTML(shift.name)}"
-                >
-                  ${buildCaregiverOptions(assignedCaregiverId)}
-                </select>
-                <button class="edit-occurrence-button" type="button"
-                  data-day="${day.key}" data-shift="${escapeHTML(shift.name)}"
-                  aria-label="Edit ${escapeHTML(shift.name)} on ${day.key}">
-                  Edit shift
-                </button>
+                ${shiftForDay.end <= shiftForDay.start ? '<span class="shift-next-day">Ends next day</span>' : ""}
               `;
 
           shiftStack.append(shiftPill);
@@ -2300,8 +2296,10 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
       ).length > 0;
 
       shiftRows += `
-            <div class="month-shift-row ${timeOffConflict ? "has-time-off-conflict" : ""}">
-              <div class="month-shift-info">
+            <button class="month-shift-row edit-occurrence-button compact-shift ${timeOffConflict ? "has-time-off-conflict" : ""}"
+              type="button" data-day="${day.key}" data-shift="${escapeHTML(shift.name)}"
+              aria-label="Edit ${escapeHTML(shift.name)} on ${day.key}, ${escapeHTML(assignedCaregiver === "Open" ? "Open shift" : getCaregiverName(assignedCaregiver))}, ${formatTime(shiftForDay.start)} to ${formatTime(shiftForDay.end)}${shiftForDay.end <= shiftForDay.start ? ", ends next day" : ""}${timeOffConflict ? ", time off conflict" : ""}">
+              <span class="month-shift-info">
                 <span>
                   ${escapeHTML(shift.name)}
                 </span>
@@ -2309,23 +2307,12 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
                 <span>
                   ${formatTime(shiftForDay.start)}
                 </span>
-              </div>
+              </span>
 
               ${timeOffConflict ? '<span class="time-off-conflict-label">Time off conflict</span>' : ""}
 
-              <select
-                class="assignment-select month-assignment-select"
-                data-day="${day.key}"
-                data-shift="${escapeHTML(shift.name)}"
-              >
-                ${buildCaregiverOptions(assignedCaregiver)}
-              </select>
-                <button class="edit-occurrence-button" type="button"
-                  data-day="${day.key}" data-shift="${escapeHTML(shift.name)}"
-                  aria-label="Edit ${escapeHTML(shift.name)} on ${day.key}">
-                  Edit shift
-                </button>
-            </div>
+              <span class="month-assignee">${escapeHTML(assignedCaregiver === "Open" ? "Open shift" : getCaregiverName(assignedCaregiver))}</span>
+            </button>
           `;
     });
 
@@ -3661,6 +3648,7 @@ function clearSelectedMonth() {
 /* navigation */
 
 function setAppView(viewName) {
+  document.querySelector(".schedule-history")?.classList.toggle("app-view-hidden", ["team", "help"].includes(viewName));
   if (mainContent) {
     mainContent.classList.toggle("coverage-view", viewName === "open-shifts");
   }
@@ -3747,6 +3735,7 @@ function setAppView(viewName) {
     dashboardGrid?.classList.remove("app-view-hidden");
     dashboardGrid?.classList.add("single-panel-view");
     reportsPanel?.classList.remove("app-view-hidden");
+    renderScheduleBrief();
   }
 
   if (viewName === "settings") {
@@ -3767,6 +3756,7 @@ function setAppView(viewName) {
       behavior: "auto",
     });
   }
+  if (typeof window !== "undefined") window.scrollTo({top:0,behavior:"instant"});
 }
 
 function getDateFromValue(dateValue) {
@@ -4010,6 +4000,34 @@ function getBriefUpdateDayLabel(dayKey, scheduleDays) {
   return `${matchingDay.shortLabel}, ` + `${matchingDay.dateLabel}`;
 }
 
+function renderAutomaticCaregiverBrief(scheduleDays) {
+  const list=document.querySelector("#automatic-caregiver-briefs");
+  const status=document.querySelector("#automatic-brief-status");
+  if(!list||!status)return;
+  const summary=CuravelaWorkspace.caregiverBriefs(getWorkspaceSnapshot(),scheduleDays[0].key,scheduleDays[scheduleDays.length-1].key);
+  status.textContent=formatHours(summary.assignedHours)+" scheduled across "+summary.people.length+" caregivers · "+summary.openShifts+" open shifts remaining.";
+  list.replaceChildren();
+  if(!summary.people.length){const empty=document.createElement("p");empty.textContent="Add caregivers to see their automatic schedule briefs here.";list.append(empty);return;}
+  summary.people.forEach(function(person){
+    const card=document.createElement("article");card.className="automatic-caregiver-card";
+    const heading=document.createElement("h4");heading.textContent=person.name;
+    const text=document.createElement("p");
+    text.textContent=person.shifts.length
+      ? person.name+" has "+person.shifts.length+" "+(person.shifts.length===1?"shift":"shifts")+" starting on "+person.days+" "+(person.days===1?"day":"days")+" this week, totaling "+formatHours(person.hours)+"."
+      : person.name+" has no shifts assigned this week.";
+    const limit=document.createElement("p");limit.className="automatic-brief-limit";limit.textContent="Weekly limit: "+formatHours(person.weeklyLimit)+". Overnight hours count toward the week the shift starts.";
+    card.append(heading,text,limit);
+    if(person.warnings.length){const warnings=document.createElement("ul");warnings.className="automatic-brief-warnings";person.warnings.forEach(function(warning){const item=document.createElement("li");item.textContent=warning.text;warnings.append(item);});card.append(warnings);}
+    if(person.shifts.length){
+      const details=document.createElement("details"),label=document.createElement("summary"),shifts=document.createElement("ul");
+      label.textContent="View "+person.shifts.length+" scheduled "+(person.shifts.length===1?"shift":"shifts");
+      person.shifts.forEach(function(shift){const item=document.createElement("li");const day=scheduleDays.find(function(d){return d.key===shift.dayKey;});item.textContent=(day?day.label:shift.dayKey)+" · "+shift.shiftName+" · "+formatTime(shift.startTime)+"–"+formatTime(shift.endTime)+(shift.endTime<=shift.startTime?" (ends next day)":"")+" · "+formatHours(shift.hours);shifts.append(item);});
+      details.append(label,shifts);card.append(details);
+    }
+    list.append(card);
+  });
+}
+
 function renderScheduleBrief() {
   if (
     !scheduleFocusInput ||
@@ -4021,6 +4039,7 @@ function renderScheduleBrief() {
   }
 
   const scheduleDays = getDaysInSelectedWeek();
+  renderAutomaticCaregiverBrief(scheduleDays);
 
   const brief = getCurrentScheduleBrief();
 
@@ -4239,7 +4258,7 @@ function copyPreviousScheduleBrief() {
   const previousBrief = scheduleBriefs[previousWeekKey];
 
   if (!previousBrief) {
-    alert("The previous week does not have a Schedule Brief.");
+    alert("The previous week does not have saved notes.");
 
     return;
   }
@@ -4248,7 +4267,7 @@ function copyPreviousScheduleBrief() {
 
   if (
     !scheduleBriefIsEmpty(currentBrief) &&
-    !confirm("Replace this week's current brief with the previous week?")
+    !confirm("Replace this week's written notes with the previous week's notes? The automatic schedule summary will stay current.")
   ) {
     return;
   }
@@ -4299,7 +4318,7 @@ function clearCurrentScheduleBrief() {
     return;
   }
 
-  if (!confirm("Clear the Schedule Brief for this week?")) {
+  if (!confirm("Clear this week's written notes, updates, and follow-ups? This does not change shifts or the automatic summary.")) {
     return;
   }
 
