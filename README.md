@@ -22,6 +22,8 @@ Curavela is a caregiving scheduling web app designed to make weekly and monthly 
 - Searchable agenda, mobile navigation labels, responsive layouts, keyboard focus and non-drag caregiver reordering
 - Full-day dated time off, additional/split shifts, and recurring weekly series
 - Required-care gap reports separate from the Brief, hours and CSV export
+- Automatic weekly caregiver briefs that recalculate hours, assignments and warnings after edits; written notes remain separate
+- Full headline at the top, fading out after scrolling; compact calendar cards open the dated editor on click and keep their own height when another day has more shifts
 - Validated backups, pre-import recovery, recent local history, Help and support diagnostics
 - Optional Node/SQLite team server with accounts, explicit draft sync, publication, My shifts, acknowledgments, requests and notification preferences
 

@@ -650,7 +650,7 @@
               <div>
                 <p class="eyebrow">Weekly planning</p>
                 <h3>Schedule Brief</h3>
-                <p>Keep weekly priorities, updates, and follow-ups together.</p>
+                <p>A live summary of each caregiver's schedule, with your notes below.</p>
               </div>
 
               <div class="schedule-brief-week-nav">
@@ -686,11 +686,18 @@
               </div>
             </div>
 
+            <section class="automatic-brief" aria-labelledby="automatic-brief-title">
+              <h3 id="automatic-brief-title">Schedule so far</h3>
+              <p class="automatic-brief-description">Updates automatically when assignments, shift times, or caregiver rules change. Hours are scheduled, not hours worked.</p>
+              <p id="automatic-brief-status" role="status"></p>
+              <div id="automatic-caregiver-briefs" class="automatic-caregiver-briefs"></div>
+            </section>
+
             <section class="schedule-brief-focus">
               <div class="schedule-brief-section-heading">
                 <div>
-                  <strong>Weekly focus</strong>
-                  <span>The main priority for this schedule.</span>
+                  <strong>Your weekly notes</strong>
+                  <span>Your priorities stay separate from the automatic summary.</span>
                 </div>
 
                 <span class="schedule-brief-auto-save"> Auto-saved </span>
@@ -783,7 +790,7 @@
                 class="ghost-button"
                 type="button"
               >
-                Copy previous week
+                Copy previous week's notes
               </button>
 
               <button
@@ -791,7 +798,7 @@
                 class="ghost-button danger"
                 type="button"
               >
-                Clear this week
+                Clear this week's notes
               </button>
             </div>
           </article>
