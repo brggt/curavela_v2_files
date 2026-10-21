@@ -30,3 +30,19 @@ test('caregiver briefs include additional and overnight shifts, limits, and date
  assert.ok(brief.people[0].warnings.some(w=>w.code==='time-off'));
  assert.equal(W.caregiverBriefs(data,'2026-10-11','2026-10-17').people[0].hours,0);
 });
+
+test('brief totals distinguish assigned shifts and scheduled caregivers from the full roster',()=>{
+ const data=snapshot();data.caregivers.push({id:'jo',name:'Jo'},{id:'unused',name:'Not scheduled'});data.caregiverMaxHours.jo=50;data.caregiverMaxHours.unused=50;
+ data.scheduleAssignments={'2026-10-11-Morning':'alex','2026-10-11-Afternoon':'alex','2026-10-13-Morning':'alex','2026-10-12-Afternoon':'sam','2026-10-14-Night':'sam','2026-10-16-Night':'jo'};
+ const brief=W.caregiverBriefs(data,'2026-10-11','2026-10-17');
+ assert.equal(brief.assignedHours,49);assert.equal(brief.assignedShifts,6);assert.equal(brief.totalShifts,21);assert.equal(brief.openShifts,15);assert.equal(brief.scheduledCaregivers,3);assert.equal(brief.people.length,4);
+ assert.equal(brief.openRows.length,15);assert.ok(brief.openRows.every(row=>row.caregiverId==='Open'));
+ assert.deepEqual(brief.people.map(person=>person.hours),[19,18,12,0]);
+});
+test('brief shows a prior-week overnight shift separately without double-counting its hours',()=>{
+ const data=snapshot();data.scheduleAssignments={'2026-10-10-Night':'alex','2026-10-17-Night':'sam'};
+ const brief=W.caregiverBriefs(data,'2026-10-11','2026-10-17');
+ assert.equal(brief.assignedHours,12);assert.equal(brief.assignedShifts,1);assert.equal(brief.people[0].hours,0);assert.equal(brief.people[0].carryoverShifts[0].key,'2026-10-10-Night');
+ data.shiftTimeOverrides['2026-10-10__Night']={start:'19:00',end:'00:00'};
+ assert.equal(W.caregiverBriefs(data,'2026-10-11','2026-10-17').people[0].carryoverShifts.length,0);
+});
