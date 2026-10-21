@@ -125,6 +125,7 @@ function renderWorkspaceExtras() {
     const distance=Math.max(window.scrollY||0,main.scrollTop||0);
     if(distance>24)headlineHidden=true;
     else if(distance<=2)headlineHidden=false;
+    document.documentElement.classList.toggle('headline-collapsed',headlineHidden);
     main.classList.toggle('headline-scrolled',headlineHidden);
     if(headline)headline.setAttribute('aria-hidden',String(headlineHidden));
   }

@@ -14,9 +14,17 @@ input, select, textarea { max-width: 100%; }
 .modal-actions { flex-wrap: wrap; }
 .main-content { min-width: 0; }
 .main-content .app-view-hidden { display: none !important; }
-.hero-copy { transition: opacity 160ms ease, transform 160ms ease, visibility 160ms; }
+/* Collapse the introduction's actual space so the toolbar and schedule rise. */
+.hero { transition: row-gap 240ms ease; }
+.hero-intro { display: grid; grid-template-rows: 1fr; padding-top: 6px; transition: grid-template-rows 240ms ease, padding-top 240ms ease; }
+.hero-copy { min-height: 0; overflow: hidden; padding-top: 0; transition: opacity 160ms ease, transform 240ms ease, visibility 160ms; }
+.headline-scrolled .hero-intro { grid-template-rows: 0fr; padding-top: 0; }
+.headline-scrolled .hero { row-gap: 0 !important; }
 .headline-scrolled .hero-copy { opacity: 0; transform: translateY(-12px); visibility: hidden; }
-/* Keep headline space in normal flow to avoid scroll jumps or collapse loops. */
+/* Anchoring must not undo the upward movement. A tiny scroll range prevents
+   a short page from being clamped to the top and reopening the introduction. */
+html.headline-collapsed { overflow-anchor: none; }
+html.headline-collapsed body { min-height: calc(100vh + 4px); min-height: calc(100dvh + 4px); }
 .automatic-brief { padding: 22px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 22px; }
 .automatic-brief h3 { font-size: 19px; margin: 0 0 8px; }
 .automatic-brief-description, .automatic-brief-limit { color: var(--muted); }
