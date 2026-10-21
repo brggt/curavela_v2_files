@@ -34,7 +34,7 @@ test('stale saves and malformed snapshots leave the shared draft unchanged',asyn
 });
 test('drafts remain private until publishing; acknowledgments belong to the assigned person',async t=>{
  const f=await fixture(t);assert.equal((await f.request('my-shifts','GET',undefined,f.alex)).data.shifts.length,0);
- const published=await f.request('publish','POST',{revision:1,first:'2027-01-04',last:'2027-01-05'},f.manager);assert.equal(published.status,200);assert.equal(published.data.count,6);
+ const published=await f.request('publish','POST',{revision:1,first:'2027-01-04',last:'2027-01-05'},f.manager);assert.equal(published.status,200,JSON.stringify(published.data));assert.equal(published.data.count,6);
  const mine=(await f.request('my-shifts','GET',undefined,f.alex)).data;assert.equal(mine.shifts.length,1);assert.equal(mine.shifts[0].caregiverId,'alex');
  assert.equal((await f.request('acknowledge','POST',{key:'2027-01-05-Morning'},f.alex)).status,404);
  assert.equal((await f.request('acknowledge','POST',{key:'2027-01-04-Morning'},f.alex)).status,200);
@@ -65,7 +65,13 @@ test('a reciprocal swap needs agreement and updates both assignments in the draf
  const f=await fixture(t);await f.request('publish','POST',{revision:1,first:'2027-01-04',last:'2027-01-05'},f.manager);
  const submitted=await f.request('requests','POST',{kind:'swap',key:'2027-01-04-Morning',targetKey:'2027-01-05-Morning'},f.alex);assert.equal(submitted.status,201,JSON.stringify(submitted.data));
  assert.equal((await f.request('requests/decide','POST',{id:submitted.data.id,decision:'approved',revision:1},f.manager)).status,400);
- const approved=await f.request('requests/decide','POST',{id:submitted.data.id,decision:'approved',revision:1,coworkerConfirmed:true},f.manager);assert.equal(approved.status,200,JSON.stringify(approved.data));
+ assert.equal((await f.request('requests/decide','POST',{id:submitted.data.id,decision:'approved',revision:1,coworkerConfirmed:true},f.manager)).status,400);
+ assert.equal((await f.request('requests/respond','POST',{id:submitted.data.id,decision:'accepted'},f.manager)).status,403);
+ assert.equal((await f.request('requests/respond','POST',{id:submitted.data.id,decision:'accepted'},f.alex)).status,403);
+ assert.equal((await f.request('requests','GET',undefined,f.sam)).data.requests[0].incoming,true);
+ assert.equal((await f.request('requests/respond','POST',{id:submitted.data.id,decision:'accepted'},f.sam)).status,200);
+ assert.equal((await f.request('requests/respond','POST',{id:submitted.data.id,decision:'accepted'},f.sam)).status,409);
+ const approved=await f.request('requests/decide','POST',{id:submitted.data.id,decision:'approved',revision:1},f.manager);assert.equal(approved.status,200,JSON.stringify(approved.data));
  const draft=(await f.request('draft','GET',undefined,f.manager)).data.snapshot;assert.equal(draft.scheduleAssignments['2027-01-04-Morning'],'sam');assert.equal(draft.scheduleAssignments['2027-01-05-Morning'],'alex');
 });
 test('invitation tokens are single-use and logout revokes the session',async t=>{
@@ -101,4 +107,60 @@ test('email alerts respect opt-in and retries retain an idempotency key',async t
  await f.app.processNotifications();assert.equal((await f.request('notifications','GET',undefined,f.alex)).data.notifications[0].email_state,'failed');
  await f.app.processNotifications();assert.equal((await f.request('notifications','GET',undefined,f.alex)).data.notifications[0].email_state,'accepted');
  assert.equal(calls.length,2);assert.equal(calls[0].id,calls[1].id);assert.equal(calls[0].to,'alex@example.test');
+});
+
+test('coworker declines and stale swap acceptances cannot change the draft',async t=>{
+ const f=await fixture(t);await f.request('publish','POST',{revision:1,first:'2027-01-04',last:'2027-01-05'},f.manager);
+ const create=async()=>f.request('requests','POST',{kind:'swap',key:'2027-01-04-Morning',targetKey:'2027-01-05-Morning'},f.alex);
+ const one=await create();assert.equal((await f.request('requests/respond','POST',{id:one.data.id,decision:'declined'},f.sam)).status,200);
+ assert.equal((await f.request('requests/decide','POST',{id:one.data.id,decision:'approved',revision:1},f.manager)).status,409);
+ const two=await create();assert.equal((await f.request('requests/respond','POST',{id:two.data.id,decision:'accepted'},f.sam)).status,200);
+ const data=snapshot();data.shiftTimeOverrides['2027-01-05__Morning']={start:'09:00',end:'12:00'};await f.request('draft','PUT',{revision:1,snapshot:data},f.manager);
+ assert.equal((await f.request('requests/decide','POST',{id:two.data.id,decision:'approved',revision:2},f.manager)).status,409);
+ const current=(await f.request('draft','GET',undefined,f.manager)).data;assert.equal(current.revision,2);assert.equal(current.snapshot.scheduleAssignments['2027-01-04-Morning'],'alex');
+});
+test('timed team requests retain exact hours and reject overlaps on approval',async t=>{
+ const f=await fixture(t),body={kind:'time-off',startDate:'2027-01-04',endDate:'2027-01-04',allDay:false,startTime:'14:00',endTime:'17:00'};
+ const submit=await f.request('requests','POST',body,f.alex);assert.equal(submit.status,201);
+ assert.equal((await f.request('requests/decide','POST',{id:submit.data.id,decision:'approved',revision:1},f.manager)).status,200);
+ const data=(await f.request('draft','GET',undefined,f.manager)).data.snapshot;assert.equal(data.caregiverRules.alex.timeOff[0].startTime,'14:00');
+ const duplicate=await f.request('requests','POST',body,f.alex);assert.equal((await f.request('requests/decide','POST',{id:duplicate.data.id,decision:'approved',revision:2},f.manager)).status,400);
+ assert.equal((await f.request('publish','POST',{revision:2,first:'2027-01-04',last:'2027-01-04'},f.manager)).status,200);
+ assert.equal((await f.request('requests','POST',{...body,endTime:'13:00'},f.alex)).status,400);
+});
+test('server restore is manager-only, rejects stale drafts and preserves publications',async t=>{
+ const f=await fixture(t);await f.request('publish','POST',{revision:1,first:'2027-01-04',last:'2027-01-05'},f.manager);
+ const data=snapshot();data.shiftTimeOverrides['2027-01-04__Morning']={start:'08:00',end:'12:00'};data.workspace.shiftNotes['2027-01-04-Morning']='Draft note';await f.request('draft','PUT',{revision:1,snapshot:data},f.manager);
+ assert.equal((await f.request('snapshots','GET',undefined,f.alex)).status,403);
+ const preview=await f.request('snapshots/preview','POST',{revision:2,targetRevision:1},f.manager);assert.equal(preview.status,200);assert.equal(preview.data.changes[0].before.start,'08:00');assert.equal(preview.data.changes[0].after.start,'06:30');
+ assert.equal((await f.request('snapshots/restore','POST',{revision:1,targetRevision:1},f.manager)).status,409);
+ assert.equal((await f.request('snapshots/restore','POST',{revision:2,targetRevision:1},f.alex)).status,403);
+ assert.equal((await f.request('snapshots/restore','POST',{revision:2,targetRevision:1},f.manager)).data.revision,3);
+ assert.equal((await f.request('my-shifts','GET',undefined,f.alex)).data.shifts[0].startTime,'06:30');
+ const history=(await f.request('history','GET',undefined,f.manager)).data.history;assert.equal(history[0].name,'manager');assert.match(history[0].action,/Restore/);assert.equal(history[0].details.changes[0].before.note,'Draft note');
+ assert.equal((await f.request('snapshots/restore','POST',{revision:3,targetRevision:2},f.manager)).data.revision,4);
+ assert.equal((await f.request('draft','GET',undefined,f.manager)).data.snapshot.workspace.shiftNotes['2027-01-04-Morning'],'Draft note');
+});
+test('private calendar links show only published own shifts, rotate, revoke and omit notes',async t=>{
+ const f=await fixture(t,{timeZone:'America/Chicago'});const created=await f.request('calendar-link','POST',{},f.alex);assert.equal(created.status,200);
+ const route=new URL(created.data.link).pathname;let response=await fetch(f.url+route),text=await response.text();assert.match(response.headers.get('content-type'),/text\/calendar/);assert.ok(!text.includes('BEGIN:VEVENT'));
+ const data=snapshot();data.workspace.shiftNotes['2027-01-04-Morning']='PRIVATE HANDOFF';await f.request('draft','PUT',{revision:1,snapshot:data},f.manager);await f.request('publish','POST',{revision:2,first:'2027-01-04',last:'2027-01-05'},f.manager);
+ text=await (await fetch(f.url+route)).text();assert.equal(text.match(/BEGIN:VEVENT/g).length,1);assert.match(text,/DTSTART:20270104T123000Z/);assert.ok(!text.includes('PRIVATE HANDOFF'));assert.ok(!text.includes('20270105T123000Z'));
+ assert.equal((await f.request('my-shifts','GET',undefined,f.alex)).data.shifts[0].note,'PRIVATE HANDOFF');assert.ok((await f.request('swap-options?key=2027-01-05-Morning','GET',undefined,f.sam)).data.shifts.every(s=>!('note' in s)));
+ const stored=f.app.db.prepare('SELECT hash FROM calendar_tokens').get().hash;assert.ok(!route.includes(stored));assert.equal(stored.length,64);
+ const rotated=await f.request('calendar-link','POST',{},f.alex);assert.equal((await fetch(f.url+route)).status,404);const newRoute=new URL(rotated.data.link).pathname;assert.equal((await fetch(f.url+newRoute)).status,200);
+ await f.request('calendar-link','DELETE',undefined,f.alex);assert.equal((await fetch(f.url+newRoute)).status,404);assert.equal((await f.request('calendar-link','POST',{},f.manager)).status,403);
+});
+test('calendar reassignment publishes a cancellation with stable event ID and restores correctly',async t=>{
+ const f=await fixture(t);await f.request('publish','POST',{revision:1,first:'2027-01-04',last:'2027-01-04'},f.manager);const link=(await f.request('calendar-link','POST',{},f.alex)).data.link,route=new URL(link).pathname;
+ const original=await(await fetch(f.url+route)).text(),uid=original.match(/UID:[^\r]+/)[0];
+ const data=snapshot();data.scheduleAssignments['2027-01-04-Morning']='sam';await f.request('draft','PUT',{revision:1,snapshot:data},f.manager);await f.request('publish','POST',{revision:2,first:'2027-01-04',last:'2027-01-04'},f.manager);
+ const cancelled=await(await fetch(f.url+route)).text();assert.match(cancelled,/STATUS:CANCELLED/);assert.equal(cancelled.match(/UID:[^\r]+/)[0],uid);assert.match(cancelled,/SEQUENCE:2/);
+ await f.request('draft','PUT',{revision:2,snapshot:snapshot()},f.manager);await f.request('publish','POST',{revision:3,first:'2027-01-04',last:'2027-01-04'},f.manager);
+ const restored=await(await fetch(f.url+route)).text();assert.ok(!restored.includes('STATUS:CANCELLED'));assert.equal(restored.match(/BEGIN:VEVENT/g).length,1);
+});
+test('new public assets have correct media types and private operational files remain inaccessible',async t=>{
+ const f=await fixture(t);
+ for(const [file,type] of [['calendar.js','text/javascript'],['manifest.webmanifest','application/manifest+json'],['icon-192.png','image/png'],['sw.js','text/javascript']]){const res=await fetch(f.url+'/'+file);assert.equal(res.status,200);assert.equal(res.headers.get('content-type'),type);}
+ for(const file of ['server/backup.js','Dockerfile','.env','.dockerignore'])assert.equal((await fetch(f.url+'/'+file)).status,404);
 });

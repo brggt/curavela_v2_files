@@ -527,11 +527,13 @@ function migrateCaregiverData() {
 }
 
 let savedWorkspaceUnreadable = false;
+let lastLocalSaveFailed = false;
 function saveData(label) {
   const before = lastSavedScheduleState;
   const changed = before !== null && before !== captureScheduleState();
   if (changed && !restoringScheduleState) {
-    workspaceState.history.push({at:new Date().toISOString(), action:label || "Schedule changed", actor:"Local scheduler"});
+    const changes=CuravelaWorkspace.changes(JSON.parse(before),JSON.parse(captureScheduleState()));
+    workspaceState.history.push({at:new Date().toISOString(), action:label || "Schedule changed", actor:"Local scheduler",changes:changes.slice(0,100),changeCount:changes.length});
     workspaceState.history = workspaceState.history.slice(-200);
   }
   const snapshot = getWorkspaceSnapshot();
@@ -540,12 +542,20 @@ function saveData(label) {
       CuravelaTeam.markDirty();
     } else {
       if (savedWorkspaceUnreadable) throw new Error("Preserving unreadable saved workspace until an explicit restore.");
+      const saved=localStorage.getItem("curavelaWorkspaceV6");
       localStorage.setItem("curavelaWorkspaceV6", JSON.stringify(snapshot));
+      lastLocalSaveFailed=false;
+      if(changed&&saved){
+        try{const copies=JSON.parse(localStorage.getItem('curavelaRecoveryV1')||'[]');const prior=JSON.parse(saved);prior.workspace.history=[];copies.push({at:new Date().toISOString(),label:label||'schedule change',snapshot:prior});localStorage.setItem('curavelaRecoveryV1',JSON.stringify(copies.slice(-10)));}catch{showScheduleNotice('Schedule saved, but a recovery copy could not be stored. Export a backup.',true);}
+      }
     }
     recordScheduleChange(label);
+    if(typeof renderConnectionStatus==='function')renderConnectionStatus();
     if (typeof CuravelaTeam !== "undefined" && CuravelaTeam.isConnected()) showScheduleNotice("Team draft changed. Use Team → Sync draft to share your changes.");
     return true;
   } catch (error) {
+    lastLocalSaveFailed=true;
+    if(typeof renderConnectionStatus==='function')renderConnectionStatus();
     recordScheduleChange(label);
     showScheduleNotice("Could not save on this device. Keep this page open and export a backup from More.", true);
     return false;
@@ -1152,6 +1162,7 @@ function getDefaultCaregiverRules() {
     minRestHours: 0,
     needsTwoConsecutiveDaysOff: false,
     timeOff: [],
+    availabilityWindows: {},
     note: "",
   };
 }
@@ -1240,6 +1251,7 @@ function openCaregiverRulesModal(caregiverId) {
 
   renderCaregiverRuleChoices(caregiverId);
 
+  if(typeof renderAvailabilityWindows==='function')renderAvailabilityWindows(rules);
   openManagedDialog(caregiverRulesModal);
 }
 
@@ -1277,9 +1289,12 @@ function saveActiveCaregiverRules() {
     return checkbox.value;
   });
 
+  const availability=typeof readAvailabilityWindows==='function'?readAvailabilityWindows():getCaregiverRules(activeCaregiverRulesId).availabilityWindows;
+  if(availability===null)return;
   caregiverRules[activeCaregiverRulesId] = {
     ...getCaregiverRules(activeCaregiverRulesId),
     availableDays: selectedDays,
+    availabilityWindows: availability,
 
     allowedShifts: selectedShifts,
 
@@ -2052,7 +2067,8 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
             "Edit " + shift.name + " for " + caregiverName + " on " + day.key +
             ", " + formatTime(shiftForDay.start) + " to " + formatTime(shiftForDay.end) +
             (shiftForDay.end <= shiftForDay.start ? ", ends next day" : "") +
-            (timeOffConflict ? ", time off conflict" : ""));
+            (timeOffConflict ? ", time off conflict" : "") +
+            (workspaceState.shiftNotes?.[day.key+'-'+shift.name] ? ", has handoff note" : ""));
 
           shiftPill.innerHTML = `
                 <strong>
@@ -2070,6 +2086,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
                 ${shiftForDay.end <= shiftForDay.start ? '<span class="shift-next-day">Ends next day</span>' : ""}
               `;
 
+          if(workspaceState.shiftNotes?.[day.key+'-'+shift.name]){const marker=document.createElement('span');marker.className='shift-note-marker';marker.textContent='Has handoff note';shiftPill.append(marker);}
           shiftStack.append(shiftPill);
         });
 
@@ -2298,7 +2315,7 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
       shiftRows += `
             <button class="month-shift-row edit-occurrence-button compact-shift ${timeOffConflict ? "has-time-off-conflict" : ""}"
               type="button" data-day="${day.key}" data-shift="${escapeHTML(shift.name)}"
-              aria-label="Edit ${escapeHTML(shift.name)} on ${day.key}, ${escapeHTML(assignedCaregiver === "Open" ? "Open shift" : getCaregiverName(assignedCaregiver))}, ${formatTime(shiftForDay.start)} to ${formatTime(shiftForDay.end)}${shiftForDay.end <= shiftForDay.start ? ", ends next day" : ""}${timeOffConflict ? ", time off conflict" : ""}">
+              aria-label="Edit ${escapeHTML(shift.name)} on ${day.key}, ${escapeHTML(assignedCaregiver === "Open" ? "Open shift" : getCaregiverName(assignedCaregiver))}, ${formatTime(shiftForDay.start)} to ${formatTime(shiftForDay.end)}${shiftForDay.end <= shiftForDay.start ? ", ends next day" : ""}${timeOffConflict ? ", time off conflict" : ""}${workspaceState.shiftNotes?.[day.key+'-'+shift.name] ? ", has handoff note" : ""}">
               <span class="month-shift-info">
                 <span>
                   ${escapeHTML(shift.name)}
@@ -2312,6 +2329,7 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
               ${timeOffConflict ? '<span class="time-off-conflict-label">Time off conflict</span>' : ""}
 
               <span class="month-assignee">${escapeHTML(assignedCaregiver === "Open" ? "Open shift" : getCaregiverName(assignedCaregiver))}</span>
+              ${workspaceState.shiftNotes?.[day.key+'-'+shift.name]?'<span class="shift-note-marker">Has handoff note</span>':''}
             </button>
           `;
     });
@@ -3240,36 +3258,11 @@ function renderShiftList() {
 
     removeButton.addEventListener("click", function () {
       const removedShiftName = customShifts[index];
-
-      customShifts.splice(index, 1);
-
-      delete shiftTimes[removedShiftName];
-
-      Object.keys(scheduleAssignments).forEach(function (assignmentKey) {
-        if (assignmentKey.endsWith(`-${removedShiftName}`)) {
-          delete scheduleAssignments[assignmentKey];
-        }
-      });
-
-      Object.keys(shiftTimeOverrides).forEach(function (overrideKey) {
-        if (overrideKey.endsWith(`__${removedShiftName}`)) {
-          delete shiftTimeOverrides[overrideKey];
-        }
-      });
-
-      Object.keys(caregiverRules).forEach(function (caregiverId) {
-        const rules = getCaregiverRules(caregiverId);
-
-        caregiverRules[caregiverId] = {
-          ...rules,
-
-          allowedShifts: rules.allowedShifts.filter(function (allowedShift) {
-            return allowedShift !== removedShiftName;
-          }),
-        };
-      });
-
-      saveData();
+      if(!confirm('Remove '+removedShiftName+' from future templates? Existing dated assignments, times and notes will be kept.'))return;
+      const data=getWorkspaceSnapshot();
+      data.customShifts=data.customShifts.filter(name=>name!==removedShiftName);
+      applyWorkspaceSnapshot(CuravelaWorkspace.validateBackup(data));
+      saveData('remove future shift template');
       renderShiftList();
       renderShiftTimeList();
       renderCaregiverList();
@@ -3521,74 +3514,17 @@ function saveEditedShiftTime() {
 /* copy, paste and clear */
 
 function copySelectedWeek() {
-  if (scheduleViewSelect.value !== "weekly") {
-    alert("Switch to Weekly view before copying a week.");
-
-    return;
-  }
-
-  const weekDays = getDaysInSelectedWeek();
-
-  const activeShifts = getActiveShifts();
-
-  copiedWeekAssignments = [];
-
-  weekDays.forEach(function (day, dayIndex) {
-    getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
-      const assignmentKey = `${day.key}-${shift.name}`;
-
-      copiedWeekAssignments.push({
-        dayIndex,
-        times: { ...getShiftForDay(day.key, shift) },
-
-        shiftName: shift.name,
-
-        caregiver: scheduleAssignments[assignmentKey] || "Open",
-      });
-    });
-  });
-
-  alert("This week has been copied. Additional dated shifts are included when the destination has the same shift name.");
+  if(scheduleViewSelect.value!=="weekly"){alert("Switch to Weekly view before copying a week.");return;}
+  copiedWeekAssignments=CuravelaWorkspace.capturePattern(getWorkspaceSnapshot(),getDaysInSelectedWeek()[0].key,7,'Copied week','clipboard');
+  showScheduleNotice('Week copied, including dated shifts, hours, and notes. Choose another week and Paste.');
 }
-
 function pasteCopiedWeek() {
-  if (scheduleViewSelect.value !== "weekly" || !copiedWeekAssignments) {
-    alert("Select Weekly view and copy a week before pasting.");
-    return;
-  }
-  const days = getDaysInSelectedWeek();
-  const assignments = { ...scheduleAssignments };
-  const overrides = { ...shiftTimeOverrides };
-  const active = new Set(getActiveShifts().map(function (shift) { return shift.name; }));
-  let changed = 0, replaced = 0;
-  copiedWeekAssignments.forEach(function (copy) {
-    const day = days[copy.dayIndex];
-    if (!day || !active.has(copy.shiftName)) return;
-    const key = day.key + "-" + copy.shiftName;
-    const person = caregiverIdExists(copy.caregiver) ? copy.caregiver : "Open";
-    if (assignments[key] && assignments[key] !== "Open") replaced += 1;
-    assignments[key] = person;
-    overrides[getShiftOverrideKey(day.key, copy.shiftName)] = {
-      start: copy.times.start, end: copy.times.end,
-    };
-    changed += 1;
-  });
-  if (!changed) { alert("The copied week has no templates in the current shift style."); return; }
-  const warnings = CuravelaScheduling.getWarnings({
-    ...getSchedulingModel(), assignments, overrides,
-  }, days[0].key, days[6].key).filter(function (warning) { return warning.code !== "near-hours"; });
-  if (warnings.some(function (warning) { return warning.blocking; })) {
-    alert("This week cannot be pasted because it contains blocking scheduling conflicts.\n\n" +
-      warnings.filter(function (warning) { return warning.blocking; }).map(function (warning) { return warning.text; }).join("\n"));
-    return;
-  }
-  const detail = warnings.length ? "\n\nWarnings:\n" + warnings.map(function (warning) { return warning.text; }).join("\n") : "";
-  if (!confirm("Paste " + changed + " shift slots into " + days[0].dateLabel + "–" + days[6].dateLabel +
-    "? This replaces " + replaced + " assigned slots. You can undo this." + detail)) return;
-  scheduleAssignments = assignments;
-  shiftTimeOverrides = overrides;
-  saveData("paste week");
-  renderSchedule();
+  if(scheduleViewSelect.value!=="weekly"||!copiedWeekAssignments){alert('Select Weekly view and copy a week before pasting.');return;}
+  try {
+    const preview=CuravelaWorkspace.applyPattern(getWorkspaceSnapshot(),copiedWeekAssignments,getDaysInSelectedWeek()[0].key);
+    if(!confirm('Paste '+preview.keys.length+' shift slots into '+preview.first+'–'+preview.last+'? '+preview.replaced+' currently assigned slots will be replaced. Other shifts are kept.'+(preview.missing.length?' Removed caregivers become Open shifts.':'')+' You can undo this.'))return;
+    commitScheduleBatch(preview.data,preview.keys,'paste week');
+  }catch(error){alert('This week cannot be pasted.\n\n'+error.message);}
 }
 
 function clearSelectedWeek() {
@@ -4021,7 +3957,7 @@ function renderAutomaticCaregiverBrief(scheduleDays) {
     if(person.shifts.length){
       const details=document.createElement("details"),label=document.createElement("summary"),shifts=document.createElement("ul");
       label.textContent="View "+person.shifts.length+" scheduled "+(person.shifts.length===1?"shift":"shifts");
-      person.shifts.forEach(function(shift){const item=document.createElement("li");const day=scheduleDays.find(function(d){return d.key===shift.dayKey;});item.textContent=(day?day.label:shift.dayKey)+" · "+shift.shiftName+" · "+formatTime(shift.startTime)+"–"+formatTime(shift.endTime)+(shift.endTime<=shift.startTime?" (ends next day)":"")+" · "+formatHours(shift.hours);shifts.append(item);});
+      person.shifts.forEach(function(shift){const item=document.createElement("li");const day=scheduleDays.find(function(d){return d.key===shift.dayKey;});item.textContent=(day?day.label:shift.dayKey)+" · "+shift.shiftName+" · "+formatTime(shift.startTime)+"–"+formatTime(shift.endTime)+(shift.endTime<=shift.startTime?" (ends next day)":"")+" · "+formatHours(shift.hours);if(shift.note){const note=document.createElement('p');note.className='shift-note';note.textContent=shift.note;item.append(note);}shifts.append(item);});
       details.append(label,shifts);card.append(details);
     }
     list.append(card);
@@ -4425,11 +4361,14 @@ weekStartSelect.addEventListener("change", function () {
 });
 
 shiftStyleSelect.addEventListener("change", function () {
-  updateCustomShiftVisibility();
-  renderShiftTimeList();
-  renderCaregiverList();
-  saveData();
-  renderSchedule();
+  const next=shiftStyleSelect.value,previous=JSON.parse(lastSavedScheduleState).shiftStyle;
+  shiftStyleSelect.value=previous;
+  try{
+    const data=CuravelaWorkspace.changeStyle(getWorkspaceSnapshot(),next);
+    const kept=data.workspace.extraShifts.length;
+    if(!confirm('Change shift style? Existing assignments, dated times and notes will be kept. '+kept+' dated shift(s) will remain alongside the new templates. You can undo this.'))return;
+    applyWorkspaceSnapshot(data);saveData('change shift style');refreshWorkspace();
+  }catch(error){showScheduleNotice(error.message,true);}
 });
 
 scheduleViewSelect.addEventListener("change", function () {
@@ -4575,6 +4514,7 @@ if (moreActionsButton && moreActionsMenu) {
     event.stopPropagation();
 
     moreActionsMenu.classList.toggle("hidden");
+    moreActionsButton.setAttribute('aria-expanded',String(!moreActionsMenu.classList.contains('hidden')));
   });
 
   moreActionsMenu.addEventListener("click", function (event) {
@@ -4584,6 +4524,7 @@ if (moreActionsButton && moreActionsMenu) {
   document.addEventListener("click", function (event) {
     if (!event.target.closest(".more-actions")) {
       moreActionsMenu.classList.add("hidden");
+      moreActionsButton.setAttribute('aria-expanded','false');
     }
   });
 }
