@@ -1,4 +1,4 @@
-/* Full-day caregiver time off, kept with caregiver rules for backups and undo. */
+/* Full-day and timed caregiver time off, kept with caregiver rules for backups and undo. */
 let activeTimeOffCaregiverId = "";
 let editingTimeOffIndex = -1;
 const caregiverTimeOffModal = document.querySelector("#caregiver-time-off-modal");
@@ -17,11 +17,11 @@ function getCaregiverTimeOff(caregiverId) {
   }) : [];
 }
 
-function saveCaregiverTimeOff(caregiverId, startDate, endDate, index = -1) {
+function saveCaregiverTimeOff(caregiverId, startDate, endDate, index = -1, times = null) {
   if (!caregiverIdExists(caregiverId)) return { error: "Choose an existing caregiver." };
-  const record = { startDate, endDate };
+  const record = times ? {startDate,endDate,allDay:false,startTime:times.startTime,endTime:times.endTime} : { startDate, endDate };
   const span = CuravelaScheduling.timeOffInterval(record);
-  if (!span) return { error: "Choose valid dates. The last day must be on or after the first day." };
+  if (!span) return { error: "Choose valid dates and times. Timed time off must end after it starts; use the next date for overnight time off." };
   const records = getCaregiverTimeOff(caregiverId).slice();
   if (!Number.isInteger(index) || index < -1 || index >= records.length) {
     return { error: "This time-off period is no longer available. Reopen Time off and try again." };
@@ -29,7 +29,7 @@ function saveCaregiverTimeOff(caregiverId, startDate, endDate, index = -1) {
   if (records.some(function (saved, savedIndex) {
     const other = CuravelaScheduling.timeOffInterval(saved);
     return savedIndex !== index && span.start < other.end && span.end > other.start;
-  })) return { error: "These dates overlap an existing time-off period. Edit that period instead." };
+  })) return { error: "These dates or times overlap an existing time-off period. Edit that period instead." };
   if (index === -1) records.push(record);
   else records[index] = record;
   records.sort(function (a, b) { return a.startDate.localeCompare(b.startDate); });
@@ -70,11 +70,14 @@ function formatTimeOffRange(record) {
       month: "short", day: "numeric", year: "numeric",
     });
   }
+  if(record.startTime)return formatDate(record.startDate)+' '+formatTime(record.startTime)+' – '+formatDate(record.endDate)+' '+formatTime(record.endTime);
   return formatDate(record.startDate) + (record.startDate === record.endDate ? "" : " – " + formatDate(record.endDate));
 }
 
 function resetTimeOffForm() {
   editingTimeOffIndex = -1;
+  document.querySelector('#time-off-all-day').checked=true;
+  updateTimeOffFields();
   timeOffStart.value = "";
   timeOffEnd.value = "";
   timeOffEnd.removeAttribute("min");
@@ -92,7 +95,7 @@ function renderCaregiverTimeOff() {
     const item = document.createElement("li");
     const label = document.createElement("span");
     const range = formatTimeOffRange(record);
-    label.textContent = range + (record.endDate < getTodayDateValue() ? " · Past" : " · All day");
+    label.textContent = range + (record.endDate < getTodayDateValue() ? " · Past" : record.startTime ? "" : " · All day");
     const actions = document.createElement("div");
     actions.classList.add("time-off-item-actions");
     const edit = document.createElement("button");
@@ -103,6 +106,10 @@ function renderCaregiverTimeOff() {
       editingTimeOffIndex = index;
       timeOffStart.value = record.startDate;
       timeOffEnd.value = record.endDate;
+      document.querySelector('#time-off-all-day').checked=!record.startTime;
+      document.querySelector('#time-off-start-time').value=record.startTime||'09:00';
+      document.querySelector('#time-off-end-time').value=record.endTime||'17:00';
+      updateTimeOffFields();
       timeOffEnd.min = record.startDate;
       timeOffError.textContent = "";
       timeOffStatus.textContent = "Editing " + range + ".";
@@ -181,7 +188,7 @@ timeOffStart.addEventListener("change", function () {
 timeOffForm.addEventListener("submit", function (event) {
   event.preventDefault();
   timeOffError.textContent = "";
-  const result = saveCaregiverTimeOff(activeTimeOffCaregiverId, timeOffStart.value, timeOffEnd.value, editingTimeOffIndex);
+  const result = saveCaregiverTimeOff(activeTimeOffCaregiverId, timeOffStart.value, timeOffEnd.value, editingTimeOffIndex, document.querySelector('#time-off-all-day').checked?null:{startTime:document.querySelector('#time-off-start-time').value,endTime:document.querySelector('#time-off-end-time').value});
   if (result.error) { timeOffError.textContent = result.error; return; }
   resetTimeOffForm();
   renderCaregiverTimeOff();
@@ -199,3 +206,10 @@ document.querySelectorAll("[data-close-time-off]").forEach(function (button) {
 caregiverTimeOffModal.addEventListener("click", function (event) {
   if (event.target === caregiverTimeOffModal) closeCaregiverTimeOffModal();
 });
+
+function updateTimeOffFields(){
+  const allDay=document.querySelector('#time-off-all-day').checked;
+  document.querySelector('#time-off-times').hidden=allDay;
+  for(const id of ['time-off-start-time','time-off-end-time']){const input=document.querySelector('#'+id);input.required=!allDay;input.disabled=allDay;}
+}
+document.querySelector('#time-off-all-day').addEventListener('change',updateTimeOffFields);

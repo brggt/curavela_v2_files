@@ -284,3 +284,30 @@ test("automatic briefs follow edit and undo while written notes stay intact",fun
  assert.match(f.nodes.get('#automatic-caregiver-briefs').children[0].children[1].textContent,/3 hrs/);
  assert.equal(f.run('scheduleBriefs["2026-10-04"].focus'),'Keep this written note');
 });
+
+test('copy and paste retain additional shifts and handoff notes, with one-step undo',()=>{
+ const f=app();f.run('workspaceState.extraShifts.push({dayKey:"2026-10-04",name:"Extra",start:"20:00",end:"22:00"});scheduleAssignments["2026-10-04-Extra"]="sam";workspaceState.shiftNotes["2026-10-04-Extra"]="Handoff reminder";resetScheduleHistory();copySelectedWeek();weekStartDateInput.value="2026-10-11";pasteCopiedWeek();');
+ assert.equal(f.data().scheduleAssignments['2026-10-11-Extra'],'sam');assert.equal(f.data().workspace.shiftNotes['2026-10-11-Extra'],'Handoff reminder');assert.equal(f.data().workspace.extraShifts.length,2);
+ f.run('changeScheduleHistory(scheduleUndoStack,scheduleRedoStack,"Undid")');assert.equal(f.data().workspace.extraShifts.length,1);assert.equal(f.data().workspace.shiftNotes['2026-10-11-Extra'],undefined);
+});
+test('notes move with a shift and undo restores both note locations',()=>{
+ const f=app();f.edit({note:'Remind next caregiver'});f.edit({dayKey:'2026-10-05',sourceKey:'2026-10-04-Morning',note:'Moved reminder'});
+ assert.equal(f.data().workspace.shiftNotes['2026-10-04-Morning'],undefined);assert.equal(f.data().workspace.shiftNotes['2026-10-05-Morning'],'Moved reminder');
+ f.run('changeScheduleHistory(scheduleUndoStack,scheduleRedoStack,"Undid")');assert.equal(f.data().workspace.shiftNotes['2026-10-04-Morning'],'Remind next caregiver');
+});
+test('timed time off persists through save, reload and undo without becoming all day',()=>{
+ const f=app();f.run('saveCaregiverTimeOff("alex","2026-10-04","2026-10-04",-1,{startTime:"14:00",endTime:"17:00"})');
+ assert.equal(f.data().caregiverRules.alex.timeOff[0].startTime,'14:00');assert.equal(f.edit({start:'09:00',end:'12:00'}),true);assert.equal(f.edit({start:'13:00',end:'16:00'}),false);
+ f.run('loadData()');assert.equal(f.data().caregiverRules.alex.timeOff[0].endTime,'17:00');
+});
+test('local recovery copies retain the previous schedule with bounded storage and readable history',()=>{
+ const f=app();f.run('saveData()');f.edit({note:'First'});f.edit({start:'09:00',end:'12:00',note:'Second'});
+ const copies=JSON.parse(f.saved.get('curavelaRecoveryV1'));assert.equal(copies.length,2);assert.equal(copies[1].snapshot.workspace.shiftNotes['2026-10-04-Morning'],'First');assert.equal(copies[1].snapshot.workspace.history.length,0);
+ const history=JSON.parse(f.saved.get('curavelaWorkspaceV6')).workspace.history;assert.equal(history.at(-1).changes[0].after.note,'Second');
+ for(let i=0;i<12;i++)f.edit({note:String(i)});assert.equal(JSON.parse(f.saved.get('curavelaRecoveryV1')).length,10);
+});
+
+test('workspace snapshots stay detached from later notes and pattern edits',()=>{
+ const f=app();f.run('workspaceState.shiftNotes["2026-10-04-Morning"]="Original";const prior=getWorkspaceSnapshot();workspaceState.shiftNotes["2026-10-04-Morning"]="Later";');
+ assert.equal(f.run('prior.workspace.shiftNotes["2026-10-04-Morning"]'),'Original');
+});

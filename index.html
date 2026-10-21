@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Curavela</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,6 +14,10 @@
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="enhancements.css" />
     <link rel="stylesheet" href="responsive.css" />
+      <meta name="theme-color" content="#174dbb" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   </head>
 
   <body>
@@ -262,10 +266,12 @@
             <div class="more-actions">
               <button
                 id="more-actions-button"
+                aria-expanded="false"
+                aria-controls="more-actions-menu"
                 class="ghost-button"
                 type="button"
               >
-                More •••
+                More
               </button>
 
               <div id="more-actions-menu" class="more-actions-menu hidden">
@@ -869,6 +875,10 @@
             >Ends<input id="occurrence-end" type="time" step="60" required
           /></label>
         </div>
+        <label class="shift-note-field" for="occurrence-note">Shift notes / handoff reminders
+          <textarea id="occurrence-note" rows="3" maxlength="2000" placeholder="What should the next caregiver know?" aria-describedby="shift-note-help"></textarea>
+        </label>
+        <p id="shift-note-help" class="muted">Included with this shift when published to its assigned caregiver. Keep notes relevant to the handoff.</p>
         <p id="occurrence-duration" class="occurrence-duration"></p>
         <p
           id="occurrence-error"
@@ -987,6 +997,7 @@
             </div>
 
             <div id="caregiver-rule-days" class="rule-choice-grid"></div>
+          <details class="availability-details"><summary>Available hours by starting day</summary><p>Optional windows for shifts starting on each day. An end at or before the start means the next day. Leave a window off for any hours. These are preferences; dated time off blocks conflicting work.</p><div id="availability-windows"></div></details>
           </section>
 
           <section class="rule-section">
@@ -1090,10 +1101,15 @@
           </button>
         </div>
         <p id="time-off-help">
-          Block full days when this caregiver cannot work. Both dates are
-          included. Overnight shifts that touch these dates are also blocked.
+          Block full days or specific hours. All-day time off includes both dates.
+          For timed time off, choose its exact end date and time. Overnight shifts are checked too.
         </p>
         <form id="time-off-form">
+          <label class="checkbox-label"><input id="time-off-all-day" type="checkbox" checked />All day</label>
+          <div id="time-off-times" class="occurrence-fields" hidden>
+            <label>Start time<input id="time-off-start-time" type="time" value="09:00" disabled /></label>
+            <label>End time<input id="time-off-end-time" type="time" value="17:00" disabled /></label>
+          </div>
           <div class="occurrence-fields">
             <label for="time-off-start"
               >First day<input id="time-off-start" type="date" required
@@ -1139,10 +1155,13 @@
 
     <script src="scheduling.js"></script>
     <script src="workspace.js"></script>
+    <script src="calendar.js"></script>
     <script src="editing.js"></script>
     <script src="timeoff.js"></script>
     <script src="script.js"></script>
     <script src="team.js"></script>
     <script src="workspace-ui.js"></script>
+    <script src="planning-ui.js"></script>
+    <script src="pwa.js"></script>
   </body>
 </html>

@@ -1,13 +1,13 @@
-let workspaceState = {extraShifts:[],series:[],care:{enabled:false,start:"00:00",end:"00:00",count:1},history:[]};
+let workspaceState = {extraShifts:[],series:[],care:{enabled:false,start:"00:00",end:"00:00",count:1},shiftNotes:{},patterns:[],calendarTimeZone:"",history:[]};
 function getWorkspaceSnapshot() {
-  return {app:"Curavela",version:6,...JSON.parse(captureScheduleState()),workspace:workspaceState,scheduleBriefs,
+  return {app:"Curavela",version:7,...JSON.parse(captureScheduleState()),workspace:JSON.parse(JSON.stringify(workspaceState)),scheduleBriefs:JSON.parse(JSON.stringify(scheduleBriefs)),
     scheduleView:scheduleViewSelect.value,weekStart:weekStartSelect.value,month:monthPicker.value,weekStartDate:weekStartDateInput.value};
 }
 function applyWorkspaceSnapshot(state) {
   customShifts=state.customShifts;caregivers=state.caregivers;caregiverMaxHours=state.caregiverMaxHours;
   caregiverRules=state.caregiverRules;scheduleAssignments=state.scheduleAssignments;shiftTimes=state.shiftTimes;
   shiftTimeOverrides=state.shiftTimeOverrides;scheduleBriefs=state.scheduleBriefs||{};
-  workspaceState=state.workspace||{extraShifts:[],series:[],care:{enabled:false,start:"00:00",end:"00:00",count:1},history:[]};
+  workspaceState=state.workspace||{extraShifts:[],series:[],care:{enabled:false,start:"00:00",end:"00:00",count:1},shiftNotes:{},patterns:[],calendarTimeZone:"",history:[]};
   shiftStyleSelect.value=state.shiftStyle;weekStartSelect.value=state.weekStart||"Sunday";
   scheduleViewSelect.value=state.scheduleView||"weekly";monthPicker.value=state.month||"";weekStartDateInput.value=state.weekStartDate||"";
 }
@@ -62,7 +62,7 @@ function captureScheduleState() {
     customShifts, caregivers, caregiverMaxHours, caregiverRules,
     scheduleAssignments, shiftTimes, shiftTimeOverrides,
     shiftStyle: shiftStyleSelect.value,
-    workspace: {extraShifts:workspaceState.extraShifts,series:workspaceState.series,care:workspaceState.care},
+    workspace: {extraShifts:workspaceState.extraShifts,series:workspaceState.series,care:workspaceState.care,shiftNotes:workspaceState.shiftNotes||{},patterns:workspaceState.patterns||[],calendarTimeZone:workspaceState.calendarTimeZone||""},
   });
 }
 
@@ -141,17 +141,20 @@ function preserveAssignedShiftTimes(shiftName) {
   });
 }
 
+function isVisibleDialogControl(element) {
+  return !element.disabled && element.tabIndex >= 0 && !element.hidden && element.type !== 'hidden' && !element.closest('[hidden], .hidden') && element.getClientRects().length > 0;
+}
 function openManagedDialog(modal) {
   dialogReturnFocus.set(modal, document.activeElement);
   modal.classList.remove("hidden");
   document.querySelector(".app-shell").inert = true;
-  const focusTarget = modal.querySelector("input:not([disabled]), select:not([disabled]), textarea, button");
+  const focusTarget = Array.from(modal.querySelectorAll("input, select, textarea, button")).find(isVisibleDialogControl);
   if (focusTarget) focusTarget.focus();
 }
 
 function closeManagedDialog(modal) {
   modal.classList.add("hidden");
-  document.querySelector(".app-shell").inert = false;
+  document.querySelector(".app-shell").inert = Boolean(document.querySelector(".modal-backdrop:not(.hidden)"));
   const previous = dialogReturnFocus.get(modal);
   if (previous && previous.isConnected) previous.focus();
   else if (quickAddShiftButton) quickAddShiftButton.focus();
@@ -171,6 +174,8 @@ function loadOccurrenceFields() {
   occurrenceStart.value = times.start;
   occurrenceEnd.value = times.end;
   occurrenceCaregiver.value = scheduleAssignments[occurrenceDate.value + "-" + shift.name] || "Open";
+  const note=document.querySelector('#occurrence-note');
+  if(note)note.value=workspaceState.shiftNotes?.[occurrenceDate.value+'-'+shift.name]||'';
   updateOccurrenceDuration();
 }
 
@@ -217,6 +222,7 @@ function commitOccurrenceChange(proposal, reportError) {
     fail("Choose a valid date, shift, caregiver, and start and end time.");
     return false;
   }
+  if(proposal.note!==undefined&&(typeof proposal.note!=='string'||proposal.note.length>2000)){fail('Keep shift notes to 2,000 characters.');return false;}
   const targetKey = proposal.dayKey + "-" + proposal.shiftName;
   if (proposal.caregiverId !== "Open") {
     const candidate = CuravelaScheduling.evaluate(getSchedulingModel(), proposal);
@@ -238,6 +244,10 @@ function commitOccurrenceChange(proposal, reportError) {
       return false;
     }
     scheduleAssignments[proposal.sourceKey] = "Open";
+    const oldNote=workspaceState.shiftNotes?.[proposal.sourceKey];
+    if(proposal.note===undefined&&oldNote)proposal.note=oldNote;
+    if(workspaceState.shiftNotes)delete workspaceState.shiftNotes[proposal.sourceKey];
+    delete shiftTimeOverrides[getShiftOverrideKey(proposal.sourceKey.slice(0,10),proposal.shiftName)];
     if (extra) {
       extra.dayKey = proposal.dayKey;
       delete scheduleAssignments[proposal.sourceKey];
@@ -246,6 +256,8 @@ function commitOccurrenceChange(proposal, reportError) {
       series.keys = series.keys.map(function (key) { return key === proposal.sourceKey ? targetKey : key; });
     });
   }
+  workspaceState.shiftNotes=workspaceState.shiftNotes||{};
+  if(proposal.note!==undefined){if(proposal.note.trim())workspaceState.shiftNotes[targetKey]=proposal.note.trim();else delete workspaceState.shiftNotes[targetKey];}
   scheduleAssignments[targetKey] = proposal.caregiverId;
   shiftTimeOverrides[getShiftOverrideKey(proposal.dayKey, proposal.shiftName)] = { start: proposal.start, end: proposal.end };
   saveData(proposal.sourceKey && proposal.sourceKey !== targetKey ? "move shift" : "edit shift");
@@ -268,6 +280,7 @@ occurrenceForm.addEventListener("submit", function (event) {
     dayKey: occurrenceDate.value, shiftName: occurrenceShift.value,
     caregiverId: occurrenceCaregiver.value, start: occurrenceStart.value, end: occurrenceEnd.value,
     sourceKey: occurrenceSourceKey,
+    note: document.querySelector('#occurrence-note').value,
     scope: document.querySelector("#occurrence-scope")?.value || "one",
   }, function (message) { occurrenceError.textContent = message; });
   if (saved) closeManagedDialog(occurrenceModal);
@@ -302,8 +315,10 @@ document.addEventListener("keydown", function (event) {
       else closeManagedDialog(modal);
     } else if (event.key === "Tab") {
       const controls = Array.from(modal.querySelectorAll("button, input, select, textarea, [tabindex]"))
-        .filter(function (element) { return !element.disabled && element.tabIndex >= 0 && !element.hidden && !element.closest("[hidden]"); });
+        .filter(isVisibleDialogControl);
       const first = controls[0], last = controls[controls.length - 1];
+      if(!first){event.preventDefault();return;}
+      if(!controls.includes(document.activeElement)){event.preventDefault();first.focus();return;}
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     }

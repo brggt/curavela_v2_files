@@ -156,3 +156,45 @@ html.headline-collapsed body { min-height: calc(100vh + 4px); min-height: calc(1
   .care-map-grid { min-width: 0; }
   .agenda-card { break-inside: avoid; }
 }
+
+/* Planning tools share the existing layout; calendar cards keep their size. */
+.connection-status { margin: 0 0 12px; color: #52617a; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.workspace-panel > details { border-top: 1px solid var(--border); padding: 12px 0; }
+.workspace-panel summary, .availability-details > summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-weight: 600; line-height: 1.5; }
+.workspace-panel details p, .workspace-panel details li, #patterns-modal p, #patterns-modal li { overflow-wrap: anywhere; }
+.workspace-panel details li { margin-bottom: 12px; }
+.workspace-panel details label { display: grid; gap: 8px; }
+.workspace-panel details select { max-width: 100%; }
+.shift-note-field { display: grid; gap: 8px; }
+.shift-note-field textarea { width: 100%; min-height: 90px; resize: vertical; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font: inherit; }
+.shift-note { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; color: #394963; }
+.shift-note-marker { color: #174dbb; font-size: 12px; font-weight: 600; }
+.availability-window { display: grid; grid-template-columns: minmax(120px,1fr) repeat(2,minmax(90px,1fr)); align-items: end; gap: 12px; margin: 12px 0; }
+.availability-window label { display: grid; gap: 6px; font-size: 14px; }
+.availability-window .checkbox-label, #time-off-form > .checkbox-label { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.availability-window input[type=checkbox], #time-off-all-day { width: 20px; height: 20px; min-height: 20px; flex: 0 0 20px; }
+.availability-window input[type=time] { width: 100%; min-height: 44px; }
+#patterns-modal .workspace-form { width: 100%; }
+#patterns-modal .modal-card { max-width: 720px; }
+#pattern-preview:empty, .revision-preview:empty { display: none; }
+#pattern-preview, .revision-preview { padding: 12px; background: #f3f6fc; border-radius: 12px; line-height: 1.6; }
+#private-calendar-url { width: 100%; font-size: 14px; }
+@media (max-width: 1100px) {
+  .app-shell .main-content { padding-bottom: max(24px,env(safe-area-inset-bottom)) !important; }
+  input[type=date], input[type=time] { min-width: 0; }
+}
+@media (max-width: 700px) {
+  .app-shell .main-content { padding-right: max(16px,env(safe-area-inset-right)) !important; padding-left: max(16px,env(safe-area-inset-left)) !important; }
+  .hero-actions { grid-template-areas: "view view today" "prev date next" "add add more" !important; grid-template-columns: 44px minmax(0,1fr) 76px !important; }
+  .main-content.coverage-view .hero-actions { grid-template-areas: "prev date next" "add add today" "more more more" !important; grid-template-columns: 44px minmax(0,1fr) 76px !important; }
+  #more-actions-button { min-width: 0 !important; padding: 0 8px !important; }
+  .hero-actions > *, .workspace-form > *, .request-card { min-width: 0; }
+  .availability-window { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .availability-window .checkbox-label { grid-column: 1 / -1; }
+  .modal-card { scroll-padding-bottom: 24px; }
+  .workspace-panel details select { width: 100%; }
+  .care-map-grid .compact-shift span, .month-shift-row.compact-shift .month-shift-info { font-size: 13px; }
+}
+@media print {
+  .connection-status, #open-patterns, #patterns-modal, #reports-workspace-panel > details { display: none !important; }
+}

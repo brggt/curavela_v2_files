@@ -112,6 +112,11 @@
     if (!record || typeof record !== "object") return null;
     const start = dateNumber(record.startDate), last = dateNumber(record.endDate);
     if (!Number.isFinite(start) || !Number.isFinite(last) || last < start) return null;
+    if(record.allDay===false || record.startTime!==undefined || record.endTime!==undefined) {
+      const from=start+timeNumber(record.startTime),to=last+timeNumber(record.endTime);
+      if(!Number.isFinite(from)||!Number.isFinite(to)||to<=from)return null;
+      return {start:from,end:to};
+    }
     return { start, end: last + DAY };
   }
 
@@ -145,7 +150,7 @@
           const timeOff = getTimeOffConflicts(rules, entry);
           if (timeOff.length) {
             const dates = timeOff.map(function (record) {
-              return record.startDate === record.endDate ? record.startDate : record.startDate + "–" + record.endDate;
+              return record.startTime ? record.startDate+' '+record.startTime+'–'+record.endDate+' '+record.endTime : record.startDate === record.endDate ? record.startDate : record.startDate + "–" + record.endDate;
             }).join(", ");
             warn("time-off", name + " has time off " + dates + ", overlapping " + entry.dayKey +
               " " + entry.shiftName + ". Reassign or open this shift.", { blocking: true, keys: [entry.key] });
@@ -160,6 +165,11 @@
         const weekday = WEEKDAYS[new Date(entry.dayKey + "T00:00:00Z").getUTCDay()];
         if (!availableDays.includes(weekday)) {
           warn("unavailable", name + " is scheduled for " + label + ", but is unavailable " + weekday + ".", { keys: [entry.key] });
+        }
+        const window=rules.availabilityWindows?.[weekday];
+        if(window) {
+          const available=interval(entry.dayKey,window.start,window.end);
+          if(available&&(entry.start<available.start||entry.end>available.end))warn("availability-time",name+" is scheduled for "+label+", outside their "+weekday+" availability ("+window.start+"–"+window.end+").",{keys:[entry.key]});
         }
         if (allowedShifts.length && !allowedShifts.includes(entry.shiftName)) {
           warn("shift-rule", name + " is scheduled for " + label + ", but that shift is not allowed.", { keys: [entry.key] });
@@ -245,6 +255,6 @@
     };
   }
 
-  return { dateNumber, addDays, interval, weekStart, buildEntries, workedDays, weeklyHours,
+  return { dateNumber, timeNumber, addDays, interval, weekStart, buildEntries, workedDays, weeklyHours,
     timeOffInterval, getTimeOffConflicts, getWarnings, evaluate };
 });
