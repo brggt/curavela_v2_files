@@ -175,14 +175,20 @@
   function caregiverBriefs(data,first,last) {
     const rows=occurrences(data,first,last);
     const warnings=rules.getWarnings(model(data),first,last);
+    const assigned=rows.filter(row=>row.caregiverId!=='Open');
+    const openRows=rows.filter(row=>row.caregiverId==='Open').sort((a,b)=>a.start-b.start||a.shiftName.localeCompare(b.shiftName));
+    const previousDay=rules.addDays(first,-1);
+    const carryover=occurrences(data,previousDay,previousDay).filter(row=>row.caregiverId!=='Open'&&row.end>rules.dateNumber(first));
     return {
-      first,last,
-      assignedHours:rows.filter(row=>row.caregiverId!=='Open').reduce((sum,row)=>sum+row.hours,0),
-      openShifts:rows.filter(row=>row.caregiverId==='Open').length,
+      first,last,totalShifts:rows.length,assignedShifts:assigned.length,
+      scheduledCaregivers:new Set(assigned.map(row=>row.caregiverId)).size,
+      assignedHours:assigned.reduce((sum,row)=>sum+row.hours,0),
+      openShifts:openRows.length,openRows,
       people:data.caregivers.map(person=>{
         const shifts=rows.filter(row=>row.caregiverId===person.id).sort((a,b)=>a.start-b.start||a.shiftName.localeCompare(b.shiftName));
         return {
           id:person.id,name:person.name,shifts,
+          carryoverShifts:carryover.filter(row=>row.caregiverId===person.id),
           hours:shifts.reduce((sum,row)=>sum+row.hours,0),
           days:new Set(shifts.map(row=>row.dayKey)).size,
           weeklyLimit:data.caregiverMaxHours[person.id],

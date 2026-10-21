@@ -81,4 +81,10 @@ Before broad rollout: real-device and browser integration testing; selected-host
 - [ ] Install on iPhone/iPad and open offline after the first online visit. Verify local/team/unsynced messages; no private API or feed responses in Cache Storage.
 - [ ] Deploy an update while a draft is open; the worker waits for tabs to close. Export/sync before closing. Verify the new version on reopen.
 
-Automated checks currently pass for 92 scheduling, state, calendar, offline-cache and HTTP cases. Real iPhone/iPad/VoiceOver, calendar clients, service-worker lifecycle, and deployment UI checks remain pending. The current review environment cannot open a local app preview, so this branch should remain a draft until browser review is complete.
+Automated checks currently pass for 95 scheduling, state, calendar, offline-cache and HTTP cases. Real iPhone/iPad/VoiceOver, calendar clients, service-worker lifecycle, and deployment UI checks remain pending. The current review environment cannot open a local app preview, so this branch should remain a draft until browser review is complete.
+
+### Brief clarity follow-up
+
+- [ ] Verify the weekly brief shows assigned slots out of total slots, scheduled hours, and only the caregivers who have assignments in that week.
+- [ ] Read each caregiver’s dates, shift times, and hours directly without opening a disclosure; confirm overnight shifts show the actual ending date.
+- [ ] Expand the unassigned-shift list and match it to the schedule. A prior-week overnight carryover must display separately without adding its hours twice.

@@ -276,9 +276,9 @@ test("automatic briefs follow edit and undo while written notes stay intact",fun
  f.run('scheduleBriefs["2026-10-04"]={focus:"Keep this written note",updates:[],followUps:[]};renderSchedule=function(){renderScheduleBrief();};');
  f.edit({start:'09:00',end:'12:00'});
  assert.match(f.nodes.get('#automatic-brief-status').textContent,/3 hrs/);
- assert.match(f.nodes.get('#automatic-caregiver-briefs').children[0].children[1].textContent,/Alex has 1 shift/);
+ assert.match(f.nodes.get('#automatic-caregiver-briefs').children[0].children[1].textContent,/3 hrs scheduled across 1 shift/);
  f.edit({caregiverId:'sam',start:'09:00',end:'13:00'});
- assert.match(f.nodes.get('#automatic-caregiver-briefs').children[0].children[1].textContent,/no shifts/);
+ assert.match(f.nodes.get('#automatic-caregiver-briefs').children[0].children[1].textContent,/No shifts/);
  assert.match(f.nodes.get('#automatic-caregiver-briefs').children[1].children[1].textContent,/4 hrs/);
  f.run('changeScheduleHistory(scheduleUndoStack,scheduleRedoStack,"Undid")');
  assert.match(f.nodes.get('#automatic-caregiver-briefs').children[0].children[1].textContent,/3 hrs/);
@@ -310,4 +310,14 @@ test('local recovery copies retain the previous schedule with bounded storage an
 test('workspace snapshots stay detached from later notes and pattern edits',()=>{
  const f=app();f.run('workspaceState.shiftNotes["2026-10-04-Morning"]="Original";const prior=getWorkspaceSnapshot();workspaceState.shiftNotes["2026-10-04-Morning"]="Later";');
  assert.equal(f.run('prior.workspace.shiftNotes["2026-10-04-Morning"]'),'Original');
+});
+
+test('brief displays dates and times directly, labels overnight end dates and lists unassigned shifts',()=>{
+ const f=app();f.run('scheduleAssignments={"2026-10-04-Night":"alex"};renderScheduleBrief();');
+ function content(node){return [node.textContent,...node.children.map(content)].join(' ');}
+ const card=f.nodes.get('#automatic-caregiver-briefs').children[0],text=content(card);
+ assert.match(text,/12 hrs scheduled across 1 shift/);assert.match(text,/Sun, Oct 4/);assert.match(text,/7:00 PM–7:00 AM \(ends Mon, Oct 5\)/);
+ assert.match(f.nodes.get('#automatic-brief-status').textContent,/1 of 21 shifts assigned.*1 caregiver scheduled/);
+ assert.match(content(f.nodes.get('#automatic-brief-open')),/20 shifts have no caregiver assigned/);
+ assert.ok(!text.includes('starting on 1 day'));
 });
