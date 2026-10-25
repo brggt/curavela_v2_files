@@ -38,7 +38,14 @@ html.headline-collapsed body { min-height: calc(100vh + 4px); min-height: calc(1
 .automatic-caregiver-card li + li { margin-top: 8px; }
 .automatic-brief-warnings { color: #a51c31; }
 .care-map-grid { min-width: 1000px; grid-template-columns: 176px repeat(var(--day-count), minmax(0, 1fr)) !important; }
-#schedule { overflow-x: auto; }
+/* Keep the wide weekly care map inside its own swipeable, keyboard-focusable region. */
+#schedule {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-inline: 16px;
+}
 .care-map-cell { min-width: 0; }
 .caregiver-cell { position: sticky; left: 0; background: #f8faff; z-index: 1; }
 .caregiver-cell .avatar { flex: 0 0 36px; }
