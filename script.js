@@ -3996,6 +3996,11 @@ function renderAutomaticCaregiverBrief(scheduleDays) {
     message.textContent = summary.openShifts
       ? summary.openShifts + " shift" + (summary.openShifts === 1 ? " has" : "s have") + " no caregiver assigned."
       : summary.totalShifts ? "Every shift this week has a caregiver assigned." : "Add shift templates in Settings to start planning.";
+    if (summary.blockingWarnings.length) {
+      const count = summary.blockingWarnings.length;
+      message.textContent += " " + count + " blocking scheduling warning" + (count === 1 ? " needs" : "s need") + " attention. Review the caregiver details below.";
+      message.classList.add("automatic-brief-warnings");
+    }
     open.append(message);
     if (summary.openShifts) {
       const details = document.createElement("details"), title = document.createElement("summary");

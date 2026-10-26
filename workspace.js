@@ -184,6 +184,7 @@
       scheduledCaregivers:new Set(assigned.map(row=>row.caregiverId)).size,
       assignedHours:assigned.reduce((sum,row)=>sum+row.hours,0),
       openShifts:openRows.length,openRows,
+      blockingWarnings:warnings.filter(warning=>warning.blocking),
       people:data.caregivers.map(person=>{
         const shifts=rows.filter(row=>row.caregiverId===person.id).sort((a,b)=>a.start-b.start||a.shiftName.localeCompare(b.shiftName));
         return {
