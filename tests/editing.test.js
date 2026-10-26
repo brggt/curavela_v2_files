@@ -321,3 +321,21 @@ test('brief displays dates and times directly, labels overnight end dates and li
  assert.match(content(f.nodes.get('#automatic-brief-open')),/20 shifts have no caregiver assigned/);
  assert.ok(!text.includes('starting on 1 day'));
 });
+
+test('live Schedule Brief announces blocking warnings without changing coverage totals', () => {
+  const f = app();
+  f.run('scheduleAssignments["2026-10-04-Morning"] = "alex"; renderScheduleBrief();');
+  const status = f.nodes.get('#automatic-brief-status');
+  const before = status.textContent;
+  assert.match(before, /1 of 21 shifts assigned/);
+  assert.doesNotMatch(before, /blocking scheduling warning/);
+
+  f.run('caregiverRules.alex.timeOff = [{startDate:"2026-10-04",endDate:"2026-10-04"}]; renderScheduleBrief();');
+  assert.match(status.textContent, /1 of 21 shifts assigned/);
+  assert.match(status.textContent, /1 blocking scheduling warning needs attention/);
+  assert.match(f.nodes.get('#automatic-brief-open').children[0].textContent, /1 blocking scheduling warning needs attention/);
+
+  f.run('caregiverRules.alex.timeOff = []; renderScheduleBrief();');
+  assert.equal(status.textContent, before);
+  assert.doesNotMatch(f.nodes.get('#automatic-brief-open').children[0].textContent, /blocking scheduling warning/);
+});
