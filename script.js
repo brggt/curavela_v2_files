@@ -3936,29 +3936,101 @@ function getBriefUpdateDayLabel(dayKey, scheduleDays) {
   return `${matchingDay.shortLabel}, ` + `${matchingDay.dateLabel}`;
 }
 
+function formatBriefShiftDate(dayKey) {
+  return new Date(dayKey + "T12:00:00Z").toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric", timeZone: "UTC",
+  });
+}
+function formatBriefShiftTime(shift) {
+  const start = formatTime(shift.startTime);
+  const end = formatTime(shift.endTime);
+  return start + "–" + end + (shift.endTime <= shift.startTime
+    ? " (ends " + formatBriefShiftDate(CuravelaScheduling.addDays(shift.dayKey, 1)) + ")" : "");
+}
+function appendBriefShiftList(container, rows, showNotes) {
+  const list = document.createElement("ul");
+  list.className = "automatic-brief-shifts";
+  const days = new Map();
+  rows.forEach(function (shift) {
+    if (!days.has(shift.dayKey)) days.set(shift.dayKey, []);
+    days.get(shift.dayKey).push(shift);
+  });
+  days.forEach(function (shifts, dayKey) {
+    const item = document.createElement("li");
+    const day = document.createElement("strong");
+    day.textContent = formatBriefShiftDate(dayKey);
+    item.append(day);
+    shifts.forEach(function (shift) {
+      const line = document.createElement("span");
+      line.textContent = shift.shiftName + " · " + formatBriefShiftTime(shift) + " · " + formatHours(shift.hours);
+      item.append(line);
+      if (showNotes && shift.note) {
+        const details = document.createElement("details");
+        const title = document.createElement("summary");
+        title.textContent = "Handoff note · " + shift.shiftName;
+        const note = document.createElement("p");
+        note.className = "shift-note";
+        note.textContent = shift.note;
+        details.append(title, note);
+        item.append(details);
+      }
+    });
+    list.append(item);
+  });
+  container.append(list);
+}
 function renderAutomaticCaregiverBrief(scheduleDays) {
-  const list=document.querySelector("#automatic-caregiver-briefs");
-  const status=document.querySelector("#automatic-brief-status");
-  if(!list||!status)return;
-  const summary=CuravelaWorkspace.caregiverBriefs(getWorkspaceSnapshot(),scheduleDays[0].key,scheduleDays[scheduleDays.length-1].key);
-  status.textContent=formatHours(summary.assignedHours)+" scheduled across "+summary.people.length+" caregivers · "+summary.openShifts+" open shifts remaining.";
+  const list = document.querySelector("#automatic-caregiver-briefs");
+  const status = document.querySelector("#automatic-brief-status");
+  if (!list || !status) return;
+  const summary = CuravelaWorkspace.caregiverBriefs(getWorkspaceSnapshot(), scheduleDays[0].key, scheduleDays[scheduleDays.length - 1].key);
+  const assigned = summary.assignedShifts;
+  status.textContent = assigned
+    ? assigned + " of " + summary.totalShifts + " shifts assigned · " + formatHours(summary.assignedHours) +
+      " scheduled · " + summary.scheduledCaregivers + " caregiver" + (summary.scheduledCaregivers === 1 ? "" : "s") + " scheduled."
+    : "No shifts are assigned for this week yet.";
+  const open = document.querySelector("#automatic-brief-open");
+  if (open) {
+    open.replaceChildren();
+    const message = document.createElement("p");
+    message.textContent = summary.openShifts
+      ? summary.openShifts + " shift" + (summary.openShifts === 1 ? " has" : "s have") + " no caregiver assigned."
+      : summary.totalShifts ? "Every shift this week has a caregiver assigned." : "Add shift templates in Settings to start planning.";
+    open.append(message);
+    if (summary.openShifts) {
+      const details = document.createElement("details"), title = document.createElement("summary");
+      title.textContent = "See which shifts are unassigned";
+      details.append(title);
+      appendBriefShiftList(details, summary.openRows, false);
+      open.append(details);
+    }
+  }
   list.replaceChildren();
-  if(!summary.people.length){const empty=document.createElement("p");empty.textContent="Add caregivers to see their automatic schedule briefs here.";list.append(empty);return;}
-  summary.people.forEach(function(person){
-    const card=document.createElement("article");card.className="automatic-caregiver-card";
-    const heading=document.createElement("h4");heading.textContent=person.name;
-    const text=document.createElement("p");
-    text.textContent=person.shifts.length
-      ? person.name+" has "+person.shifts.length+" "+(person.shifts.length===1?"shift":"shifts")+" starting on "+person.days+" "+(person.days===1?"day":"days")+" this week, totaling "+formatHours(person.hours)+"."
-      : person.name+" has no shifts assigned this week.";
-    const limit=document.createElement("p");limit.className="automatic-brief-limit";limit.textContent="Weekly limit: "+formatHours(person.weeklyLimit)+". Overnight hours count toward the week the shift starts.";
-    card.append(heading,text,limit);
-    if(person.warnings.length){const warnings=document.createElement("ul");warnings.className="automatic-brief-warnings";person.warnings.forEach(function(warning){const item=document.createElement("li");item.textContent=warning.text;warnings.append(item);});card.append(warnings);}
-    if(person.shifts.length){
-      const details=document.createElement("details"),label=document.createElement("summary"),shifts=document.createElement("ul");
-      label.textContent="View "+person.shifts.length+" scheduled "+(person.shifts.length===1?"shift":"shifts");
-      person.shifts.forEach(function(shift){const item=document.createElement("li");const day=scheduleDays.find(function(d){return d.key===shift.dayKey;});item.textContent=(day?day.label:shift.dayKey)+" · "+shift.shiftName+" · "+formatTime(shift.startTime)+"–"+formatTime(shift.endTime)+(shift.endTime<=shift.startTime?" (ends next day)":"")+" · "+formatHours(shift.hours);if(shift.note){const note=document.createElement('p');note.className='shift-note';note.textContent=shift.note;item.append(note);}shifts.append(item);});
-      details.append(label,shifts);card.append(details);
+  if (!summary.people.length) {
+    const empty = document.createElement("p");empty.textContent = "Add caregivers to see their schedules here.";list.append(empty);return;
+  }
+  summary.people.forEach(function (person) {
+    const card = document.createElement("article");card.className = "automatic-caregiver-card";
+    const heading = document.createElement("h4");heading.textContent = person.name;
+    const text = document.createElement("p");text.className = "automatic-brief-total";
+    text.textContent = person.shifts.length
+      ? formatHours(person.hours) + " scheduled across " + person.shifts.length + " shift" + (person.shifts.length === 1 ? "" : "s") + "."
+      : "No shifts starting this week.";
+    const limit = document.createElement("p");limit.className = "automatic-brief-limit";limit.textContent = "Weekly limit: " + formatHours(person.weeklyLimit) + ".";
+    card.append(heading, text, limit);
+    if (person.shifts.length) appendBriefShiftList(card, person.shifts, true);
+    if (person.carryoverShifts.length) {
+      const continuing = document.createElement("p");continuing.className = "automatic-brief-limit";
+      continuing.textContent = "Continues into this week — hours counted last week:";
+      card.append(continuing);appendBriefShiftList(card, person.carryoverShifts, true);
+    }
+    if (person.warnings.length) {
+      const details = document.createElement("details"), title = document.createElement("summary"), warnings = document.createElement("ul");
+      const blocked = person.warnings.some(function (warning) { return warning.blocking; });
+      title.textContent = (blocked ? "Needs attention · " : "Schedule warnings · ") + person.warnings.length;
+      details.open = blocked;warnings.className = "automatic-brief-warnings";
+      person.warnings.forEach(function (warning) { const item = document.createElement("li");item.textContent = warning.text;warnings.append(item); });
+      details.append(title, warnings);card.append(details);
     }
     list.append(card);
   });

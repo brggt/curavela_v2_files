@@ -1,6 +1,6 @@
 /* Bump VERSION with every app release. Cache only this explicit static shell.
    No API, calendar feeds, invitations, user data, third-party assets or writes. */
-const VERSION='curavela-shell-3.1.0';
+const VERSION='curavela-shell-3.1.0-brief-2';
 const FILES=['./','index.html','style.css','enhancements.css','responsive.css','scheduling.js','workspace.js','calendar.js','editing.js','timeoff.js','script.js','team.js','workspace-ui.js','planning-ui.js','pwa.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','apple-touch-icon.png'];
 const ROOT=new URL('./',self.location.href);
 const ALLOWED=new Set(FILES.map(file=>new URL(file,ROOT).href));

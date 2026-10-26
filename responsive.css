@@ -29,13 +29,22 @@ html.headline-collapsed body { min-height: calc(100vh + 4px); min-height: calc(1
 .automatic-brief h3 { font-size: 19px; margin: 0 0 8px; }
 .automatic-brief-description, .automatic-brief-limit { color: var(--muted); }
 .automatic-brief p { font-size: 14px; line-height: 1.6; }
-.automatic-caregiver-briefs { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 16px; margin-top: 16px; }
+.automatic-caregiver-briefs { display: grid; align-items: start; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 16px; margin-top: 16px; }
 .automatic-caregiver-card { padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: #fbfcff; min-width: 0; overflow-wrap: anywhere; }
 .automatic-caregiver-card h4 { margin: 0 0 8px; font-size: 17px; }
 .automatic-caregiver-card p { margin: 8px 0; }
 .automatic-caregiver-card summary { cursor: pointer; min-height: 44px; padding: 12px 0; font-size: 14px; font-weight: 600; }
 .automatic-caregiver-card ul { padding-left: 20px; font-size: 13px; line-height: 1.65; }
 .automatic-caregiver-card li + li { margin-top: 8px; }
+.automatic-brief .automatic-brief-total { font-weight: 600; color: #203653; }
+.automatic-brief .automatic-brief-hours-note { font-size: 13px; color: var(--muted); margin: 12px 0; }
+.automatic-brief-open { padding: 12px 16px; border-left: 3px solid #9cb4e9; background: #f5f8ff; border-radius: 0 10px 10px 0; }
+.automatic-brief-open > p { margin: 0; }
+.automatic-brief-open summary { cursor: pointer; min-height: 44px; padding: 12px 0; font-size: 14px; }
+.automatic-brief .automatic-brief-shifts { list-style: none; padding: 0; margin: 14px 0 0; }
+.automatic-brief-shifts > li { padding-top: 10px; border-top: 1px solid var(--border); }
+.automatic-brief-shifts > li > strong, .automatic-brief-shifts > li > span { display: block; }
+.automatic-brief-shifts > li > span { margin-top: 4px; line-height: 1.6; }
 .automatic-brief-warnings { color: #a51c31; }
 .care-map-grid { min-width: 1000px; grid-template-columns: 176px repeat(var(--day-count), minmax(0, 1fr)) !important; }
 #schedule { overflow-x: auto; }
