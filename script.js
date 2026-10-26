@@ -3989,6 +3989,13 @@ function renderAutomaticCaregiverBrief(scheduleDays) {
     ? assigned + " of " + summary.totalShifts + " shifts assigned · " + formatHours(summary.assignedHours) +
       " scheduled · " + summary.scheduledCaregivers + " caregiver" + (summary.scheduledCaregivers === 1 ? "" : "s") + " scheduled."
     : "No shifts are assigned for this week yet.";
+  const blockingWarningCount = summary.blockingWarnings.length;
+  const blockingWarningMessage = blockingWarningCount
+    ? " " + blockingWarningCount + " blocking scheduling warning" +
+      (blockingWarningCount === 1 ? " needs" : "s need") + " attention."
+    : "";
+  // The existing role="status" announces warning changes even when assigned hours stay unchanged.
+  status.textContent += blockingWarningMessage;
   const open = document.querySelector("#automatic-brief-open");
   if (open) {
     open.replaceChildren();
@@ -3996,9 +4003,8 @@ function renderAutomaticCaregiverBrief(scheduleDays) {
     message.textContent = summary.openShifts
       ? summary.openShifts + " shift" + (summary.openShifts === 1 ? " has" : "s have") + " no caregiver assigned."
       : summary.totalShifts ? "Every shift this week has a caregiver assigned." : "Add shift templates in Settings to start planning.";
-    if (summary.blockingWarnings.length) {
-      const count = summary.blockingWarnings.length;
-      message.textContent += " " + count + " blocking scheduling warning" + (count === 1 ? " needs" : "s need") + " attention. Review the caregiver details below.";
+    if (blockingWarningCount) {
+      message.textContent += blockingWarningMessage + " Review the caregiver details below.";
       message.classList.add("automatic-brief-warnings");
     }
     open.append(message);
