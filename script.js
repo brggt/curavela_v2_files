@@ -21,6 +21,8 @@ let activeCaregiverRulesId = "";
 let selectedCoverageShiftKey = "";
 let customCalendarDate = new Date();
 let scheduleMode = "all";
+// Preserve expanded open-shift days when assigning one shift re-renders the care map.
+const expandedOpenShiftDays = new Set();
 
 let caregiverMaxHours = {};
 
@@ -1938,7 +1940,9 @@ function attachOpenShiftToggleListeners() {
 
     toggleButton.addEventListener("click", function () {
       const isOpen = openShiftCard.classList.toggle("is-open");
-
+      const dayKey = openShiftCard.dataset.day;
+      if (isOpen) expandedOpenShiftDays.add(dayKey);
+      else expandedOpenShiftDays.delete(dayKey);
       toggleButton.setAttribute("aria-expanded", String(isOpen));
     });
   });
@@ -2159,6 +2163,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
     });
 
     if (openShiftsForDay.length === 0) {
+      expandedOpenShiftDays.delete(day.key);
       dayCell.innerHTML = `
           <div class="open-day-covered">
             <span>✓</span>
@@ -2213,11 +2218,11 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
       .join("");
 
     dayCell.innerHTML = `
-  <div class="open-day-summary">
+  <div class="open-day-summary ${expandedOpenShiftDays.has(day.key) ? "is-open" : ""}" data-day="${day.key}">
     <button
       class="open-day-toggle"
       type="button"
-      aria-expanded="false"
+      aria-expanded="${expandedOpenShiftDays.has(day.key)}"
     >
       <div>
         <strong>
