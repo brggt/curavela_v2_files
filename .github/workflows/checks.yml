@@ -1,0 +1,36 @@
+name: Curavela checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: curavela-checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scheduling-and-app-tests:
+    name: Node tests and syntax checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Run scheduling, state, and server regression tests
+        run: npm test
+      - name: Check JavaScript syntax
+        run: npm run check
+      - name: Check patch whitespace
+        run: git diff --check HEAD^ HEAD
