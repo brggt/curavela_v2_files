@@ -93,3 +93,10 @@ The Team Communications navigation has four planned categories. Only **Caregiver
 - The existing old Brief updates and follow-ups remain saved as *archived notes*, not real messages. Manager Notes are collapsible and the automatic schedule summary remains intact.
 - New messages linked to coverage requests notify relevant team accounts within the application. This is not a replacement for urgent care or emergency messaging.
 - Before real use: add member deactivation, channel-level audit and retention rules, health/family consent controls, PHI risk assessment, data export/deletion, abuse monitoring, and an independent security review. Do not advertise this as HIPAA-compliant without evaluating deployment and operational controls.
+
+### Additional messaging review gates
+- Treat manager planning notes as **shared in the manager draft**, not private personal notes; other managers with draft access may read them.
+- A sender is taken only from their authenticated session. Never accept user IDs or sender names from message input.
+- Chat posting is limited to 30 valid messages per account per rolling minute (in-process guard; use persistent/shared enforcement if scaling to multiple servers).
+- UI must render message bodies with textContent, show communication errors within the active panel, and avoid writing replies to a different conversation after a slow request.
+- Verify account sign-out revokes access and clears rendered messages. Before customer release, implement account revocation, retention/deletion policy, abuse handling, authorized export, and secure backups.
