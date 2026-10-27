@@ -164,3 +164,22 @@ test('new public assets have correct media types and private operational files r
  for(const [file,type] of [['calendar.js','text/javascript'],['manifest.webmanifest','application/manifest+json'],['icon-192.png','image/png'],['sw.js','text/javascript']]){const res=await fetch(f.url+'/'+file);assert.equal(res.status,200);assert.equal(res.headers.get('content-type'),type);}
  for(const file of ['server/backup.js','Dockerfile','.env','.dockerignore'])assert.equal((await fetch(f.url+'/'+file)).status,404);
 });
+
+test('host startup refuses ephemeral and unconfigured production SQLite storage', () => {
+  const {spawnSync}=require('node:child_process');
+  const path=require('node:path');
+  const entry=path.join(__dirname,'../server/start.js');
+  const run=extra=>spawnSync(process.execPath,[entry],{
+    env:{...process.env,VERCEL:'',AWS_LAMBDA_FUNCTION_NAME:'',NETLIFY:'',NODE_ENV:'test',...extra},
+    encoding:'utf8',timeout:5000
+  });
+  const serverless=run({VERCEL:'1'});
+  assert.notEqual(serverless.status,0);
+  assert.match(serverless.stderr,/persistent Node host and durable disk/);
+  const noVolume=run({NODE_ENV:'production',PUBLIC_URL:'https://curavela.example'});
+  assert.notEqual(noVolume.status,0);
+  assert.match(noVolume.stderr,/CURAVELA_DATA_DIR/);
+  const tempVolume=run({NODE_ENV:'production',PUBLIC_URL:'https://curavela.example',CURAVELA_DATA_DIR:'/tmp/curavela-test'});
+  assert.notEqual(tempVolume.status,0);
+  assert.match(tempVolume.stderr,/temporary storage/);
+});
