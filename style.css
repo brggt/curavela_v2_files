@@ -4306,3 +4306,31 @@ select {
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+
+/* Print the actual assignments, not the scrollable interactive dashboard. */
+#curavela-print-sheet { display: none; }
+@media print {
+  @page { size: auto; margin: 12mm; }
+  html, body { overflow: visible !important; height: auto !important; background: #fff !important; }
+  body > *:not(#curavela-print-sheet) { display: none !important; }
+  #curavela-print-sheet {
+    display: block !important;
+    position: static;
+    width: 100%;
+    color: #14223a;
+    font-family: Arial, sans-serif;
+    font-size: 10pt;
+  }
+  .print-schedule-heading { margin-bottom: 16px; border-bottom: 2px solid #234da8; padding-bottom: 10px; }
+  .print-schedule-heading h1 { font-size: 18pt; margin: 0 0 5px; }
+  .print-schedule-heading p { margin: 0; font-size: 11pt; }
+  .print-schedule-days { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; align-items: start; }
+  .print-schedule-day { border: 1px solid #b9c7df; border-radius: 7px; padding: 10px; break-inside: avoid; page-break-inside: avoid; }
+  .print-schedule-day h2 { margin: 0 0 7px; font-size: 11pt; }
+  .print-schedule-shift { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-top: 1px solid #dce3ee; break-inside: avoid; }
+  .print-schedule-shift > div { display: grid; gap: 3px; min-width: 0; }
+  .print-schedule-shift span { font-size: 9pt; }
+  .print-schedule-time { text-align: right; max-width: 45%; white-space: normal; }
+  .print-schedule-open { color: #9b2b2b; }
+}
