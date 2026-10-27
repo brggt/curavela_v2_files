@@ -186,20 +186,34 @@
     const openRows=rows.filter(row=>row.caregiverId==='Open').sort((a,b)=>a.start-b.start||a.shiftName.localeCompare(b.shiftName));
     const previousDay=rules.addDays(first,-1);
     const carryover=occurrences(data,previousDay,previousDay).filter(row=>row.caregiverId!=='Open'&&row.end>rules.dateNumber(first));
+    // Group once, rather than scanning every occurrence and warning for each
+    // caregiver. This matters when a workspace contains hundreds of people.
+    function groupByCaregiver(items) {
+      const groups=new Map();
+      for(const item of items) {
+        const id=item.caregiverId;
+        if(!groups.has(id))groups.set(id,[]);
+        groups.get(id).push(item);
+      }
+      return groups;
+    }
+    const shiftsByCaregiver=groupByCaregiver(assigned);
+    const carryoverByCaregiver=groupByCaregiver(carryover);
+    const warningsByCaregiver=groupByCaregiver(warnings);
     return {
       first,last,totalShifts:rows.length,assignedShifts:assigned.length,
-      scheduledCaregivers:new Set(assigned.map(row=>row.caregiverId)).size,
+      scheduledCaregivers:shiftsByCaregiver.size,
       assignedHours:assigned.reduce((sum,row)=>sum+row.hours,0),
       openShifts:openRows.length,openRows,
       people:data.caregivers.map(person=>{
-        const shifts=rows.filter(row=>row.caregiverId===person.id).sort((a,b)=>a.start-b.start||a.shiftName.localeCompare(b.shiftName));
+        const shifts=(shiftsByCaregiver.get(person.id)||[]).sort((a,b)=>a.start-b.start||a.shiftName.localeCompare(b.shiftName));
         return {
           id:person.id,name:person.name,shifts,
-          carryoverShifts:carryover.filter(row=>row.caregiverId===person.id),
+          carryoverShifts:carryoverByCaregiver.get(person.id)||[],
           hours:shifts.reduce((sum,row)=>sum+row.hours,0),
           days:new Set(shifts.map(row=>row.dayKey)).size,
           weeklyLimit:data.caregiverMaxHours[person.id],
-          warnings:warnings.filter(warning=>warning.caregiverId===person.id),
+          warnings:warningsByCaregiver.get(person.id)||[],
         };
       }),
     };
