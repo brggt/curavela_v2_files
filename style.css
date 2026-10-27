@@ -4261,3 +4261,29 @@ select {
 .agenda-schedule .agenda-card.coverage-covered {
   border-radius: 12px;
 }
+
+/* Comfortable card spacing and text inset for the agenda and monthly care maps. */
+.agenda-schedule .agenda-day { padding: 16px; }
+.agenda-schedule .agenda-card {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px !important;
+  margin-bottom: 12px;
+  border-radius: 14px;
+}
+.agenda-schedule .agenda-card > div:first-child { min-width: 0; padding-left: 0; }
+.agenda-schedule .agenda-card .edit-occurrence-button {
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+.monthly-schedule-grid .month-shift-row {
+  box-sizing: border-box;
+  padding: 12px 11px !important;
+  margin-bottom: 3px;
+  border-radius: 12px;
+}
+.monthly-schedule-grid .month-shift-info { gap: 8px; }
+.monthly-schedule-grid .month-shift-info > span:first-child { min-width: 0; overflow-wrap: anywhere; }
