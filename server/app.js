@@ -46,6 +46,16 @@ function createApplication(options={}) {
   CREATE INDEX IF NOT EXISTS team_messages_request_time ON team_messages(request_id,at);`);
   const origin=options.origin||'http://localhost:3000', secure=origin.startsWith('https:'),timeZone=options.timeZone||'UTC';
   const limits=new Map();
+  // Independent per-account throttle for messages; login rate limiting alone
+  // does not prevent an authenticated account from flooding a discussion.
+  const messageLimits=new Map();
+  function limitMessage(userId){
+    const time=Date.now(),windowMs=60*1000;
+    let entry=messageLimits.get(userId);
+    if(!entry||entry.until<=time){entry={count:0,until:time+windowMs};messageLimits.set(userId,entry);}
+    if(++entry.count>30)failure(429,'Message limit reached. Try again shortly.');
+    if(messageLimits.size>10000)for(const [id,value] of messageLimits)if(value.until<=time)messageLimits.delete(id);
+  }
   function tx(fn){db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(e){db.exec('ROLLBACK');throw e;}}
   function audit(user,action,details={}){db.prepare('INSERT INTO history(actor,at,action,details) VALUES(?,?,?,?)').run(user.id,now(),action,JSON.stringify(details));}
   function notify(userId,event,message){const user=db.prepare('SELECT * FROM users WHERE id=?').get(userId);if(!user)return;db.prepare('INSERT OR IGNORE INTO notifications(id,user_id,event_key,message,at,email_state) VALUES(?,?,?,?,?,?)').run(crypto.randomUUID(),userId,event,message,now(),user.email_enabled&&options.sendEmail?'queued':'disabled');}
@@ -195,6 +205,7 @@ function createApplication(options={}) {
       }
       if(typeof body.text!=='string'||!body.text.trim()||body.text.trim().length>2000)failure(400,'Write a message between 1 and 2000 characters.');
       if(related?.status!=='pending' && channel==='schedule')failure(409,'This request is closed. Its conversation is read-only.');
+      limitMessage(user.id);
       const messageId=crypto.randomUUID();
       db.prepare('INSERT INTO team_messages(id,channel,request_id,sender_id,body,at) VALUES(?,?,?,?,?,?)')
         .run(messageId,channel,channel==='schedule'?requestId:null,user.id,body.text.trim(),now());
