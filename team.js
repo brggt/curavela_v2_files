@@ -8,7 +8,7 @@ const CuravelaTeam = (function(){
   communicationsPanel.className='workspace-panel';
   communicationsPanel.hidden=true;
   document.querySelector('.main-content').append(communicationsPanel);
-  let chatChannel='caregiver',chatRequestId=null;
+  let chatChannel='caregiver',chatRequestId=null,communicationsRenderVersion=0;
   async function api(route,method='GET',body){
     if(navigator.onLine===false)throw new Error('Offline. Reconnect before using team actions; nothing has been submitted.');
     let response;try{response=await fetch('api/'+route,{method,credentials:'same-origin',headers:method==='GET'?{}:{'Content-Type':'application/json','X-Curavela-Request':'1'},body:body===undefined?undefined:JSON.stringify(body)});reachable=true;}catch(error){reachable=false;renderConnectionStatusIfReady();throw new Error('Team connection unavailable. Nothing was confirmed; refresh before retrying.');}
@@ -18,7 +18,7 @@ const CuravelaTeam = (function(){
   }
   function renderConnectionStatusIfReady(){if(typeof renderConnectionStatus==='function')renderConnectionStatus();}
   function status(message,error){const node=document.querySelector('#team-status');if(node){node.textContent=message;node.classList.toggle('workspace-error',Boolean(error));}renderConnectionStatusIfReady();}
-  function button(text,handler){const b=document.createElement('button');b.type='button';b.textContent=text;b.addEventListener('click',async()=>{b.disabled=true;try{await handler();}catch(error){status(error.message,true);}finally{b.disabled=false;}});return b;}
+  function button(text,handler){const b=document.createElement('button');b.type='button';b.textContent=text;b.addEventListener('click',async()=>{b.disabled=true;try{await handler();}catch(error){status(error.message,true);const feedback=communicationsPanel.querySelector('[data-communications-status]');if(!communicationsPanel.hidden&&feedback)feedback.textContent=error.message;}finally{b.disabled=false;}});return b;}
   function isConnected(){return connected&&user?.role==='manager';}
   function markDirty(){dirty=true;status('Unsynced team changes. Sync draft before publishing.');}
   function applyTeam(data){applyWorkspaceSnapshot(data);resetScheduleHistory();refreshWorkspace();const picker=panel.querySelector('select[name="caregiverId"]');if(picker)picker.innerHTML=buildCaregiverOptions('Open');}
@@ -35,6 +35,7 @@ const CuravelaTeam = (function(){
     });
   }
   async function renderCommunications(){
+    const renderVersion=++communicationsRenderVersion;
     communicationsPanel.replaceChildren();
     const heading=document.createElement('h2');heading.textContent='Team Communications';
     const description=document.createElement('p');
@@ -57,7 +58,7 @@ const CuravelaTeam = (function(){
       channels.append(control);
     }
     communicationsPanel.append(channels);
-    const feedback=document.createElement('p');feedback.setAttribute('role','status');communicationsPanel.append(feedback);
+    const feedback=document.createElement('p');feedback.setAttribute('role','status');feedback.dataset.communicationsStatus='';communicationsPanel.append(feedback);
     if(!serverAvailable||!user){
       feedback.textContent='Real team messages require a signed-in team account on the secure Curavela server. Local mode cannot send messages.';
       return;
@@ -65,6 +66,7 @@ const CuravelaTeam = (function(){
     let request=null;
     if(chatChannel==='schedule'){
       const data=await api('requests');
+      if(renderVersion!==communicationsRenderVersion)return;
       const available=data.requests.filter(r=>['claim','release','swap'].includes(r.kind));
       if(!available.length){feedback.textContent='No shift requests yet. Create a coverage request from Team to start a schedule conversation.';return;}
       if(!available.some(r=>r.id===chatRequestId))chatRequestId=available[0].id;
@@ -83,7 +85,9 @@ const CuravelaTeam = (function(){
       communicationsPanel.append(statusText);
     }
     const query='messages?channel='+encodeURIComponent(chatChannel)+(chatChannel==='schedule'?'&requestId='+encodeURIComponent(chatRequestId):'');
+    const selectedChannel=chatChannel,selectedRequestId=chatChannel==='schedule'?chatRequestId:null;
     const result=await api(query);
+    if(renderVersion!==communicationsRenderVersion)return;
     const list=document.createElement('div');list.className='communications-messages';
     list.setAttribute('role','log');list.setAttribute('aria-label',chatChannel==='schedule'?'Schedule request discussion':'Caregiver chat');
     if(!result.messages.length){const empty=document.createElement('p');empty.textContent='No messages yet.';list.append(empty);}
@@ -125,8 +129,8 @@ const CuravelaTeam = (function(){
       event.preventDefault();
       submit.disabled=true;
       try{
-        await api('messages','POST',{channel:chatChannel,requestId:chatChannel==='schedule'?chatRequestId:undefined,text:input.value});
-        await renderCommunications();
+        await api('messages','POST',{channel:selectedChannel,requestId:selectedRequestId||undefined,text:input.value});
+        if(renderVersion===communicationsRenderVersion)await renderCommunications();
       }catch(e){feedback.textContent=e.message;}finally{submit.disabled=false;}
     });
     communicationsPanel.append(form);
@@ -175,7 +179,7 @@ const CuravelaTeam = (function(){
       form.addEventListener('submit',async event=>{event.preventDefault();const submit=form.querySelector('button');submit.disabled=true;try{const fields=new FormData(form);const result=await api(invite?'accept-invite':'login','POST',invite?{token:invite,name:fields.get('name'),password:fields.get('password')}:{email:fields.get('email'),password:fields.get('password')});user=result.user;if(invite)history.replaceState(null,'',location.pathname+location.search);localCopy=getWorkspaceSnapshot();render();await refresh();}catch(e){status(e.message,true);}finally{submit.disabled=false;}});panel.append(form);return;
     }
     const intro=document.createElement('p');intro.textContent=user.name+' · '+user.role+' · Schedule times: '+timeZone;panel.append(intro);
-    const actions=document.createElement('div');actions.className='workspace-tools';actions.append(button('Refresh',refresh),button('Sign out',async()=>{if(dirty&&!confirm('Sign out and discard unsynced team changes? Export a backup first if needed.'))return;await api('logout','POST',{});user=null;connected=false;dirty=false;if(localCopy){applyTeam(localCopy);localCopy=null;}document.querySelectorAll('.side-nav-link').forEach(link=>link.hidden=false);render();}));panel.append(actions);
+    const actions=document.createElement('div');actions.className='workspace-tools';actions.append(button('Refresh',refresh),button('Sign out',async()=>{if(dirty&&!confirm('Sign out and discard unsynced team changes? Export a backup first if needed.'))return;await api('logout','POST',{});user=null;connected=false;dirty=false;communicationsRenderVersion++;communicationsPanel.replaceChildren();if(localCopy){applyTeam(localCopy);localCopy=null;}document.querySelectorAll('.side-nav-link').forEach(link=>link.hidden=false);render();}));panel.append(actions);
     if(user.role==='manager'){
       actions.prepend(button('Load latest draft',load),button('Sync draft',sync),button('Publish selected dates',publish));
       const form=document.createElement('form');form.className='workspace-form';form.innerHTML='<h3>Invite a team member</h3><label>Email<input name="email" type="email" required /></label><label>Role<select name="role"><option value="caregiver">Caregiver</option><option value="manager">Manager</option></select></label><label>Caregiver profile<select name="caregiverId">'+buildCaregiverOptions('Open')+'</select></label><button type="submit">Create invitation link</button><p id="invitation-result"></p>';
