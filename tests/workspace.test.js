@@ -78,3 +78,25 @@ test('large-team monthly occurrences include split parts and dated shifts exactl
   assert.equal(rows.filter(x=>x.shiftName==='Outside month').length,0);
   assert.equal(rows.filter(x=>x.key==='2026-10-01-Morning (part 2)').length,1);
 });
+
+test('large-team briefs retain accurate caregiver hours, open slots, and dated handoffs',()=>{
+  const people=Array.from({length:120},(_,i)=>({id:'person-'+i,name:'Caregiver '+i}));
+  const extraShifts=Array.from({length:480},(_,i)=>({
+    dayKey:R.addDays('2026-10-04',i%7),name:'Extra '+i,start:'09:00',end:'11:00'
+  }));
+  const assignments={};
+  extraShifts.forEach((shift,i)=>{if(i%4!==0)assignments[shift.dayKey+'-'+shift.name]='person-'+(i%120);});
+  assignments['2026-10-03-Night']='person-0';
+  const data=W.validateBackup({caregivers:people,shiftStyle:'three',scheduleAssignments:assignments,workspace:{extraShifts}});
+  const brief=W.caregiverBriefs(data,'2026-10-04','2026-10-10');
+  assert.equal(brief.totalShifts,501);
+  assert.equal(brief.assignedShifts,360);
+  assert.equal(brief.openShifts,141);
+  assert.equal(brief.assignedHours,720);
+  assert.equal(brief.people.length,120);
+  assert.equal(brief.people.reduce((sum,p)=>sum+p.shifts.length,0),360);
+  assert.equal(brief.people.reduce((sum,p)=>sum+p.hours,0),720);
+  assert.equal(brief.people.find(p=>p.id==='person-0').carryoverShifts.length,1);
+  assert.ok(brief.openRows.every(row=>row.caregiverId==='Open'));
+  assert.ok(brief.people.every(person=>person.shifts.every(shift=>shift.caregiverId===person.id)));
+});
