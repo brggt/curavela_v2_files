@@ -4349,3 +4349,75 @@ select {
   #curavela-print-sheet.print-monthly .print-schedule-shift { padding: 4px 0; }
   #curavela-print-sheet.print-monthly .print-schedule-shift span { font-size: 7pt; }
 }
+
+
+/* Team Communications: a clear, responsive workspace. */
+.communications-channels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.communications-channel {
+  min-width: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  border-radius: 14px;
+  padding: 16px;
+  background: #f7faff;
+  border: 1px solid #d9e4f5;
+}
+.communications-channel[aria-pressed="true"] {
+  border-color: #245dff;
+  background: #eef4ff;
+}
+.communications-channel:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+  background: #f6f7f9;
+}
+.communications-channel small {
+  font-size: 12px;
+  font-weight: normal;
+  color: #596982;
+  line-height: 1.45;
+}
+.communications-messages {
+  display: grid;
+  gap: 10px;
+  max-height: 460px;
+  overflow-y: auto;
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid #e3eaf5;
+  border-radius: 15px;
+  background: #fbfcff;
+}
+.communication-message {
+  max-width: 100%;
+  padding: 12px 15px;
+  border-radius: 12px;
+  border: 1px solid #e0e7f3;
+  background: white;
+  overflow-wrap: anywhere;
+}
+.communication-message strong { display: block; }
+.communication-message small { display: block; margin: 4px 0 8px; color: #60718b; }
+.communication-message p { margin: 0; white-space: pre-wrap; }
+.communications-compose { display: grid; gap: 12px; }
+.communications-compose label { display: grid; gap: 8px; }
+.communications-compose textarea { width: 100%; min-height: 90px; box-sizing: border-box; resize: vertical; padding: 12px; border: 1px solid #cedaf0; border-radius: 12px; font: inherit; }
+.communications-compose button { justify-self: start; }
+.manager-notes { margin-top: 20px; }
+.manager-notes > summary, .archived-brief-notes > summary {
+  padding: 16px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.manager-notes > summary span { color: #66758b; font-weight: 400; margin-left: 10px; }
+.manager-notes-content { padding: 0 16px 16px; }
+.archived-brief-notes { margin: 18px 0; }
+.archived-brief-notes > p { margin: 6px 16px; color: #66758b; }

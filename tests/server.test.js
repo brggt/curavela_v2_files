@@ -164,3 +164,83 @@ test('new public assets have correct media types and private operational files r
  for(const [file,type] of [['calendar.js','text/javascript'],['manifest.webmanifest','application/manifest+json'],['icon-192.png','image/png'],['sw.js','text/javascript']]){const res=await fetch(f.url+'/'+file);assert.equal(res.status,200);assert.equal(res.headers.get('content-type'),type);}
  for(const file of ['server/backup.js','Dockerfile','.env','.dockerignore'])assert.equal((await fetch(f.url+'/'+file)).status,404);
 });
+
+test('authenticated team chat is shared only with signed-in teammates',async t=>{
+  const f=await fixture(t);
+  assert.equal((await f.request('messages?channel=caregiver')).status,401);
+  assert.equal((await f.request('messages','POST',{channel:'caregiver',text:'Ready for Friday'},f.alex)).status,201);
+  const teammate=await f.request('messages?channel=caregiver','GET',undefined,f.sam);
+  assert.equal(teammate.status,200);
+  assert.equal(teammate.data.messages.length,1);
+  assert.equal(teammate.data.messages[0].body,'Ready for Friday');
+  assert.equal((await f.request('messages','POST',{channel:'health',text:'medical details'},f.alex)).status,400);
+  assert.equal((await f.request('messages?channel=family','GET',undefined,f.manager)).status,400);
+  assert.equal((await f.request('messages','POST',{channel:'caregiver',text:'x'.repeat(2001)},f.alex)).status,400);
+  assert.equal((await f.request('messages','POST',{channel:'caregiver',text:'Hello'},f.alex,{Origin:'https://attacker.example'})).status,403);
+});
+test('schedule conversation restricts participants and manager approval updates draft only',async t=>{
+  const f=await fixture(t);
+  const published=await f.request('publish','POST',{revision:1,first:'2027-01-04',last:'2027-01-05'},f.manager);
+  assert.equal(published.status,200);
+  const release=await f.request('requests','POST',{kind:'release',key:'2027-01-04-Morning'},f.alex);
+  assert.equal(release.status,201);
+  const id=release.data.id,endpoint='messages?channel=schedule&requestId='+id;
+  assert.equal((await f.request(endpoint,'GET',undefined,f.sam)).status,403);
+  assert.equal((await f.request('messages','POST',{channel:'schedule',requestId:id,text:'Not on this shift'},f.sam)).status,403);
+  assert.equal((await f.request('messages','POST',{channel:'schedule',requestId:id,text:'Need someone for Monday morning'},f.alex)).status,201);
+  const managerMessages=await f.request(endpoint,'GET',undefined,f.manager);
+  assert.equal(managerMessages.status,200);
+  assert.equal(managerMessages.data.messages[0].body,'Need someone for Monday morning');
+  assert.equal((await f.request('messages','POST',{channel:'schedule',requestId:id,text:'Approved after review'},f.manager)).status,201);
+  const approval=await f.request('requests/decide','POST',{id,decision:'approved',revision:1},f.manager);
+  assert.equal(approval.status,200,JSON.stringify(approval.data));
+  const draft=await f.request('draft','GET',undefined,f.manager);
+  assert.equal(draft.data.snapshot.scheduleAssignments['2027-01-04-Morning'],'Open');
+  const caregiverView=await f.request('my-shifts','GET',undefined,f.alex);
+  assert.ok(caregiverView.data.shifts.some(shift=>shift.key==='2027-01-04-Morning'),'published shift stays assigned until publish');
+  assert.equal((await f.request('messages','POST',{channel:'schedule',requestId:id,text:'Reopen without new request'},f.alex)).status,409);
+  assert.equal((await f.request(endpoint,'GET',undefined,f.alex)).status,200);
+  assert.equal((await f.request('messages?channel=schedule&requestId=unrelated','GET',undefined,f.manager)).status,404);
+});
+
+test('chat authorship comes from the session and cannot be impersonated',async t=>{
+  const f=await fixture(t);
+  const posted=await f.request('messages','POST',{channel:'caregiver',text:'<script>alert("x")</script>',senderId:'manager',senderName:'Manager'},f.alex);
+  assert.equal(posted.status,201);
+  const manager=await f.request('messages?channel=caregiver','GET',undefined,f.manager);
+  assert.equal(manager.status,200);
+  assert.equal(manager.data.messages[0].senderName,'alex');
+  assert.equal(manager.data.messages[0].body,'<script>alert("x")</script>');
+  assert.equal((await f.request('logout','POST',{},f.alex)).status,200);
+  assert.equal((await f.request('messages?channel=caregiver','GET',undefined,f.alex)).status,401);
+  assert.equal((await f.request('messages','POST',{channel:'caregiver',text:'after logout'},f.alex)).status,401);
+});
+test('message throttling is per authenticated user and never alters the schedule',async t=>{
+  const f=await fixture(t);
+  const original=(await f.request('draft','GET',undefined,f.manager)).data.revision;
+  for(let i=0;i<30;i++){
+    const r=await f.request('messages','POST',{channel:'caregiver',text:'scheduling update '+i},f.alex);
+    assert.equal(r.status,201,'message '+i+' should be accepted');
+  }
+  assert.equal((await f.request('messages','POST',{channel:'caregiver',text:'excess'},f.alex)).status,429);
+  assert.equal((await f.request('messages','POST',{channel:'caregiver',text:'another teammate'},f.sam)).status,201);
+  const list=await f.request('messages?channel=caregiver','GET',undefined,f.manager);
+  assert.equal(list.status,200);
+  assert.equal(list.data.messages.length,31);
+  const current=(await f.request('draft','GET',undefined,f.manager)).data.revision;
+  assert.equal(current,original);
+});
+test('a swap target can discuss only their own shift request',async t=>{
+  const f=await fixture(t);
+  assert.equal((await f.request('publish','POST',{revision:1,first:'2027-01-04',last:'2027-01-05'},f.manager)).status,200);
+  const r=await f.request('requests','POST',{kind:'swap',key:'2027-01-04-Morning',targetKey:'2027-01-05-Morning'},f.alex);
+  assert.equal(r.status,201);
+  const id=r.data.id;
+  assert.equal((await f.request('messages?channel=schedule&requestId='+id,'GET',undefined,f.sam)).status,200);
+  assert.equal((await f.request('messages','POST',{channel:'schedule',requestId:id,text:'I can swap'},f.sam)).status,201);
+  assert.equal((await f.request('requests/decide','POST',{id,decision:'approved',revision:1},f.manager)).status,400);
+  assert.equal((await f.request('requests/respond','POST',{id,decision:'accepted'},f.sam)).status,200);
+  assert.equal((await f.request('requests/decide','POST',{id,decision:'approved',revision:1},f.manager)).status,200);
+  assert.equal((await f.request('messages?channel=schedule&requestId='+id,'GET',undefined,f.sam)).status,200);
+  assert.equal((await f.request('messages','POST',{channel:'schedule',requestId:id,text:'too late'},f.sam)).status,409);
+});
