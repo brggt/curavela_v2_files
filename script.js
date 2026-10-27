@@ -4836,10 +4836,14 @@ function buildPrintableCareMap() {
   if (document.getElementById("curavela-print-sheet")) return;
   const sheet = document.createElement("section");
   sheet.id = "curavela-print-sheet";
+  sheet.classList.toggle("print-monthly", scheduleViewSelect.value === "monthly");
   sheet.setAttribute("aria-label", "Printable caregiver schedule");
-  const days = getDaysInSelectedWeek();
+  const printingMonth = scheduleViewSelect.value === "monthly";
+  const days = printingMonth ? getDaysInSelectedMonth() : getDaysInSelectedWeek();
   const activeShifts = getActiveShifts();
-  const dateRange = days.length ? days[0].label + " – " + days[days.length - 1].label : "";
+  const dateRange = printingMonth
+    ? (monthPicker.value || getTodayMonthValue())
+    : (days.length ? days[0].label + " – " + days[days.length - 1].label : "");
   const title = document.createElement("header");
   title.className = "print-schedule-heading";
   const name = document.createElement("h1");

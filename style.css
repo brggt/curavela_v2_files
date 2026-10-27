@@ -4334,3 +4334,18 @@ select {
   .print-schedule-time { text-align: right; max-width: 45%; white-space: normal; }
   .print-schedule-open { color: #9b2b2b; }
 }
+
+/* Dense but legible month printout: every day in the selected month. */
+@media print {
+  #curavela-print-sheet.print-monthly .print-schedule-days {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+  #curavela-print-sheet.print-monthly .print-schedule-day {
+    padding: 7px;
+    font-size: 8pt;
+  }
+  #curavela-print-sheet.print-monthly .print-schedule-day h2 { font-size: 9pt; }
+  #curavela-print-sheet.print-monthly .print-schedule-shift { padding: 4px 0; }
+  #curavela-print-sheet.print-monthly .print-schedule-shift span { font-size: 7pt; }
+}
