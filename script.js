@@ -2059,7 +2059,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
           const shiftPill = document.createElement("button");
           shiftPill.type = "button";
-          shiftPill.classList.add("shift-pill", "edit-occurrence-button", "compact-shift");
+          shiftPill.classList.add("shift-pill", "edit-occurrence-button", "compact-shift", "coverage-covered");
           shiftPill.dataset.day = day.key;
           shiftPill.dataset.shift = shift.name;
 
@@ -2165,7 +2165,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
     if (openShiftsForDay.length === 0) {
       expandedOpenShiftDays.delete(day.key);
       dayCell.innerHTML = `
-          <div class="open-day-covered">
+          <div class="open-day-covered coverage-covered">
             <span>✓</span>
             Covered
           </div>
@@ -2187,7 +2187,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
         const shiftForDay = getShiftForDay(day.key, shift);
 
         return `
-                <div class="open-mini-shift">
+                <div class="open-mini-shift coverage-open">
                   <div class="open-mini-shift-info">
                     <strong>
                       ${escapeHTML(shift.name)}
@@ -2218,7 +2218,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
       .join("");
 
     dayCell.innerHTML = `
-  <div class="open-day-summary ${expandedOpenShiftDays.has(day.key) ? "is-open" : ""}" data-day="${day.key}">
+  <div class="open-day-summary coverage-open ${expandedOpenShiftDays.has(day.key) ? "is-open" : ""}" data-day="${day.key}">
     <button
       class="open-day-toggle"
       type="button"
@@ -2318,7 +2318,7 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
       ).length > 0;
 
       shiftRows += `
-            <button class="month-shift-row edit-occurrence-button compact-shift ${timeOffConflict ? "has-time-off-conflict" : ""}"
+            <button class="month-shift-row edit-occurrence-button compact-shift ${assignedCaregiver === "Open" ? "coverage-open" : "coverage-covered"} ${timeOffConflict ? "has-time-off-conflict" : ""}"
               type="button" data-day="${day.key}" data-shift="${escapeHTML(shift.name)}"
               aria-label="Edit ${escapeHTML(shift.name)} on ${day.key}, ${escapeHTML(assignedCaregiver === "Open" ? "Open shift" : getCaregiverName(assignedCaregiver))}, ${formatTime(shiftForDay.start)} to ${formatTime(shiftForDay.end)}${shiftForDay.end <= shiftForDay.start ? ", ends next day" : ""}${timeOffConflict ? ", time off conflict" : ""}${workspaceState.shiftNotes?.[day.key+'-'+shift.name] ? ", has handoff note" : ""}">
               <span class="month-shift-info">
