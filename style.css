@@ -4287,3 +4287,22 @@ select {
 }
 .monthly-schedule-grid .month-shift-info { gap: 8px; }
 .monthly-schedule-grid .month-shift-info > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+
+/* Let narrow month cards wrap at word boundaries, never inside 'Afternoon'. */
+.monthly-schedule-grid .month-shift-row .month-shift-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 3px 7px;
+  min-width: 0;
+}
+.monthly-schedule-grid .month-shift-row .month-shift-info > span:first-child {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+.monthly-schedule-grid .month-shift-row .month-shift-info > span:last-child {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
