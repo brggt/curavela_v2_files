@@ -321,3 +321,47 @@ test('brief displays dates and times directly, labels overnight end dates and li
  assert.match(content(f.nodes.get('#automatic-brief-open')),/20 shifts have no caregiver assigned/);
  assert.ok(!text.includes('starting on 1 day'));
 });
+
+test('indexed dated-shift lookups preserve ordering, do not scan every date, and expire after render',()=>{
+  const f=app();
+  const extras=Array.from({length:1500},(_,i)=>({
+    dayKey:i%3===0?'2026-10-04':i%3===1?'2026-10-05':'2026-11-01',
+    name:'Extra '+i,start:'08:00',end:'10:00'
+  }));
+  f.run('workspaceState.extraShifts='+JSON.stringify(extras)+';');
+  // Guard against the old O(number of days * all additional shifts) scan.
+  const rows=f.run(`(() => {
+    const original=workspaceState.extraShifts.filter;
+    workspaceState.extraShifts.filter=()=>{throw Error('full array was scanned inside render');};
+    let result;
+    try {
+      result=withIndexedExtraShifts(()=>[
+        getShiftsForDay('2026-10-04').map(x=>x.name),
+        getShiftsForDay('2026-10-05').map(x=>x.name),
+        getShiftsForDay('2026-10-04').map(x=>x.name)
+      ]);
+    }finally{workspaceState.extraShifts.filter=original;}
+    return result;
+  })()`);
+  const first=Array.from(rows[0]),second=Array.from(rows[1]);
+  assert.equal(first.length,503); // three templates plus 500 dated shifts
+  assert.equal(second.length,503);
+  assert.deepEqual(Array.from(rows[2]),first);
+  assert.deepEqual(first.slice(0,3),['Morning','Afternoon','Night']);
+  assert.equal(first[3],'Extra 0');
+  assert.equal(first[4],'Extra 3');
+  f.run("workspaceState.extraShifts.push({dayKey:'2026-10-04',name:'Added after render',start:'10:00',end:'11:00'});");
+  assert.equal(f.run("getShiftsForDay('2026-10-04').at(-1).name"),'Added after render');
+  assert.equal(f.run('renderExtraShiftsByDay'),null);
+});
+test('print follows the selected month while week and agenda retain seven days, including leap years',()=>{
+  const f=app();
+  assert.equal(f.run("getPrintableScheduleDays().length"),7);
+  assert.equal(f.run("getPrintableScheduleDays()[0].key"),'2026-10-04');
+  f.run("scheduleViewSelect.value='monthly';monthPicker.value='2028-02';");
+  assert.equal(f.run('getPrintableScheduleDays().length'),29);
+  assert.equal(f.run("getPrintableScheduleDays()[0].key"),'2028-02-01');
+  assert.equal(f.run("getPrintableScheduleDays().at(-1).key"),'2028-02-29');
+  f.run("scheduleViewSelect.value='agenda';");
+  assert.equal(f.run('getPrintableScheduleDays().length'),7);
+});
