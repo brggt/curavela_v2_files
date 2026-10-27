@@ -125,12 +125,19 @@
   }
   function model(data) { return {shifts:templates(data),extraShifts:data.workspace.extraShifts,assignments:data.scheduleAssignments,overrides:data.shiftTimeOverrides,caregivers:data.caregivers,rules:data.caregiverRules,maxHours:data.caregiverMaxHours,weekStart:data.weekStart}; }
   function occurrences(data,first,last) {
-    const result=[];
+    const result=[], recurringTemplates=templates(data), extrasByDay=new Map();
+    // Preserve input order: templates first, then additional dated shifts.
+    // Index only requested dates instead of filtering the full array per day.
+    for(const shift of data.workspace.extraShifts){
+      if(shift.dayKey<first||shift.dayKey>last)continue;
+      if(!extrasByDay.has(shift.dayKey))extrasByDay.set(shift.dayKey,[]);
+      extrasByDay.get(shift.dayKey).push(shift);
+    }
     for(let date=first;date<=last;date=rules.addDays(date,1)) {
-      templates(data).concat(data.workspace.extraShifts.filter(s=>s.dayKey===date)).forEach(s=>{
+      for(const s of recurringTemplates.concat(extrasByDay.get(date)||[])){
         const key=date+'-'+s.name,t=data.shiftTimeOverrides[date+'__'+s.name]||s,span=rules.interval(date,t.start,t.end);
         result.push({key,dayKey:date,shiftName:s.name,startTime:t.start,endTime:t.end,caregiverId:data.scheduleAssignments[key]||'Open',note:data.workspace.shiftNotes?.[key]||'',...span});
-      });
+      }
     }
     return result;
   }
