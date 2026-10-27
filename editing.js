@@ -215,6 +215,11 @@ function openOccurrenceEditor(dayKey, shiftName) {
 
 // Saving a shift rebuilds the care map. Keep the scheduler at the same scroll position.
 function renderScheduleWithoutLosingPosition() {
+  // Node.js regression tests do not provide browser globals.
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    renderSchedule();
+    return;
+  }
   const pageY = window.scrollY;
   const content = typeof mainContent !== "undefined" ? mainContent : null;
   const contentY = content ? content.scrollTop : 0;

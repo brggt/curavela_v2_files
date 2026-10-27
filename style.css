@@ -4213,3 +4213,124 @@ select {
   min-height: 36px;
   font-size: 9px;
 }
+
+/* Coverage status: consistent across weekly, monthly, and agenda views. */
+.care-map-grid .coverage-covered,
+.monthly-schedule-grid .coverage-covered,
+.agenda-schedule .coverage-covered {
+  background: linear-gradient(150deg, #f1f8ff, #e4f1ff);
+  border: 1px solid #a3cbfa;
+  box-shadow: 0 0 0 1px rgba(74, 151, 246, .13), 0 0 13px rgba(66, 145, 245, .18);
+  color: #153e73;
+}
+.care-map-grid .coverage-open,
+.monthly-schedule-grid .coverage-open,
+.agenda-schedule .coverage-open {
+  background: linear-gradient(150deg, #fff6f5, #ffe8e7);
+  border: 1px solid #f0a6a5;
+  box-shadow: 0 0 0 1px rgba(225, 78, 82, .13), 0 0 13px rgba(225, 78, 82, .19);
+  color: #803033;
+}
+/* Conflicts continue to take precedence over the covered state. */
+.care-map-grid .has-time-off-conflict,
+.monthly-schedule-grid .has-time-off-conflict {
+  border-color: #d76b39;
+  box-shadow: 0 0 0 2px rgba(215, 107, 57, .25);
+}
+
+/* Match status tint and glow to the rounded cards, not their outer wrappers. */
+.care-map-grid .open-day-summary.coverage-open {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: inherit;
+}
+.care-map-grid .open-day-summary.coverage-open > .open-day-toggle {
+  border-radius: 12px;
+  border: 1px solid #f0a6a5;
+  background: linear-gradient(150deg, #fff6f5, #ffe8e7);
+  box-shadow: 0 0 0 1px rgba(225, 78, 82, .13), 0 0 13px rgba(225, 78, 82, .19);
+  color: #803033;
+}
+.care-map-grid .open-mini-shift.coverage-open,
+.care-map-grid .shift-pill.coverage-covered,
+.care-map-grid .open-day-covered.coverage-covered,
+.monthly-schedule-grid .month-shift-row.coverage-open,
+.monthly-schedule-grid .month-shift-row.coverage-covered,
+.agenda-schedule .agenda-card.coverage-open,
+.agenda-schedule .agenda-card.coverage-covered {
+  border-radius: 12px;
+}
+
+/* Comfortable card spacing and text inset for the agenda and monthly care maps. */
+.agenda-schedule .agenda-day { padding: 16px; }
+.agenda-schedule .agenda-card {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px !important;
+  margin-bottom: 12px;
+  border-radius: 14px;
+}
+.agenda-schedule .agenda-card > div:first-child { min-width: 0; padding-left: 0; }
+.agenda-schedule .agenda-card .edit-occurrence-button {
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+.monthly-schedule-grid .month-shift-row {
+  box-sizing: border-box;
+  padding: 12px 11px !important;
+  margin-bottom: 3px;
+  border-radius: 12px;
+}
+.monthly-schedule-grid .month-shift-info { gap: 8px; }
+.monthly-schedule-grid .month-shift-info > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+
+/* Let narrow month cards wrap at word boundaries, never inside 'Afternoon'. */
+.monthly-schedule-grid .month-shift-row .month-shift-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 3px 7px;
+  min-width: 0;
+}
+.monthly-schedule-grid .month-shift-row .month-shift-info > span:first-child {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+.monthly-schedule-grid .month-shift-row .month-shift-info > span:last-child {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+
+/* Print the actual assignments, not the scrollable interactive dashboard. */
+#curavela-print-sheet { display: none; }
+@media print {
+  @page { size: auto; margin: 12mm; }
+  html, body { overflow: visible !important; height: auto !important; background: #fff !important; }
+  body > *:not(#curavela-print-sheet) { display: none !important; }
+  #curavela-print-sheet {
+    display: block !important;
+    position: static;
+    width: 100%;
+    color: #14223a;
+    font-family: Arial, sans-serif;
+    font-size: 10pt;
+  }
+  .print-schedule-heading { margin-bottom: 16px; border-bottom: 2px solid #234da8; padding-bottom: 10px; }
+  .print-schedule-heading h1 { font-size: 18pt; margin: 0 0 5px; }
+  .print-schedule-heading p { margin: 0; font-size: 11pt; }
+  .print-schedule-days { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; align-items: start; }
+  .print-schedule-day { border: 1px solid #b9c7df; border-radius: 7px; padding: 10px; break-inside: avoid; page-break-inside: avoid; }
+  .print-schedule-day h2 { margin: 0 0 7px; font-size: 11pt; }
+  .print-schedule-shift { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-top: 1px solid #dce3ee; break-inside: avoid; }
+  .print-schedule-shift > div { display: grid; gap: 3px; min-width: 0; }
+  .print-schedule-shift span { font-size: 9pt; }
+  .print-schedule-time { text-align: right; max-width: 45%; white-space: normal; }
+  .print-schedule-open { color: #9b2b2b; }
+}

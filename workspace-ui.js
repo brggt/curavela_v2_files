@@ -27,7 +27,7 @@ function renderAgendaSchedule(days) {
     const section=document.createElement('section');section.className='agenda-day';
     const title=document.createElement('h3');title.textContent=day.label;section.append(title);
     list.forEach(row=>{
-      total++;const card=document.createElement('article');card.className='agenda-card';
+      total++;const card=document.createElement('article');card.className='agenda-card '+(row.caregiverId==='Open'?'coverage-open':'coverage-covered');
       const text=document.createElement('div'); const name=document.createElement('strong');
       name.textContent=row.shiftName+' · '+(row.caregiverId==='Open'?'Open shift':getCaregiverName(row.caregiverId));
       const time=document.createElement('span');time.textContent=formatTime(row.startTime)+'–'+formatTime(row.endTime)+(row.endTime<=row.startTime?' · ends next day':'');

@@ -2059,7 +2059,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
           const shiftPill = document.createElement("button");
           shiftPill.type = "button";
-          shiftPill.classList.add("shift-pill", "edit-occurrence-button", "compact-shift");
+          shiftPill.classList.add("shift-pill", "edit-occurrence-button", "compact-shift", "coverage-covered");
           shiftPill.dataset.day = day.key;
           shiftPill.dataset.shift = shift.name;
 
@@ -2165,7 +2165,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
     if (openShiftsForDay.length === 0) {
       expandedOpenShiftDays.delete(day.key);
       dayCell.innerHTML = `
-          <div class="open-day-covered">
+          <div class="open-day-covered coverage-covered">
             <span>✓</span>
             Covered
           </div>
@@ -2187,7 +2187,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
         const shiftForDay = getShiftForDay(day.key, shift);
 
         return `
-                <div class="open-mini-shift">
+                <div class="open-mini-shift coverage-open">
                   <div class="open-mini-shift-info">
                     <strong>
                       ${escapeHTML(shift.name)}
@@ -2218,7 +2218,7 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
       .join("");
 
     dayCell.innerHTML = `
-  <div class="open-day-summary ${expandedOpenShiftDays.has(day.key) ? "is-open" : ""}" data-day="${day.key}">
+  <div class="open-day-summary coverage-open ${expandedOpenShiftDays.has(day.key) ? "is-open" : ""}" data-day="${day.key}">
     <button
       class="open-day-toggle"
       type="button"
@@ -2306,7 +2306,20 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
 
     let shiftRows = "";
 
-    getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
+    // Render split continuations directly after their named parent shift.
+    const monthShifts = [...getShiftsForDay(day.key, activeShifts)];
+    const splitBase = name => name.replace(/\s*\(part\s*\d+\)\s*$/i, "").trim().toLowerCase();
+    const splitPart = name => Number(name.match(/\(part\s*(\d+)\)\s*$/i)?.[1] || 1);
+    const shiftGroupPositions = new Map();
+    monthShifts.forEach((shift, position) => {
+      const base = splitBase(shift.name);
+      if (!shiftGroupPositions.has(base)) shiftGroupPositions.set(base, position);
+    });
+    monthShifts.sort((a, b) =>
+      shiftGroupPositions.get(splitBase(a.name)) - shiftGroupPositions.get(splitBase(b.name)) ||
+      splitPart(a.name) - splitPart(b.name)
+    );
+    monthShifts.forEach(function (shift) {
       const assignmentKey = `${day.key}-${shift.name}`;
 
       const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
@@ -2318,7 +2331,7 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
       ).length > 0;
 
       shiftRows += `
-            <button class="month-shift-row edit-occurrence-button compact-shift ${timeOffConflict ? "has-time-off-conflict" : ""}"
+            <button class="month-shift-row edit-occurrence-button compact-shift ${assignedCaregiver === "Open" ? "coverage-open" : "coverage-covered"} ${timeOffConflict ? "has-time-off-conflict" : ""}"
               type="button" data-day="${day.key}" data-shift="${escapeHTML(shift.name)}"
               aria-label="Edit ${escapeHTML(shift.name)} on ${day.key}, ${escapeHTML(assignedCaregiver === "Open" ? "Open shift" : getCaregiverName(assignedCaregiver))}, ${formatTime(shiftForDay.start)} to ${formatTime(shiftForDay.end)}${shiftForDay.end <= shiftForDay.start ? ", ends next day" : ""}${timeOffConflict ? ", time off conflict" : ""}${workspaceState.shiftNotes?.[day.key+'-'+shift.name] ? ", has handoff note" : ""}">
               <span class="month-shift-info">
@@ -4827,3 +4840,62 @@ setAppView("schedule");
 
 
 resetScheduleHistory();
+
+
+/* A dedicated printable schedule, independent from the interactive care-map layout. */
+function buildPrintableCareMap() {
+  document.getElementById("curavela-print-sheet")?.remove();
+  const sheet = document.createElement("section");
+  sheet.id = "curavela-print-sheet";
+  sheet.setAttribute("aria-label", "Printable caregiver schedule");
+  const days = getDaysInSelectedWeek();
+  const activeShifts = getActiveShifts();
+  const dateRange = days.length ? days[0].label + " – " + days[days.length - 1].label : "";
+  const title = document.createElement("header");
+  title.className = "print-schedule-heading";
+  const name = document.createElement("h1");
+  name.textContent = "Curavela · Caregiver schedule";
+  const range = document.createElement("p");
+  range.textContent = dateRange;
+  title.append(name, range);
+  sheet.append(title);
+  const grid = document.createElement("div");
+  grid.className = "print-schedule-days";
+  days.forEach(day => {
+    const card = document.createElement("section");
+    card.className = "print-schedule-day";
+    const heading = document.createElement("h2");
+    heading.textContent = day.label;
+    card.append(heading);
+    const shifts = getShiftsForDay(day.key, activeShifts);
+    shifts.forEach(shift => {
+      const times = getShiftForDay(day.key, shift);
+      const assignedId = scheduleAssignments[day.key + "-" + shift.name] || "Open";
+      const isOpen = assignedId === "Open";
+      const row = document.createElement("div");
+      row.className = "print-schedule-shift" + (isOpen ? " print-schedule-open" : "");
+      const details = document.createElement("div");
+      const label = document.createElement("strong");
+      label.textContent = shift.name;
+      const caregiver = document.createElement("span");
+      caregiver.textContent = isOpen ? "OPEN — needs coverage" : getCaregiverName(assignedId);
+      details.append(label, caregiver);
+      const hours = document.createElement("span");
+      hours.className = "print-schedule-time";
+      hours.textContent = formatTime(times.start) + " – " + formatTime(times.end) +
+        (times.end <= times.start ? " (+1 day)" : "");
+      row.append(details, hours);
+      card.append(row);
+    });
+    if (!shifts.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "No shifts scheduled";
+      card.append(empty);
+    }
+    grid.append(card);
+  });
+  sheet.append(grid);
+  document.body.append(sheet);
+}
+window.addEventListener("beforeprint", buildPrintableCareMap);
+window.addEventListener("afterprint", () => document.getElementById("curavela-print-sheet")?.remove());
