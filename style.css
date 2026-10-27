@@ -4213,3 +4213,27 @@ select {
   min-height: 36px;
   font-size: 9px;
 }
+
+/* Coverage status: consistent across weekly, monthly, and agenda views. */
+.care-map-grid .coverage-covered,
+.monthly-schedule-grid .coverage-covered,
+.agenda-schedule .coverage-covered {
+  background: linear-gradient(150deg, #f1f8ff, #e4f1ff);
+  border: 1px solid #a3cbfa;
+  box-shadow: 0 0 0 1px rgba(74, 151, 246, .13), 0 0 13px rgba(66, 145, 245, .18);
+  color: #153e73;
+}
+.care-map-grid .coverage-open,
+.monthly-schedule-grid .coverage-open,
+.agenda-schedule .coverage-open {
+  background: linear-gradient(150deg, #fff6f5, #ffe8e7);
+  border: 1px solid #f0a6a5;
+  box-shadow: 0 0 0 1px rgba(225, 78, 82, .13), 0 0 13px rgba(225, 78, 82, .19);
+  color: #803033;
+}
+/* Conflicts continue to take precedence over the covered state. */
+.care-map-grid .has-time-off-conflict,
+.monthly-schedule-grid .has-time-off-conflict {
+  border-color: #d76b39;
+  box-shadow: 0 0 0 2px rgba(215, 107, 57, .25);
+}
