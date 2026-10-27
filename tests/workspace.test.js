@@ -46,3 +46,35 @@ test('brief shows a prior-week overnight shift separately without double-countin
  data.shiftTimeOverrides['2026-10-10__Night']={start:'19:00',end:'00:00'};
  assert.equal(W.caregiverBriefs(data,'2026-10-11','2026-10-17').people[0].carryoverShifts.length,0);
 });
+
+test('large-team monthly occurrences include split parts and dated shifts exactly once without repeated scans',()=>{
+  const people=Array.from({length:100},(_,i)=>({id:'person-'+i,name:'Caregiver '+i}));
+  const base={
+    caregivers:people,
+    shiftStyle:'three',
+    scheduleAssignments:{'2026-10-01-Morning':'person-0','2026-10-01-Morning (part 2)':'person-1'},
+    shiftTimeOverrides:{'2026-10-01__Morning (part 2)':{start:'10:00',end:'12:00'}},
+    workspace:{extraShifts:[
+      {dayKey:'2026-10-01',name:'Morning (part 2)',start:'10:00',end:'12:00'},
+      ...Array.from({length:1200},(_,i)=>({
+        dayKey:R.addDays('2026-10-01',i%31),
+        name:'Extra '+i,start:'10:00',end:'11:00'
+      })),
+      {dayKey:'2026-11-04',name:'Outside month',start:'12:00',end:'13:00'}
+    ]}
+  };
+  const data=W.validateBackup(base);
+  const originalFilter=data.workspace.extraShifts.filter;
+  data.workspace.extraShifts.filter=()=>{throw Error('repeated full-array scan');};
+  let rows;
+  try{rows=W.occurrences(data,'2026-10-01','2026-10-31');}
+  finally{data.workspace.extraShifts.filter=originalFilter;}
+  const dayOne=rows.filter(x=>x.dayKey==='2026-10-01');
+  assert.equal(rows.length,31*3+1201);
+  assert.deepEqual(dayOne.slice(0,3).map(x=>x.shiftName),['Morning','Afternoon','Night']);
+  assert.equal(dayOne[3].shiftName,'Morning (part 2)');
+  assert.equal(dayOne[3].caregiverId,'person-1');
+  assert.equal(dayOne[3].hours,2);
+  assert.equal(rows.filter(x=>x.shiftName==='Outside month').length,0);
+  assert.equal(rows.filter(x=>x.key==='2026-10-01-Morning (part 2)').length,1);
+});
