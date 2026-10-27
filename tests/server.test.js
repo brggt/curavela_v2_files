@@ -164,3 +164,41 @@ test('new public assets have correct media types and private operational files r
  for(const [file,type] of [['calendar.js','text/javascript'],['manifest.webmanifest','application/manifest+json'],['icon-192.png','image/png'],['sw.js','text/javascript']]){const res=await fetch(f.url+'/'+file);assert.equal(res.status,200);assert.equal(res.headers.get('content-type'),type);}
  for(const file of ['server/backup.js','Dockerfile','.env','.dockerignore'])assert.equal((await fetch(f.url+'/'+file)).status,404);
 });
+
+test('authenticated team chat is shared only with signed-in teammates',async t=>{
+  const f=await fixture(t);
+  assert.equal((await f.request('messages?channel=caregiver')).status,401);
+  assert.equal((await f.request('messages','POST',{channel:'caregiver',text:'Ready for Friday'},f.alex)).status,201);
+  const teammate=await f.request('messages?channel=caregiver','GET',undefined,f.sam);
+  assert.equal(teammate.status,200);
+  assert.equal(teammate.data.messages.length,1);
+  assert.equal(teammate.data.messages[0].body,'Ready for Friday');
+  assert.equal((await f.request('messages','POST',{channel:'health',text:'medical details'},f.alex)).status,400);
+  assert.equal((await f.request('messages?channel=family','GET',undefined,f.manager)).status,400);
+  assert.equal((await f.request('messages','POST',{channel:'caregiver',text:'x'.repeat(2001)},f.alex)).status,400);
+  assert.equal((await f.request('messages','POST',{channel:'caregiver',text:'Hello'},f.alex,{Origin:'https://attacker.example'})).status,403);
+});
+test('schedule conversation restricts participants and manager approval updates draft only',async t=>{
+  const f=await fixture(t);
+  const published=await f.request('publish','POST',{revision:1,first:'2027-01-04',last:'2027-01-05'},f.manager);
+  assert.equal(published.status,200);
+  const release=await f.request('requests','POST',{kind:'release',key:'2027-01-04-Morning'},f.alex);
+  assert.equal(release.status,201);
+  const id=release.data.id,endpoint='messages?channel=schedule&requestId='+id;
+  assert.equal((await f.request(endpoint,'GET',undefined,f.sam)).status,403);
+  assert.equal((await f.request('messages','POST',{channel:'schedule',requestId:id,text:'Not on this shift'},f.sam)).status,403);
+  assert.equal((await f.request('messages','POST',{channel:'schedule',requestId:id,text:'Need someone for Monday morning'},f.alex)).status,201);
+  const managerMessages=await f.request(endpoint,'GET',undefined,f.manager);
+  assert.equal(managerMessages.status,200);
+  assert.equal(managerMessages.data.messages[0].body,'Need someone for Monday morning');
+  assert.equal((await f.request('messages','POST',{channel:'schedule',requestId:id,text:'Approved after review'},f.manager)).status,201);
+  const approval=await f.request('requests/decide','POST',{id,decision:'approved',revision:1},f.manager);
+  assert.equal(approval.status,200,JSON.stringify(approval.data));
+  const draft=await f.request('draft','GET',undefined,f.manager);
+  assert.equal(draft.data.snapshot.scheduleAssignments['2027-01-04-Morning'],'Open');
+  const caregiverView=await f.request('my-shifts','GET',undefined,f.alex);
+  assert.ok(caregiverView.data.shifts.some(shift=>shift.key==='2027-01-04-Morning'),'published shift stays assigned until publish');
+  assert.equal((await f.request('messages','POST',{channel:'schedule',requestId:id,text:'Reopen without new request'},f.alex)).status,409);
+  assert.equal((await f.request(endpoint,'GET',undefined,f.alex)).status,200);
+  assert.equal((await f.request('messages?channel=schedule&requestId=unrelated','GET',undefined,f.manager)).status,404);
+});
