@@ -255,6 +255,18 @@
     };
   }
 
+  // Keep the parent shift and its numbered continuations together in every view.
+  function orderSplitShifts(shifts) {
+    const base = name => String(name).replace(/\s*\(part\s*\d+\)\s*$/i, '').trim().toLowerCase();
+    const part = name => Number(String(name).match(/\(part\s*(\d+)\)\s*$/i)?.[1] || 1);
+    const positions = new Map();
+    shifts.forEach((shift, index) => {
+      const name = base(shift.name);
+      if (!positions.has(name)) positions.set(name, index);
+    });
+    return [...shifts].sort((a,b) => positions.get(base(a.name))-positions.get(base(b.name)) || part(a.name)-part(b.name));
+  }
+
   return { dateNumber, timeNumber, addDays, interval, weekStart, buildEntries, workedDays, weeklyHours,
-    timeOffInterval, getTimeOffConflicts, getWarnings, evaluate };
+    timeOffInterval, getTimeOffConflicts, getWarnings, evaluate, orderSplitShifts };
 });
