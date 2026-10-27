@@ -4840,3 +4840,62 @@ setAppView("schedule");
 
 
 resetScheduleHistory();
+
+
+/* A dedicated printable schedule, independent from the interactive care-map layout. */
+function buildPrintableCareMap() {
+  document.getElementById("curavela-print-sheet")?.remove();
+  const sheet = document.createElement("section");
+  sheet.id = "curavela-print-sheet";
+  sheet.setAttribute("aria-label", "Printable caregiver schedule");
+  const days = getDaysInSelectedWeek();
+  const activeShifts = getActiveShifts();
+  const dateRange = days.length ? days[0].label + " – " + days[days.length - 1].label : "";
+  const title = document.createElement("header");
+  title.className = "print-schedule-heading";
+  const name = document.createElement("h1");
+  name.textContent = "Curavela · Caregiver schedule";
+  const range = document.createElement("p");
+  range.textContent = dateRange;
+  title.append(name, range);
+  sheet.append(title);
+  const grid = document.createElement("div");
+  grid.className = "print-schedule-days";
+  days.forEach(day => {
+    const card = document.createElement("section");
+    card.className = "print-schedule-day";
+    const heading = document.createElement("h2");
+    heading.textContent = day.label;
+    card.append(heading);
+    const shifts = getShiftsForDay(day.key, activeShifts);
+    shifts.forEach(shift => {
+      const times = getShiftForDay(day.key, shift);
+      const assignedId = scheduleAssignments[day.key + "-" + shift.name] || "Open";
+      const isOpen = assignedId === "Open";
+      const row = document.createElement("div");
+      row.className = "print-schedule-shift" + (isOpen ? " print-schedule-open" : "");
+      const details = document.createElement("div");
+      const label = document.createElement("strong");
+      label.textContent = shift.name;
+      const caregiver = document.createElement("span");
+      caregiver.textContent = isOpen ? "OPEN — needs coverage" : getCaregiverName(assignedId);
+      details.append(label, caregiver);
+      const hours = document.createElement("span");
+      hours.className = "print-schedule-time";
+      hours.textContent = formatTime(times.start) + " – " + formatTime(times.end) +
+        (times.end <= times.start ? " (+1 day)" : "");
+      row.append(details, hours);
+      card.append(row);
+    });
+    if (!shifts.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "No shifts scheduled";
+      card.append(empty);
+    }
+    grid.append(card);
+  });
+  sheet.append(grid);
+  document.body.append(sheet);
+}
+window.addEventListener("beforeprint", buildPrintableCareMap);
+window.addEventListener("afterprint", () => document.getElementById("curavela-print-sheet")?.remove());
