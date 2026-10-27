@@ -4237,3 +4237,27 @@ select {
   border-color: #d76b39;
   box-shadow: 0 0 0 2px rgba(215, 107, 57, .25);
 }
+
+/* Match status tint and glow to the rounded cards, not their outer wrappers. */
+.care-map-grid .open-day-summary.coverage-open {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: inherit;
+}
+.care-map-grid .open-day-summary.coverage-open > .open-day-toggle {
+  border-radius: 12px;
+  border: 1px solid #f0a6a5;
+  background: linear-gradient(150deg, #fff6f5, #ffe8e7);
+  box-shadow: 0 0 0 1px rgba(225, 78, 82, .13), 0 0 13px rgba(225, 78, 82, .19);
+  color: #803033;
+}
+.care-map-grid .open-mini-shift.coverage-open,
+.care-map-grid .shift-pill.coverage-covered,
+.care-map-grid .open-day-covered.coverage-covered,
+.monthly-schedule-grid .month-shift-row.coverage-open,
+.monthly-schedule-grid .month-shift-row.coverage-covered,
+.agenda-schedule .agenda-card.coverage-open,
+.agenda-schedule .agenda-card.coverage-covered {
+  border-radius: 12px;
+}
