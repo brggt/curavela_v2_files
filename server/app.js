@@ -242,6 +242,11 @@ function createApplication(options={}) {
     res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
     try{
       const url=new URL(req.url,origin);
+      if(url.pathname==='/healthz' && ['GET','HEAD'].includes(req.method)){
+        db.prepare('SELECT 1 AS ok').get();
+        res.writeHead(200,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(req.method==='HEAD'?undefined:'ok');
+      }
       if(url.pathname.startsWith('/api/'))return await api(req,res,url);
       const file=url.pathname==='/'?'index.html':url.pathname.slice(1);
       if(!assets.has(file)||!['GET','HEAD'].includes(req.method))failure(404,'Not found.');
