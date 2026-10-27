@@ -3,6 +3,19 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {createApplication}=require('./app.js');
 const port=Number(process.env.PORT||3000),origin=process.env.PUBLIC_URL||'http://localhost:'+port;
+// File-backed SQLite requires stable disk across restarts and requests.
+if(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY) {
+  throw new Error('Curavela SQLite team service requires a persistent Node host and durable disk, not serverless functions.');
+}
+if(process.env.NODE_ENV==='production'){
+  if(!process.env.CURAVELA_DATA_DIR || !path.isAbsolute(process.env.CURAVELA_DATA_DIR)){
+    throw new Error('Production requires CURAVELA_DATA_DIR set to an absolute path on a persistent volume.');
+  }
+  const resolved=path.resolve(process.env.CURAVELA_DATA_DIR);
+  if(resolved==='/tmp' || resolved.startsWith('/tmp/') || resolved==='/var/tmp' || resolved.startsWith('/var/tmp/')){
+    throw new Error('Production SQLite data must not be stored in temporary storage.');
+  }
+}
 const url=new URL(origin);
 if(!['localhost','127.0.0.1','[::1]'].includes(url.hostname)&&url.protocol!=='https:')throw new Error('PUBLIC_URL must use HTTPS for a hosted team server.');
 const timeZone=process.env.CARE_TIME_ZONE||'UTC';new Intl.DateTimeFormat('en',{timeZone}).format();process.env.TZ=timeZone;
