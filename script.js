@@ -944,6 +944,10 @@ function getDaysInSelectedMonth() {
   return days;
 }
 
+function getPrintableScheduleDays() {
+  return scheduleViewSelect.value === "monthly" ? getDaysInSelectedMonth() : getDaysInSelectedWeek();
+}
+
 function changeSelectedWeekByDays(dayAmount) {
   const currentValue = weekStartDateInput.value || getTodayDateValue();
 
@@ -4831,10 +4835,6 @@ resetScheduleHistory();
 
 
 /* A dedicated printable schedule, independent from the interactive care-map layout. */
-function getPrintableScheduleDays() {
-  return scheduleViewSelect.value === "monthly" ? getDaysInSelectedMonth() : getDaysInSelectedWeek();
-}
-
 function buildPrintableCareMap() {
   // Avoid reconstructing the whole print DOM if a browser fires beforeprint twice.
   if (document.getElementById("curavela-print-sheet")) return;
