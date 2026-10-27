@@ -206,3 +206,13 @@ test('team database persists workspace revisions and account records after reope
     } finally { second.close(); }
   } finally { fs.rmSync(dir,{recursive:true,force:true}); }
 });
+
+test('health check reports database readiness without exposing team data',async t=>{
+ const f=await fixture(t);
+ for(const method of ['GET','HEAD']){
+  const response=await fetch(f.url+'/healthz',{method});
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('cache-control'),'no-store');
+  if(method==='GET')assert.equal(await response.text(),'ok');
+ }
+});
