@@ -1135,20 +1135,7 @@ function getCaregiverHoursForDays(scheduleDays, activeShifts) {
   });
 
   scheduleDays.forEach(function (day) {
-    // Group split-shift continuations immediately after their parent shift.
-    const monthlyShifts = getShiftsForDay(day.key, activeShifts);
-    const baseName = name => name.replace(/\s*\(part\s*\d+\)\s*$/i, "").trim().toLowerCase();
-    const partNumber = name => Number(name.match(/\(part\s*(\d+)\)\s*$/i)?.[1] || 1);
-    const groupOrder = new Map();
-    monthlyShifts.forEach((shift, index) => {
-      const base = baseName(shift.name);
-      if (!groupOrder.has(base)) groupOrder.set(base, index);
-    });
-    monthlyShifts.sort((a, b) =>
-      groupOrder.get(baseName(a.name)) - groupOrder.get(baseName(b.name)) ||
-      partNumber(a.name) - partNumber(b.name)
-    );
-    monthlyShifts.forEach(function (shift) {
+    getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
       const assignmentKey = `${day.key}-${shift.name}`;
 
       const assignedCaregiverId = scheduleAssignments[assignmentKey] || "Open";
@@ -2319,7 +2306,20 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
 
     let shiftRows = "";
 
-    getShiftsForDay(day.key, activeShifts).forEach(function (shift) {
+    // Render split continuations directly after their named parent shift.
+    const monthShifts = [...getShiftsForDay(day.key, activeShifts)];
+    const splitBase = name => name.replace(/\s*\(part\s*\d+\)\s*$/i, "").trim().toLowerCase();
+    const splitPart = name => Number(name.match(/\(part\s*(\d+)\)\s*$/i)?.[1] || 1);
+    const shiftGroupPositions = new Map();
+    monthShifts.forEach((shift, position) => {
+      const base = splitBase(shift.name);
+      if (!shiftGroupPositions.has(base)) shiftGroupPositions.set(base, position);
+    });
+    monthShifts.sort((a, b) =>
+      shiftGroupPositions.get(splitBase(a.name)) - shiftGroupPositions.get(splitBase(b.name)) ||
+      splitPart(a.name) - splitPart(b.name)
+    );
+    monthShifts.forEach(function (shift) {
       const assignmentKey = `${day.key}-${shift.name}`;
 
       const assignedCaregiver = scheduleAssignments[assignmentKey] || "Open";
