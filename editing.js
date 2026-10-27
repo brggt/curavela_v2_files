@@ -213,6 +213,31 @@ function openOccurrenceEditor(dayKey, shiftName) {
   openManagedDialog(occurrenceModal);
 }
 
+// Saving a shift rebuilds the care map. Keep the scheduler at the same scroll position.
+function renderScheduleWithoutLosingPosition() {
+  const pageY = window.scrollY;
+  const content = typeof mainContent !== "undefined" ? mainContent : null;
+  const contentY = content ? content.scrollTop : 0;
+  const contentX = content ? content.scrollLeft : 0;
+  const mapScroller = document.querySelector(".care-map-scroll, .schedule-scroll");
+  const mapX = mapScroller ? mapScroller.scrollLeft : 0;
+
+  renderSchedule();
+
+  function restorePosition() {
+    if (content) {
+      content.scrollTop = contentY;
+      content.scrollLeft = contentX;
+    }
+    window.scrollTo({ top: pageY, behavior: "instant" });
+    const nextMap = document.querySelector(".care-map-scroll, .schedule-scroll");
+    if (nextMap) nextMap.scrollLeft = mapX;
+  }
+  restorePosition();
+  // Dialog focus restoration can scroll after the save handler has returned.
+  requestAnimationFrame(restorePosition);
+}
+
 function commitOccurrenceChange(proposal, reportError) {
   const fail = reportError || function (message) { showScheduleNotice(message, true); };
   if (proposal.scope === "future" && typeof commitFutureSeries === "function") return commitFutureSeries(proposal, fail);
@@ -261,7 +286,7 @@ function commitOccurrenceChange(proposal, reportError) {
   scheduleAssignments[targetKey] = proposal.caregiverId;
   shiftTimeOverrides[getShiftOverrideKey(proposal.dayKey, proposal.shiftName)] = { start: proposal.start, end: proposal.end };
   saveData(proposal.sourceKey && proposal.sourceKey !== targetKey ? "move shift" : "edit shift");
-  renderSchedule();
+  renderScheduleWithoutLosingPosition();
   return true;
 }
 
