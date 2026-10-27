@@ -80,3 +80,19 @@ To restore, stop an **isolated test instance**, preserve its existing data direc
 Calendar links contain a random bearer token; only its hash is stored. Link rotation, revocation, and re-accepting an account invitation invalidate the previous link. Configure the HTTPS proxy to **redact calendar URLs and invitation tokens** from access logs. Calendar clients fetch without a session using that token; feeds contain only the owner's published shifts and cancellations, without care notes. The app and service worker never cache feeds. A client can retain old downloads after revocation.
 
 A swap is pending until its target caregiver accepts from their own signed-in account. A manager cannot substitute a confirmation flag. The server rechecks both publications, draft assignments, availability and membership at approval; publication remains a separate action. Declining closes the request.
+
+## Private two-account beta acceptance plan (not a production launch)
+
+Use **fictitious caregiver names, no patient identifiers, and no real care notes** for this exercise. The existing Vercel static site remains the production reference and must not be switched to this server during the test.
+
+1. Provision a **single-instance**, non-serverless Node.js 24+ test host with a dedicated encrypted persistent volume. Confirm that the provider preserves this volume across deploys and restarts; a path alone is not evidence of persistence.
+2. Provide the host with `NODE_ENV=production`, `PUBLIC_URL` (the exact HTTPS origin), `CURAVELA_DATA_DIR` (an absolute directory on that volume), `CARE_TIME_ZONE`, and private `BOOTSTRAP_EMAIL`. Ensure the HTTPS proxy terminates TLS and that browser requests and the API share the same origin.
+3. Run the existing test suite and syntax check. Start the server and accept the bootstrap invitation privately in a fresh browser profile. Remove `BOOTSTRAP_EMAIL` after initial setup, secure the invitation logs, and verify the session cookie is Secure, HttpOnly, SameSite=Strict.
+4. As manager, create two fictitious caregiver profiles, save a draft, then issue a caregiver invitation. From another browser/profile, accept that invitation and log in.
+5. Publish a known test week. Verify the caregiver can see **only their own** published shifts, and cannot read or edit the manager draft or another caregiver's records. Verify an unauthenticated browser cannot fetch private endpoints.
+6. Change the schedule from the manager account, publish again, and verify the caregiver sees the new assignment after refreshing. Also confirm manager revision conflicts are rejected instead of silently overwriting changes.
+7. Restart the container and perform a new deployment with the volume retained. Recheck account login, saved draft revision, published shifts, requests, and audit history.
+8. Create a consistent SQLite backup, copy it to an encrypted off-host location, and perform a full restore into **a separate test instance**. Verify the restored data, and assess restored sessions/tokens before allowing access.
+9. Document outcomes, remaining security findings, account offboarding, support contact, and recovery ownership. Keep the beta private and unapproved until all gates pass.
+
+**Stop conditions:** any public test data leak, broken role isolation, data loss across restart, failed restore, HTTP access to credentials, or unexpected production deployment. Do not enable real caregiver use or collect protected health information from this checklist alone.
