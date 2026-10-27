@@ -1137,8 +1137,8 @@ function getCaregiverHoursForDays(scheduleDays, activeShifts) {
   scheduleDays.forEach(function (day) {
     // Group split-shift continuations immediately after their parent shift.
     const monthlyShifts = getShiftsForDay(day.key, activeShifts);
-    const baseName = name => name.replace(/\\s*\\(part\\s*\\d+\\)\\s*$/i, "").trim().toLowerCase();
-    const partNumber = name => Number(name.match(/\\(part\\s*(\\d+)\\)\\s*$/i)?.[1] || 1);
+    const baseName = name => name.replace(/\s*\(part\s*\d+\)\s*$/i, "").trim().toLowerCase();
+    const partNumber = name => Number(name.match(/\(part\s*(\d+)\)\s*$/i)?.[1] || 1);
     const groupOrder = new Map();
     monthlyShifts.forEach((shift, index) => {
       const base = baseName(shift.name);
