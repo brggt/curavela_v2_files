@@ -31,7 +31,19 @@ function createApplication(options={}) {
   db.exec(`CREATE TABLE IF NOT EXISTS swap_responses(request_id TEXT PRIMARY KEY REFERENCES requests(id),user_id TEXT NOT NULL REFERENCES users(id),decision TEXT NOT NULL CHECK(decision IN ('accepted','declined')),at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS calendar_tokens(user_id TEXT PRIMARY KEY REFERENCES users(id),hash TEXT UNIQUE NOT NULL,at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS calendar_removals(user_id TEXT NOT NULL REFERENCES users(id),shift_key TEXT NOT NULL,data TEXT NOT NULL,PRIMARY KEY(user_id,shift_key));
-    CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);`);
+    CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS team_messages(
+    id TEXT PRIMARY KEY,
+    channel TEXT NOT NULL CHECK(channel IN ('caregiver','schedule')),
+    request_id TEXT REFERENCES requests(id),
+    sender_id TEXT NOT NULL REFERENCES users(id),
+    body TEXT NOT NULL,
+    at TEXT NOT NULL,
+    CHECK((channel='caregiver' AND request_id IS NULL) OR (channel='schedule' AND request_id IS NOT NULL))
+  );
+  CREATE INDEX IF NOT EXISTS team_messages_channel_time ON team_messages(channel,at);
+  CREATE INDEX IF NOT EXISTS team_messages_request_time ON team_messages(request_id,at);`);
   const origin=options.origin||'http://localhost:3000', secure=origin.startsWith('https:'),timeZone=options.timeZone||'UTC';
   const limits=new Map();
   function tx(fn){db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(e){db.exec('ROLLBACK');throw e;}}
@@ -161,6 +173,41 @@ function createApplication(options={}) {
     }
     if(url.pathname==='/api/acknowledge'&&method==='POST'){const row=document().published.find(s=>s.key===body.key&&s.caregiverId===user.caregiver_id);if(!row)failure(404,'That published shift is not assigned to you.');db.prepare('INSERT INTO acknowledgments(user_id,shift_key,fingerprint,at) VALUES(?,?,?,?) ON CONFLICT(user_id,shift_key) DO UPDATE SET fingerprint=excluded.fingerprint,at=excluded.at').run(user.id,row.key,digest(JSON.stringify(row)),now());return send(res,200,{ok:true});}
     if(url.pathname==='/api/acknowledgments'&&method==='GET'){manager(user);const doc=document();return send(res,200,{shifts:doc.published.filter(s=>s.caregiverId!=='Open').map(s=>{const ack=db.prepare('SELECT a.* FROM acknowledgments a JOIN users u ON u.id=a.user_id WHERE u.caregiver_id=? AND a.shift_key=?').get(s.caregiverId,s.key);return {...s,acknowledged:Boolean(ack&&ack.fingerprint===digest(JSON.stringify(s)))};})});}
+    // Only authenticated teammates may read/write messages. Schedule threads
+    // belong to a specific coverage request; arbitrary shift IDs grant no access.
+    if(url.pathname==='/api/messages' && ['GET','POST'].includes(method)){
+      const channel=method==='GET'?url.searchParams.get('channel'):body.channel;
+      if(!['caregiver','schedule'].includes(channel))failure(400,'Choose Caregiver Chat or a Schedule request.');
+      const requestId=method==='GET'?url.searchParams.get('requestId'):body.requestId;
+      let related=null;
+      if(channel==='schedule'){
+        if(typeof requestId!=='string'||requestId.length>100)failure(400,'Choose a valid schedule request.');
+        related=db.prepare('SELECT * FROM requests WHERE id=?').get(requestId);
+        if(!related || !['claim','release','swap'].includes(related.kind))failure(404,'Schedule conversation unavailable.');
+        const details=JSON.parse(related.payload);
+        if(user.role!=='manager' && related.user_id!==user.id && details.targetId!==user.id)failure(403,'This conversation is private to its participants.');
+      }else if(requestId)failure(400,'Caregiver Chat does not accept request IDs.');
+      if(method==='GET'){
+        const rows=channel==='caregiver'
+          ?db.prepare("SELECT m.id,m.channel,m.request_id AS requestId,m.body,m.at,m.sender_id AS senderId,u.name AS senderName FROM team_messages m JOIN users u ON u.id=m.sender_id WHERE m.channel='caregiver' ORDER BY m.at DESC,m.rowid DESC LIMIT 100").all()
+          :db.prepare("SELECT m.id,m.channel,m.request_id AS requestId,m.body,m.at,m.sender_id AS senderId,u.name AS senderName FROM team_messages m JOIN users u ON u.id=m.sender_id WHERE m.channel='schedule' AND m.request_id=? ORDER BY m.at DESC,m.rowid DESC LIMIT 100").all(requestId);
+        return send(res,200,{messages:rows.reverse(),status:related?.status||null});
+      }
+      if(typeof body.text!=='string'||!body.text.trim()||body.text.trim().length>2000)failure(400,'Write a message between 1 and 2000 characters.');
+      if(related?.status!=='pending' && channel==='schedule')failure(409,'This request is closed. Its conversation is read-only.');
+      const messageId=crypto.randomUUID();
+      db.prepare('INSERT INTO team_messages(id,channel,request_id,sender_id,body,at) VALUES(?,?,?,?,?,?)')
+        .run(messageId,channel,channel==='schedule'?requestId:null,user.id,body.text.trim(),now());
+      audit(user,'Send team message',{channel,requestId:channel==='schedule'?requestId:null,messageId});
+      if(related){
+        const payload=JSON.parse(related.payload);
+        const recipients=new Set([related.user_id,payload.targetId]);
+        if(user.role==='manager'){}else db.prepare("SELECT id FROM users WHERE role='manager'").all().forEach(row=>recipients.add(row.id));
+        recipients.delete(user.id);
+        for(const id of recipients)if(id)notify(id,'message:'+messageId+':'+id,'New message in a schedule request. Open Team Communications.');
+      }
+      return send(res,201,{id:messageId});
+    }
     if(url.pathname==='/api/requests'&&method==='GET'){
       const list=db.prepare('SELECT requests.*,users.name FROM requests JOIN users ON users.id=requests.user_id ORDER BY at DESC').all().map(r=>({...r,payload:JSON.parse(r.payload)})).filter(r=>user.role==='manager'||r.user_id===user.id||r.payload.targetId===user.id);
       return send(res,200,{requests:list.map(r=>({...r,consent:db.prepare('SELECT decision,at FROM swap_responses WHERE request_id=?').get(r.id)||null,incoming:r.payload.targetId===user.id}))});
