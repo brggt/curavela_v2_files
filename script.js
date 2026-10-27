@@ -3590,7 +3590,7 @@ function clearSelectedMonth() {
 /* navigation */
 
 function setAppView(viewName) {
-  document.querySelector(".schedule-history")?.classList.toggle("app-view-hidden", ["team", "help"].includes(viewName));
+  document.querySelector(".schedule-history")?.classList.toggle("app-view-hidden", ["team", "communications", "help"].includes(viewName));
   if (mainContent) {
     mainContent.classList.toggle("coverage-view", viewName === "open-shifts");
   }
