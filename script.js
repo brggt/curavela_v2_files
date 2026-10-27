@@ -2253,8 +2253,6 @@ function renderWeeklySchedule(scheduleDays, activeShifts) {
 
   scheduleSection.append(careMapGrid);
 
-  scheduleSection.append(careMapGrid);
-
   attachOpenShiftToggleListeners();
   attachCaregiverDragListeners();
 }
@@ -2798,6 +2796,7 @@ function attachCaregiverDragListeners() {
 /* main render */
 
 function renderSchedule() {
+  return withIndexedExtraShifts(function () {
   const activeShifts = getActiveShifts();
 
   const selectedView = scheduleViewSelect.value;
@@ -2848,6 +2847,7 @@ function renderSchedule() {
   renderCoverageAssistant();
   renderScheduleBrief();
   if (typeof renderWorkspaceExtras === "function") renderWorkspaceExtras();
+  });
 }
 
 function attachAssignmentListeners() {
@@ -4831,15 +4831,20 @@ resetScheduleHistory();
 
 
 /* A dedicated printable schedule, independent from the interactive care-map layout. */
+function getPrintableScheduleDays() {
+  return scheduleViewSelect.value === "monthly" ? getDaysInSelectedMonth() : getDaysInSelectedWeek();
+}
+
 function buildPrintableCareMap() {
   // Avoid reconstructing the whole print DOM if a browser fires beforeprint twice.
   if (document.getElementById("curavela-print-sheet")) return;
+  return withIndexedExtraShifts(function () {
   const sheet = document.createElement("section");
   sheet.id = "curavela-print-sheet";
   sheet.classList.toggle("print-monthly", scheduleViewSelect.value === "monthly");
   sheet.setAttribute("aria-label", "Printable caregiver schedule");
   const printingMonth = scheduleViewSelect.value === "monthly";
-  const days = printingMonth ? getDaysInSelectedMonth() : getDaysInSelectedWeek();
+  const days = getPrintableScheduleDays();
   const activeShifts = getActiveShifts();
   const dateRange = printingMonth
     ? (monthPicker.value || getTodayMonthValue())
@@ -4893,6 +4898,7 @@ function buildPrintableCareMap() {
   grid.append(dayFragment);
   sheet.append(grid);
   document.body.append(sheet);
+  });
 }
 window.addEventListener("beforeprint", buildPrintableCareMap);
 window.addEventListener("afterprint", () => document.getElementById("curavela-print-sheet")?.remove());
