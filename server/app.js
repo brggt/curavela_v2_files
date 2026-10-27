@@ -31,7 +31,7 @@ function createApplication(options={}) {
   db.exec(`CREATE TABLE IF NOT EXISTS swap_responses(request_id TEXT PRIMARY KEY REFERENCES requests(id),user_id TEXT NOT NULL REFERENCES users(id),decision TEXT NOT NULL CHECK(decision IN ('accepted','declined')),at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS calendar_tokens(user_id TEXT PRIMARY KEY REFERENCES users(id),hash TEXT UNIQUE NOT NULL,at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS calendar_removals(user_id TEXT NOT NULL REFERENCES users(id),shift_key TEXT NOT NULL,data TEXT NOT NULL,PRIMARY KEY(user_id,shift_key));
-    CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);`);
 
   db.exec(`CREATE TABLE IF NOT EXISTS team_messages(
     id TEXT PRIMARY KEY,
