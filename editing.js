@@ -11,8 +11,25 @@ function applyWorkspaceSnapshot(state) {
   shiftStyleSelect.value=state.shiftStyle;weekStartSelect.value=state.weekStart||"Sunday";
   scheduleViewSelect.value=state.scheduleView||"weekly";monthPicker.value=state.month||"";weekStartDateInput.value=state.weekStartDate||"";
 }
+// A schedule render can access many dates. Index dated shifts once per render
+// instead of scanning up to 20,000 additional shifts for every calendar cell.
+let renderExtraShiftsByDay = null;
+function withIndexedExtraShifts(callback) {
+  const previous = renderExtraShiftsByDay;
+  const byDay = new Map();
+  for (const shift of workspaceState.extraShifts) {
+    if (!byDay.has(shift.dayKey)) byDay.set(shift.dayKey, []);
+    byDay.get(shift.dayKey).push(shift);
+  }
+  renderExtraShiftsByDay = byDay;
+  try { return callback(); }
+  finally { renderExtraShiftsByDay = previous; }
+}
 function getShiftsForDay(dayKey, shifts) {
-  return (shifts || getActiveShifts()).concat(workspaceState.extraShifts.filter(function (shift) { return shift.dayKey===dayKey; }));
+  const extras = renderExtraShiftsByDay
+    ? (renderExtraShiftsByDay.get(dayKey) || [])
+    : workspaceState.extraShifts.filter(function (shift) { return shift.dayKey===dayKey; });
+  return (shifts || getActiveShifts()).concat(extras);
 }
 /* Dated shift editing and reversible schedule changes. */
 const scheduleUndoStack = [];
