@@ -164,3 +164,55 @@ test('new public assets have correct media types and private operational files r
  for(const [file,type] of [['calendar.js','text/javascript'],['manifest.webmanifest','application/manifest+json'],['icon-192.png','image/png'],['sw.js','text/javascript']]){const res=await fetch(f.url+'/'+file);assert.equal(res.status,200);assert.equal(res.headers.get('content-type'),type);}
  for(const file of ['server/backup.js','Dockerfile','.env','.dockerignore'])assert.equal((await fetch(f.url+'/'+file)).status,404);
 });
+
+test('host startup refuses ephemeral and unconfigured production SQLite storage', () => {
+  const {spawnSync}=require('node:child_process');
+  const path=require('node:path');
+  const entry=path.join(__dirname,'../server/start.js');
+  const run=extra=>spawnSync(process.execPath,[entry],{
+    env:{...process.env,VERCEL:'',AWS_LAMBDA_FUNCTION_NAME:'',NETLIFY:'',NODE_ENV:'test',...extra},
+    encoding:'utf8',timeout:5000
+  });
+  const serverless=run({VERCEL:'1'});
+  assert.notEqual(serverless.status,0);
+  assert.match(serverless.stderr,/persistent Node host and durable disk/);
+  const noVolume=run({NODE_ENV:'production',PUBLIC_URL:'https://curavela.example'});
+  assert.notEqual(noVolume.status,0);
+  assert.match(noVolume.stderr,/CURAVELA_DATA_DIR/);
+  const tempVolume=run({NODE_ENV:'production',PUBLIC_URL:'https://curavela.example',CURAVELA_DATA_DIR:'/tmp/curavela-test'});
+  assert.notEqual(tempVolume.status,0);
+  assert.match(tempVolume.stderr,/temporary storage/);
+});
+
+test('team database persists workspace revisions and account records after reopening', () => {
+  const fs=require('node:fs');
+  const os=require('node:os');
+  const path=require('node:path');
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'curavela-persist-'));
+  const dbPath=path.join(dir,'team.sqlite');
+  try {
+    const first=createApplication({dbPath,origin:'http://localhost',testing:true});
+    try {
+      first.db.prepare('UPDATE workspace SET draft=?,revision=? WHERE id=1').run(JSON.stringify(snapshot()),3);
+      first.db.prepare("INSERT INTO users(id,email,name,role,caregiver_id,salt,password) VALUES(?,?,?,?,?,?,?)")
+        .run('mgr','manager@sample.test','Manager','manager',null,'test-salt','test-hash');
+    } finally { first.close(); }
+    const second=createApplication({dbPath,origin:'http://localhost',testing:true});
+    try {
+      const row=second.db.prepare('SELECT draft,revision FROM workspace WHERE id=1').get();
+      assert.equal(row.revision,3);
+      assert.equal(JSON.parse(row.draft).scheduleAssignments['2027-01-04-Morning'],'alex');
+      assert.equal(second.db.prepare('SELECT role FROM users WHERE id=?').get('mgr').role,'manager');
+    } finally { second.close(); }
+  } finally { fs.rmSync(dir,{recursive:true,force:true}); }
+});
+
+test('health check reports database readiness without exposing team data',async t=>{
+ const f=await fixture(t);
+ for(const method of ['GET','HEAD']){
+  const response=await fetch(f.url+'/healthz',{method});
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('cache-control'),'no-store');
+  if(method==='GET')assert.equal(await response.text(),'ok');
+ }
+});
