@@ -2,7 +2,11 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const {createApplication}=require('./app.js');
-const port=Number(process.env.PORT||3000),origin=process.env.PUBLIC_URL||'http://localhost:'+port;
+const port=Number(process.env.PORT||3000);
+const origin=process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:'+port;
+if(process.env.NODE_ENV==='production' && !process.env.PUBLIC_URL && !process.env.RENDER_EXTERNAL_URL) {
+  throw new Error('Production needs PUBLIC_URL or RENDER_EXTERNAL_URL to establish its HTTPS origin.');
+}
 // File-backed SQLite requires stable disk across restarts and requests.
 if(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY) {
   throw new Error('Curavela SQLite team service requires a persistent Node host and durable disk, not serverless functions.');
