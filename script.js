@@ -2306,19 +2306,7 @@ function renderMonthlySchedule(scheduleDays, activeShifts) {
 
     let shiftRows = "";
 
-    // Render split continuations directly after their named parent shift.
-    const monthShifts = [...getShiftsForDay(day.key, activeShifts)];
-    const splitBase = name => name.replace(/\s*\(part\s*\d+\)\s*$/i, "").trim().toLowerCase();
-    const splitPart = name => Number(name.match(/\(part\s*(\d+)\)\s*$/i)?.[1] || 1);
-    const shiftGroupPositions = new Map();
-    monthShifts.forEach((shift, position) => {
-      const base = splitBase(shift.name);
-      if (!shiftGroupPositions.has(base)) shiftGroupPositions.set(base, position);
-    });
-    monthShifts.sort((a, b) =>
-      shiftGroupPositions.get(splitBase(a.name)) - shiftGroupPositions.get(splitBase(b.name)) ||
-      splitPart(a.name) - splitPart(b.name)
-    );
+    const monthShifts = CuravelaScheduling.orderSplitShifts(getShiftsForDay(day.key, activeShifts));
     monthShifts.forEach(function (shift) {
       const assignmentKey = `${day.key}-${shift.name}`;
 
@@ -4844,7 +4832,8 @@ resetScheduleHistory();
 
 /* A dedicated printable schedule, independent from the interactive care-map layout. */
 function buildPrintableCareMap() {
-  document.getElementById("curavela-print-sheet")?.remove();
+  // Avoid reconstructing the whole print DOM if a browser fires beforeprint twice.
+  if (document.getElementById("curavela-print-sheet")) return;
   const sheet = document.createElement("section");
   sheet.id = "curavela-print-sheet";
   sheet.setAttribute("aria-label", "Printable caregiver schedule");
@@ -4861,13 +4850,15 @@ function buildPrintableCareMap() {
   sheet.append(title);
   const grid = document.createElement("div");
   grid.className = "print-schedule-days";
+  const dayFragment = document.createDocumentFragment();
   days.forEach(day => {
     const card = document.createElement("section");
     card.className = "print-schedule-day";
     const heading = document.createElement("h2");
     heading.textContent = day.label;
     card.append(heading);
-    const shifts = getShiftsForDay(day.key, activeShifts);
+    const shifts = CuravelaScheduling.orderSplitShifts(getShiftsForDay(day.key, activeShifts));
+    const shiftFragment = document.createDocumentFragment();
     shifts.forEach(shift => {
       const times = getShiftForDay(day.key, shift);
       const assignedId = scheduleAssignments[day.key + "-" + shift.name] || "Open";
@@ -4885,15 +4876,17 @@ function buildPrintableCareMap() {
       hours.textContent = formatTime(times.start) + " – " + formatTime(times.end) +
         (times.end <= times.start ? " (+1 day)" : "");
       row.append(details, hours);
-      card.append(row);
+      shiftFragment.append(row);
     });
+    card.append(shiftFragment);
     if (!shifts.length) {
       const empty = document.createElement("p");
       empty.textContent = "No shifts scheduled";
       card.append(empty);
     }
-    grid.append(card);
+    dayFragment.append(card);
   });
+  grid.append(dayFragment);
   sheet.append(grid);
   document.body.append(sheet);
 }
