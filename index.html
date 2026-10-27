@@ -58,6 +58,7 @@
             Settings
           </a>
           <a class="side-nav-link" href="#" data-view="reports"><span aria-hidden="true">▤</span>Reports</a>
+          <a class="side-nav-link" href="#" data-view="communications"><span aria-hidden="true">✉</span>Communications</a>
           <a class="side-nav-link" href="#" data-view="team"><span aria-hidden="true">♧</span>Team</a>
           <a class="side-nav-link" href="#" data-view="help"><span aria-hidden="true">?</span>Help</a>
         </nav>
@@ -728,10 +729,12 @@
               <div id="automatic-caregiver-briefs" class="automatic-caregiver-briefs"></div>
             </section>
 
-            <section class="schedule-brief-focus">
+            <details class="schedule-brief-focus manager-notes">
+              <summary><strong>Manager Notes</strong><span>Private planning notes · expandable</span></summary>
+              <div class="manager-notes-content">
               <div class="schedule-brief-section-heading">
                 <div>
-                  <strong>Your weekly notes</strong>
+                  <strong>Weekly priorities</strong>
                   <span>Your priorities stay separate from the automatic summary.</span>
                 </div>
 
@@ -744,9 +747,12 @@
                 rows="3"
                 placeholder="Example: Keep night coverage consistent while Shelyn is unavailable Thursday."
               ></textarea>
-            </section>
+            </div>
+            </details>
 
-            <div class="schedule-brief-grid">
+            <details class="archived-brief-notes"><summary>Archived schedule updates and follow-ups</summary>
+              <p>These are older local notes, not messages sent to teammates. Existing entries are preserved.</p>
+              <div class="schedule-brief-grid">
               <section class="schedule-brief-section">
                 <div class="schedule-brief-section-heading">
                   <div>
@@ -821,6 +827,7 @@
                 ></ul>
               </section>
             </div>
+            </details>
 
             <div class="schedule-brief-actions">
               <button
