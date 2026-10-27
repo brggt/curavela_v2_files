@@ -183,3 +183,26 @@ test('host startup refuses ephemeral and unconfigured production SQLite storage'
   assert.notEqual(tempVolume.status,0);
   assert.match(tempVolume.stderr,/temporary storage/);
 });
+
+test('team database persists workspace revisions and account records after reopening', () => {
+  const fs=require('node:fs');
+  const os=require('node:os');
+  const path=require('node:path');
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'curavela-persist-'));
+  const dbPath=path.join(dir,'team.sqlite');
+  try {
+    const first=createApplication({dbPath,origin:'http://localhost',testing:true});
+    try {
+      first.db.prepare('UPDATE workspace SET draft=?,revision=? WHERE id=1').run(JSON.stringify(snapshot()),3);
+      first.db.prepare("INSERT INTO users(id,email,name,role,caregiver_id,salt,password) VALUES(?,?,?,?,?,?,?)")
+        .run('mgr','manager@sample.test','Manager','manager',null,'test-salt','test-hash');
+    } finally { first.close(); }
+    const second=createApplication({dbPath,origin:'http://localhost',testing:true});
+    try {
+      const row=second.db.prepare('SELECT draft,revision FROM workspace WHERE id=1').get();
+      assert.equal(row.revision,3);
+      assert.equal(JSON.parse(row.draft).scheduleAssignments['2027-01-04-Morning'],'alex');
+      assert.equal(second.db.prepare('SELECT role FROM users WHERE id=?').get('mgr').role,'manager');
+    } finally { second.close(); }
+  } finally { fs.rmSync(dir,{recursive:true,force:true}); }
+});
