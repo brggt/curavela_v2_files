@@ -169,3 +169,17 @@ test("calendar arithmetic stays stable over DST and year changes", function () {
   assert.equal(rules.addDays("2026-12-31", 1), "2027-01-01");
   assert.equal(rules.weekStart("2026-10-04", "Monday"), "2026-09-28");
 });
+
+test("split shift parts follow their parent in calendar and print ordering", () => {
+  const source=[
+    {name:"Morning",start:"06:30"},
+    {name:"Afternoon",start:"13:00"},
+    {name:"Night",start:"19:00"},
+    {name:"Morning (part 3)",start:"11:00"},
+    {name:"Morning (part 2)",start:"10:00"}
+  ];
+  const sorted=rules.orderSplitShifts(source);
+  assert.deepEqual(sorted.map(x=>x.name),["Morning","Morning (part 2)","Morning (part 3)","Afternoon","Night"]);
+  assert.deepEqual(source.map(x=>x.name),["Morning","Afternoon","Night","Morning (part 3)","Morning (part 2)"]);
+  assert.deepEqual(rules.orderSplitShifts([{name:"Night"},{name:"Morning (part 2)"},{name:"Morning"}]).map(x=>x.name),["Night","Morning","Morning (part 2)"]);
+});
