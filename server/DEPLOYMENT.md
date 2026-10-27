@@ -80,3 +80,16 @@ To restore, stop an **isolated test instance**, preserve its existing data direc
 Calendar links contain a random bearer token; only its hash is stored. Link rotation, revocation, and re-accepting an account invitation invalidate the previous link. Configure the HTTPS proxy to **redact calendar URLs and invitation tokens** from access logs. Calendar clients fetch without a session using that token; feeds contain only the owner's published shifts and cancellations, without care notes. The app and service worker never cache feeds. A client can retain old downloads after revocation.
 
 A swap is pending until its target caregiver accepts from their own signed-in account. A manager cannot substitute a confirmation flag. The server rechecks both publications, draft assignments, availability and membership at approval; publication remains a separate action. Declining closes the request.
+
+
+## Shift-linked team communications (draft, disabled on static hosting)
+
+The Team Communications navigation has four planned categories. Only **Caregiver Chat** and **Schedule** messages are implemented on the authenticated server. **Health Updates** and **Family** are disabled pending a separate privacy and consent review; never put clinical information or identifiable patient details into the existing scheduling chat. A static Vercel/GitHub Pages preview may render the navigation, but cannot send or retrieve real messages.
+
+- Caregiver Chat is visible to all authenticated manager/caregiver team members in this single-team server instance.
+- Schedule messages are attached to a specific pending coverage request (claim, release, or swap). Only managers, the submitting caregiver, and the named swap recipient may access the conversation. Closing the request makes it read-only.
+- Messages have a 2,000-character limit, are escaped as text in the browser, and are stored in the same SQLite database with sender and timestamp. No attachments, encrypted messaging at rest, search, or administrative deletion/retention tooling is included yet.
+- A manager may approve/decline an eligible shift request inside its Schedule conversation. Server validation of draft revisions, shift availability, swap consent, and permissions still applies. **Approval changes the manager draft only. A separate publish action is required to notify the caregiver of the updated schedule.**
+- The existing old Brief updates and follow-ups remain saved as *archived notes*, not real messages. Manager Notes are collapsible and the automatic schedule summary remains intact.
+- New messages linked to coverage requests notify relevant team accounts within the application. This is not a replacement for urgent care or emergency messaging.
+- Before real use: add member deactivation, channel-level audit and retention rules, health/family consent controls, PHI risk assessment, data export/deletion, abuse monitoring, and an independent security review. Do not advertise this as HIPAA-compliant without evaluating deployment and operational controls.
