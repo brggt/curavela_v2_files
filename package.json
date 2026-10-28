@@ -5,7 +5,7 @@
   "description": "Curavela caregiving scheduler",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check scheduling.js && node --check workspace.js && node --check editing.js && node --check timeoff.js && node --check script.js && node --check workspace-ui.js && node --check team.js && node --check planning-ui.js && node --check calendar.js && node --check pwa.js && node --check sw.js && node --check server/app.js && node --check server/start.js && node --check server/backup.js",
+    "check": "node --check scheduling.js && node --check workspace.js && node --check editing.js && node --check timeoff.js && node --check script.js && node --check workspace-ui.js && node --check team.js && node --check planning-ui.js && node --check calendar.js && node --check mobile-nav.js && node --check pwa.js && node --check sw.js && node --check server/app.js && node --check server/start.js && node --check server/backup.js",
     "start": "node server/start.js"
   },
   "engines": {
