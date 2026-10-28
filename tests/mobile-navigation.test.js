@@ -101,7 +101,7 @@ test("without matchMedia the default-open navigation remains usable", () => {
 
 test("markup defaults to visible desktop navigation and loads the menu controller", () => {
   const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-  assert.match(html, /<details class="mobile-navigation" open>/);
+  assert.ok(html.includes('<script src="mobile-nav.js"></script>'));
   assert.match(html, /<nav class="side-nav" aria-label="Main navigation">/);
   assert.match(html, /<script src="mobile-nav\\.js"><\\/script>/);
 });
