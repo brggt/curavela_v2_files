@@ -214,3 +214,23 @@ html.headline-collapsed body { min-height: calc(100vh + 4px); min-height: calc(1
 @media print {
   .connection-status, #open-patterns, #patterns-modal, #reports-workspace-panel > details { display: none !important; }
 }
+
+/* Mobile schedule-first navigation: desktop nav stays visible. */
+.mobile-navigation > summary { display: none; }
+@media (max-width: 700px) {
+  .app-shell .sidebar { padding: 10px 16px !important; }
+  .sidebar .brand-block { margin: 0 !important; gap: 10px; }
+  .sidebar .brand-block h1 { font-size: 25px !important; }
+  .sidebar .brand-block p { font-size: 11px !important; margin: 0; }
+  .mobile-navigation > summary { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 10px 14px; min-height: 44px; border: 1px solid #dce4f2; border-radius: 12px; font-weight: 700; list-style: none; }
+  .mobile-navigation > summary::-webkit-details-marker { display: none; }
+  .mobile-navigation:not([open]) .side-nav { display: none !important; }
+  .mobile-navigation[open] .side-nav { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); margin-top: 8px !important; }
+  .hero-intro { display: none !important; }
+  .hero { row-gap: 8px !important; }
+  .hero-actions { margin-top: 0 !important; }
+  .schedule-history { margin-block: 8px !important; gap: 8px; }
+  .schedule-history p { margin: 0; }
+  .stats-strip { gap: 8px; margin-block: 12px !important; }
+}
+@media print { .mobile-navigation > summary { display: none !important; } .mobile-navigation .side-nav { display: none !important; } }
