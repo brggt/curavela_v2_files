@@ -99,9 +99,11 @@ test("without matchMedia the default-open navigation remains usable", () => {
   assert.equal(menu.open, true);
 });
 
-test("markup defaults to visible desktop navigation and loads the menu controller", () => {
+test("markup keeps desktop navigation visible and caches the mobile controller", () => {
   const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  assert.ok(html.includes('<details class="mobile-navigation" open>'));
+  assert.ok(html.includes('<nav class="side-nav" aria-label="Main navigation">'));
   assert.ok(html.includes('<script src="mobile-nav.js"></script>'));
-  assert.match(html, /<nav class="side-nav" aria-label="Main navigation">/);
-  assert.match(html, /<script src="mobile-nav\\.js"><\\/script>/);
+  const serviceWorker = fs.readFileSync(path.join(root, "sw.js"), "utf8");
+  assert.ok(serviceWorker.includes("'mobile-nav.js'"), "mobile menu should work offline");
 });
