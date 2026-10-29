@@ -19,13 +19,28 @@
     phoneWidth.addListener(syncNavigation);
   }
 
+  const toggle = menu.querySelector("summary");
+  function closeMobileMenu(restoreFocus) {
+    if (!phoneWidth.matches || !menu.open) return;
+    menu.open = false;
+    if (restoreFocus && toggle) toggle.focus({ preventScroll: true });
+  }
+
   menu.querySelectorAll(".side-nav-link").forEach(function (link) {
     link.addEventListener("click", function () {
-      if (!phoneWidth.matches) return;
-      menu.open = false;
       // Focus must not remain on a link hidden inside a collapsed details.
-      const toggle = menu.querySelector("summary");
-      if (toggle) toggle.focus({ preventScroll: true });
+      closeMobileMenu(true);
     });
+  });
+
+  // When the menu overlays the schedule, tapping outside must dismiss it
+  // without stealing focus from the tapped control or scrolling the page.
+  document.addEventListener("pointerdown", function (event) {
+    if (phoneWidth.matches && menu.open && !menu.contains(event.target)) {
+      closeMobileMenu(false);
+    }
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closeMobileMenu(true);
   });
 })();
