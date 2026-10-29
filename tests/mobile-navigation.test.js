@@ -9,6 +9,7 @@ const script = fs.readFileSync(path.join(root, "mobile-nav.js"), "utf8");
 
 function fixture(isPhone, useLegacyMediaListener = false) {
   let focusCount = 0;
+  const documentHandlers = {};
   const summary = { focus(options) {
     assert.equal(options.preventScroll, true);
     focusCount++;
@@ -19,6 +20,7 @@ function fixture(isPhone, useLegacyMediaListener = false) {
   }));
   const menu = {
     open: true,
+    contains(target) { return target === this || target === summary || links.includes(target); },
     querySelectorAll(selector) {
       assert.equal(selector, ".side-nav-link");
       return links;
@@ -39,10 +41,13 @@ function fixture(isPhone, useLegacyMediaListener = false) {
     };
   }
   vm.runInNewContext(script, {
-    document: { querySelector(selector) {
-      assert.equal(selector, ".mobile-navigation");
-      return menu;
-    } },
+    document: {
+      querySelector(selector) {
+        assert.equal(selector, ".mobile-navigation");
+        return menu;
+      },
+      addEventListener(event, handler) { documentHandlers[event] = handler; }
+    },
     window: { matchMedia(query) {
       assert.equal(query, "(max-width: 700px)");
       return media;
@@ -50,6 +55,7 @@ function fixture(isPhone, useLegacyMediaListener = false) {
   });
   return {
     menu, media, links,
+    dispatch(event, payload) { documentHandlers[event](payload); },
     changeWidth(matches) {
       media.matches = matches;
       changeHandler();
@@ -106,4 +112,40 @@ test("markup keeps desktop navigation visible and caches the mobile controller",
   assert.ok(html.includes('<script src="mobile-nav.js"></script>'));
   const serviceWorker = fs.readFileSync(path.join(root, "sw.js"), "utf8");
   assert.ok(serviceWorker.includes("'mobile-nav.js'"), "mobile menu should work offline");
+});
+
+test("phone menu dismisses on outside tap without stealing focus", () => {
+  const f = fixture(true);
+  f.menu.open = true;
+  f.dispatch("pointerdown", { target: {} });
+  assert.equal(f.menu.open, false);
+  assert.equal(f.focusCount, 0);
+  f.menu.open = true;
+  f.dispatch("pointerdown", { target: f.links[1] });
+  assert.equal(f.menu.open, true, "tapping inside must not dismiss early");
+});
+
+test("escape closes the phone menu and restores focus without scrolling", () => {
+  const f = fixture(true);
+  f.menu.open = true;
+  f.dispatch("keydown", { key: "Escape" });
+  assert.equal(f.menu.open, false);
+  assert.equal(f.focusCount, 1);
+  f.menu.open = true;
+  f.dispatch("keydown", { key: "Enter" });
+  assert.equal(f.menu.open, true);
+});
+
+test("outside taps do not collapse desktop navigation", () => {
+  const f = fixture(false);
+  f.dispatch("pointerdown", { target: {} });
+  f.dispatch("keydown", { key: "Escape" });
+  assert.equal(f.menu.open, true);
+  assert.equal(f.focusCount, 0);
+});
+
+test("mobile header remains a single row with an overlay menu", () => {
+  const css = fs.readFileSync(path.join(root, "responsive.css"), "utf8");
+  assert.match(css, /\.app-shell \.sidebar\s*\{\s*display: flex !important;\s*flex-direction: row !important;/);
+  assert.match(css, /\.mobile-navigation\[open\] \.side-nav\s*\{\s*position: absolute;/);
 });
