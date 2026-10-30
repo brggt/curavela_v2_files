@@ -241,7 +241,13 @@ function renderScheduleWithoutLosingPosition() {
   const content = typeof mainContent !== "undefined" ? mainContent : null;
   const contentY = content ? content.scrollTop : 0;
   const contentX = content ? content.scrollLeft : 0;
-  const mapScroller = document.querySelector(".care-map-scroll, .schedule-scroll");
+  // #schedule is the real swipeable calendar region on phones and desktops.
+  // Keep the older selector as a fallback for embedded/legacy layouts.
+  function findScheduleScroller() {
+    return document.querySelector("#schedule") ||
+      document.querySelector(".care-map-scroll, .schedule-scroll");
+  }
+  const mapScroller = findScheduleScroller();
   const mapX = mapScroller ? mapScroller.scrollLeft : 0;
 
   renderSchedule();
@@ -252,7 +258,7 @@ function renderScheduleWithoutLosingPosition() {
       content.scrollLeft = contentX;
     }
     window.scrollTo({ top: pageY, behavior: "instant" });
-    const nextMap = document.querySelector(".care-map-scroll, .schedule-scroll");
+    const nextMap = findScheduleScroller();
     if (nextMap) nextMap.scrollLeft = mapX;
   }
   restorePosition();
