@@ -365,3 +365,68 @@ test('print follows the selected month while week and agenda retain seven days, 
   f.run("scheduleViewSelect.value='agenda';");
   assert.equal(f.run('getPrintableScheduleDays().length'),7);
 });
+
+test('editing a shift preserves horizontal position in the actual #schedule scroller',()=>{
+  // Execute only the scroll-preserving helper with a browser-like DOM stub.
+  // The calendar's DOM is rebuilt during render, then focus changes in a frame.
+  const source=fs.readFileSync(path.join(__dirname,'..','editing.js'),'utf8');
+  const start=source.indexOf('function renderScheduleWithoutLosingPosition()');
+  const end=source.indexOf('\nfunction commitOccurrenceChange(',start);
+  assert.ok(start>=0&&end>start);
+  let currentMap={scrollLeft:286};
+  const content={scrollTop:420,scrollLeft:14};
+  const win={scrollY:530,scrollTo({top}){this.scrollY=top;}};
+  const selectors=[];
+  let deferred;
+  const context={
+    window:win,mainContent:content,
+    document:{querySelector(selector){
+      selectors.push(selector);
+      return selector==='#schedule'?currentMap:null;
+    }},
+    renderSchedule(){
+      currentMap={scrollLeft:0};
+      content.scrollTop=0;
+      content.scrollLeft=0;
+      win.scrollY=0;
+    },
+    requestAnimationFrame(callback){deferred=callback;}
+  };
+  vm.runInNewContext(source.slice(start,end),context);
+  vm.runInNewContext('renderScheduleWithoutLosingPosition()',context);
+  assert.equal(currentMap.scrollLeft,286);
+  assert.equal(content.scrollTop,420);
+  assert.equal(content.scrollLeft,14);
+  assert.equal(win.scrollY,530);
+  assert.ok(selectors.includes('#schedule'),'use the actual horizontal scroller');
+  assert.ok(!selectors.includes('.care-map-scroll, .schedule-scroll'),'avoid fallback when #schedule exists');
+  // A later focus restore must not reintroduce the jump.
+  currentMap.scrollLeft=0;
+  content.scrollTop=0;
+  win.scrollY=0;
+  assert.equal(typeof deferred,'function');
+  deferred();
+  assert.equal(currentMap.scrollLeft,286);
+  assert.equal(content.scrollTop,420);
+  assert.equal(win.scrollY,530);
+});
+
+test('scroll restoration remains safe when the schedule region is unavailable',()=>{
+  const source=fs.readFileSync(path.join(__dirname,'..','editing.js'),'utf8');
+  const start=source.indexOf('function renderScheduleWithoutLosingPosition()');
+  const end=source.indexOf('\nfunction commitOccurrenceChange(',start);
+  const win={scrollY:90,scrollTo({top}){this.scrollY=top;}};
+  let renderCount=0,frame;
+  const context={
+    window:win,mainContent:null,
+    document:{querySelector(){return null;}},
+    renderSchedule(){renderCount++;win.scrollY=0;},
+    requestAnimationFrame(callback){frame=callback;}
+  };
+  vm.runInNewContext(source.slice(start,end),context);
+  vm.runInNewContext('renderScheduleWithoutLosingPosition()',context);
+  assert.equal(renderCount,1);
+  assert.equal(win.scrollY,90);
+  frame();
+  assert.equal(win.scrollY,90);
+});
