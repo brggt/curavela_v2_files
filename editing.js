@@ -169,12 +169,33 @@ function openManagedDialog(modal) {
   if (focusTarget) focusTarget.focus();
 }
 
+function findDialogReturnFocus(modal) {
+  const previous = dialogReturnFocus.get(modal);
+  // A saved edit replaces the schedule DOM. The original button may no longer
+  // be connected, but its newly rendered equivalent is still a useful target.
+  if (previous && previous.isConnected) return previous;
+  if (modal === occurrenceModal && previous?.classList?.contains("edit-occurrence-button")) {
+    const buttons = Array.from(document.querySelectorAll(".edit-occurrence-button"));
+    const choices = [
+      { day: occurrenceDate.value, shift: occurrenceShift.value },
+      { day: previous.dataset.day, shift: previous.dataset.shift },
+    ];
+    for (const choice of choices) {
+      const match = buttons.find(button =>
+        button.dataset.day === choice.day && button.dataset.shift === choice.shift
+      );
+      if (match) return match;
+    }
+  }
+  return quickAddShiftButton;
+}
+
 function closeManagedDialog(modal) {
   modal.classList.add("hidden");
   document.querySelector(".app-shell").inert = Boolean(document.querySelector(".modal-backdrop:not(.hidden)"));
-  const previous = dialogReturnFocus.get(modal);
-  if (previous && previous.isConnected) previous.focus();
-  else if (quickAddShiftButton) quickAddShiftButton.focus();
+  const target = findDialogReturnFocus(modal);
+  // Focusing a top-of-page action can otherwise undo scroll preservation.
+  if (target && target.isConnected) target.focus({ preventScroll: true });
 }
 
 function updateOccurrenceDuration() {
