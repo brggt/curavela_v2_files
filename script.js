@@ -3976,6 +3976,7 @@ function appendBriefShiftList(container, rows, showNotes) {
       item.append(line);
       if (showNotes && shift.note) {
         const details = document.createElement("details");
+        details.dataset.briefKey = "note:" + shift.key;
         const title = document.createElement("summary");
         title.textContent = "Handoff note · " + shift.shiftName;
         const note = document.createElement("p");
@@ -3989,17 +3990,57 @@ function appendBriefShiftList(container, rows, showNotes) {
   });
   container.append(list);
 }
+// Filtering existing cards avoids recalculating the full schedule on every
+// keystroke, and keeps the user's scroll position and expanded details intact.
+function applyAutomaticBriefFilter() {
+  const list = document.querySelector("#automatic-caregiver-briefs");
+  const count = document.querySelector("#brief-visible-count");
+  if (!list) return;
+  const query = (document.querySelector("#brief-caregiver-search")?.value || "").trim().toLocaleLowerCase();
+  const scheduledOnly = Boolean(document.querySelector("#brief-scheduled-only")?.checked);
+  const cards = Array.from(list.children).filter(card => Boolean(card.dataset?.caregiverId));
+  let visible = 0;
+  cards.forEach(function (card) {
+    const matchesName = (card.dataset.caregiverName || "").includes(query);
+    const matchesSchedule = !scheduledOnly || card.dataset.hasScheduledShifts === "true";
+    card.hidden = !(matchesName && matchesSchedule);
+    if (!card.hidden) visible++;
+  });
+  if (count) {
+    count.textContent = cards.length
+      ? visible + " of " + cards.length + " caregivers shown." +
+        (!visible ? " Clear the search or change the filter." : "")
+      : "No caregivers added yet.";
+  }
+}
+
+let lastAutomaticBriefWeekKey = null;
+function captureAutomaticBriefDetails(list) {
+  const states = new Map();
+  list.querySelectorAll("[data-caregiver-id]").forEach(function (card) {
+    card.querySelectorAll("details[data-brief-key]").forEach(function (details) {
+      states.set(card.dataset.caregiverId + "::" + details.dataset.briefKey, details.open);
+    });
+  });
+  return states;
+}
+
 function renderAutomaticCaregiverBrief(scheduleDays) {
   const list = document.querySelector("#automatic-caregiver-briefs");
   const status = document.querySelector("#automatic-brief-status");
   if (!list || !status) return;
+  const sameWeek = lastAutomaticBriefWeekKey === scheduleDays[0].key;
+  const detailStates = sameWeek ? captureAutomaticBriefDetails(list) : new Map();
+  const open = document.querySelector("#automatic-brief-open");
+  const openDetails = sameWeek && open ? open.querySelector("details") : null;
+  const openShiftsExpanded = Boolean(openDetails?.open);
+  lastAutomaticBriefWeekKey = scheduleDays[0].key;
   const summary = CuravelaWorkspace.caregiverBriefs(getWorkspaceSnapshot(), scheduleDays[0].key, scheduleDays[scheduleDays.length - 1].key);
   const assigned = summary.assignedShifts;
   status.textContent = assigned
     ? assigned + " of " + summary.totalShifts + " shifts assigned · " + formatHours(summary.assignedHours) +
       " scheduled · " + summary.scheduledCaregivers + " caregiver" + (summary.scheduledCaregivers === 1 ? "" : "s") + " scheduled."
     : "No shifts are assigned for this week yet.";
-  const open = document.querySelector("#automatic-brief-open");
   if (open) {
     open.replaceChildren();
     const message = document.createElement("p");
@@ -4010,6 +4051,7 @@ function renderAutomaticCaregiverBrief(scheduleDays) {
     if (summary.openShifts) {
       const details = document.createElement("details"), title = document.createElement("summary");
       title.textContent = "See which shifts are unassigned";
+      details.open = openShiftsExpanded;
       details.append(title);
       appendBriefShiftList(details, summary.openRows, false);
       open.append(details);
@@ -4017,10 +4059,13 @@ function renderAutomaticCaregiverBrief(scheduleDays) {
   }
   list.replaceChildren();
   if (!summary.people.length) {
-    const empty = document.createElement("p");empty.textContent = "Add caregivers to see their schedules here.";list.append(empty);return;
+    const empty = document.createElement("p");empty.textContent = "Add caregivers to see their schedules here.";list.append(empty);applyAutomaticBriefFilter();return;
   }
   summary.people.forEach(function (person) {
     const card = document.createElement("article");card.className = "automatic-caregiver-card";
+    card.dataset.caregiverId = person.id;
+    card.dataset.caregiverName = person.name.toLocaleLowerCase();
+    card.dataset.hasScheduledShifts = String(Boolean(person.shifts.length || person.carryoverShifts.length));
     const heading = document.createElement("h4");heading.textContent = person.name;
     const text = document.createElement("p");text.className = "automatic-brief-total";
     text.textContent = person.shifts.length
@@ -4037,6 +4082,7 @@ function renderAutomaticCaregiverBrief(scheduleDays) {
     if (person.warnings.length) {
       const details = document.createElement("details"), title = document.createElement("summary"), warnings = document.createElement("ul");
       const blocked = person.warnings.some(function (warning) { return warning.blocking; });
+      details.dataset.briefKey = "warnings";
       title.textContent = (blocked ? "Needs attention · " : "Schedule warnings · ") + person.warnings.length;
       details.open = blocked;warnings.className = "automatic-brief-warnings";
       person.warnings.forEach(function (warning) { const item = document.createElement("li");item.textContent = warning.text;warnings.append(item); });
@@ -4044,6 +4090,15 @@ function renderAutomaticCaregiverBrief(scheduleDays) {
     }
     list.append(card);
   });
+  // A live update must not collapse a manager's open handoff note or warning.
+  // Only restore expansion for the same week and the same caregiver/shift.
+  list.querySelectorAll("[data-caregiver-id]").forEach(function (card) {
+    card.querySelectorAll("details[data-brief-key]").forEach(function (details) {
+      const key = card.dataset.caregiverId + "::" + details.dataset.briefKey;
+      if (detailStates.has(key)) details.open = detailStates.get(key);
+    });
+  });
+  applyAutomaticBriefFilter();
 }
 
 function renderScheduleBrief() {
@@ -4469,6 +4524,9 @@ weekStartDateInput.addEventListener("change", function () {
   updateWeekDisplay();
   renderSchedule();
 });
+
+document.querySelector("#brief-caregiver-search")?.addEventListener("input", applyAutomaticBriefFilter);
+document.querySelector("#brief-scheduled-only")?.addEventListener("change", applyAutomaticBriefFilter);
 
 if (scheduleFocusInput) {
   scheduleFocusInput.addEventListener("input", function () {

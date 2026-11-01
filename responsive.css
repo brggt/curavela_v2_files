@@ -29,6 +29,12 @@ html.headline-collapsed body { min-height: calc(100vh + 4px); min-height: calc(1
 .automatic-brief h3 { font-size: 19px; margin: 0 0 8px; }
 .automatic-brief-description, .automatic-brief-limit { color: var(--muted); }
 .automatic-brief p { font-size: 14px; line-height: 1.6; }
+.automatic-brief-filters { display: flex; align-items: end; flex-wrap: wrap; gap: 12px 22px; margin-top: 16px; }
+.automatic-brief-filters label:first-child { display: grid; gap: 6px; flex: 1 1 220px; min-width: 0; font-size: 13px; font-weight: 600; }
+.automatic-brief-filters input[type="search"] { width: 100%; min-height: 44px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; font: inherit; }
+.automatic-brief-scheduled-filter { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; cursor: pointer; }
+.automatic-brief-scheduled-filter input { width: 20px; height: 20px; min-height: 20px; flex: 0 0 20px; }
+.automatic-brief .automatic-brief-visible-count { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
 .automatic-caregiver-briefs { display: grid; align-items: start; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 16px; margin-top: 16px; }
 .automatic-caregiver-card { padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: #fbfcff; min-width: 0; overflow-wrap: anywhere; }
 .automatic-caregiver-card h4 { margin: 0 0 8px; font-size: 17px; }
