@@ -728,6 +728,16 @@
               <p id="automatic-brief-status" role="status"></p>
               <div id="automatic-brief-open" class="automatic-brief-open"></div>
               <p class="automatic-brief-hours-note">These are planned hours. A shift’s full hours count in the week it starts, including overnight shifts.</p>
+              <div class="automatic-brief-filters" role="group" aria-label="Filter caregiver schedules">
+                <label for="brief-caregiver-search">Find a caregiver
+                  <input id="brief-caregiver-search" type="search" placeholder="Search by caregiver name" autocomplete="off" />
+                </label>
+                <label class="automatic-brief-scheduled-filter" for="brief-scheduled-only">
+                  <input id="brief-scheduled-only" type="checkbox" />
+                  Show scheduled caregivers only
+                </label>
+              </div>
+              <p id="brief-visible-count" class="automatic-brief-visible-count" role="status" aria-live="polite"></p>
               <div id="automatic-caregiver-briefs" class="automatic-caregiver-briefs"></div>
             </section>
 
