@@ -9,8 +9,9 @@ const path = require("node:path");
 
 function app() {
   const nodes = new Map(), saved = new Map(), alerts = [], confirmations = [];
-  function element() {
+  function element(tagName = "") {
     return {
+      tagName: tagName.toUpperCase(),
       value: "", textContent: "", innerHTML: "", disabled: false, dataset: {},
       isConnected: true, tabIndex: 0, children: [], listeners: {}, style: { setProperty() {} },
       classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
@@ -20,7 +21,19 @@ function app() {
       setAttribute() {}, removeAttribute() {}, focus() {}, checkValidity() { return true; },
       reportValidity() { return true; },
       addEventListener(event, callback) { this.listeners[event] = callback; },
-      querySelector() { return element(); }, querySelectorAll() { return []; },
+      querySelector(selector) { return this.querySelectorAll(selector)[0] || element(); },
+      querySelectorAll(selector) {
+        const matches = [], visit = node => {
+          for (const child of node.children) {
+            if (selector === "[data-caregiver-id]" && child.dataset?.caregiverId) matches.push(child);
+            if (selector === "details[data-brief-key]" && child.tagName === "DETAILS" && child.dataset?.briefKey) matches.push(child);
+            if (selector === "details" && child.tagName === "DETAILS") matches.push(child);
+            visit(child);
+          }
+        };
+        visit(this);
+        return matches;
+      },
     };
   }
   const context = vm.createContext({
@@ -364,6 +377,43 @@ test('print follows the selected month while week and agenda retain seven days, 
   assert.equal(f.run("getPrintableScheduleDays().at(-1).key"),'2028-02-29');
   f.run("scheduleViewSelect.value='agenda';");
   assert.equal(f.run('getPrintableScheduleDays().length'),7);
+});
+
+test('live brief search and scheduled-only filter update cards without recomputing schedules',()=>{
+  const f=app();
+  f.run('caregivers.push({id:"jo",name:"Jo"});caregiverMaxHours.jo=40;caregiverRules.jo=getDefaultCaregiverRules();scheduleAssignments["2026-10-04-Morning"]="alex";renderScheduleBrief();');
+  const cards=f.nodes.get('#automatic-caregiver-briefs').children;
+  assert.equal(cards.length,3);
+  f.nodes.get('#brief-caregiver-search').value='  sAm  ';
+  f.run('applyAutomaticBriefFilter()');
+  assert.deepEqual(cards.map(card=>card.hidden),[true,false,true]);
+  assert.match(f.nodes.get('#brief-visible-count').textContent,/1 of 3 caregivers shown/);
+  f.nodes.get('#brief-caregiver-search').value='';
+  f.nodes.get('#brief-scheduled-only').checked=true;
+  f.run('applyAutomaticBriefFilter()');
+  assert.deepEqual(cards.map(card=>card.hidden),[false,true,true]);
+  f.run('(() => {const original=CuravelaWorkspace.caregiverBriefs;CuravelaWorkspace.caregiverBriefs=()=>{throw Error("brief recomputed on filter");};try{applyAutomaticBriefFilter();}finally{CuravelaWorkspace.caregiverBriefs=original;}})()');
+  assert.equal(f.edit({shiftName:'Afternoon',caregiverId:'sam',start:'13:00',end:'19:00'}),true);
+  f.run('renderScheduleBrief()');
+  const updated=f.nodes.get('#automatic-caregiver-briefs').children;
+  assert.deepEqual(updated.map(card=>card.hidden),[false,false,true]);
+  assert.match(f.nodes.get('#brief-visible-count').textContent,/2 of 3 caregivers shown/);
+  assert.match(f.nodes.get('#automatic-brief-status').textContent,/2 of 21 shifts assigned/);
+});
+test('live brief preserves expanded unassigned shifts and handoff notes for the same week',()=>{
+  const f=app();
+  f.run('scheduleAssignments["2026-10-04-Morning"]="alex";workspaceState.shiftNotes["2026-10-04-Morning"]="Important handoff";renderScheduleBrief();');
+  const open=f.nodes.get('#automatic-brief-open');
+  const list=f.nodes.get('#automatic-caregiver-briefs');
+  const note=list.children[0].querySelectorAll('details[data-brief-key]')[0];
+  const openShifts=open.querySelector('details');
+  assert.equal(note.dataset.briefKey,'note:2026-10-04-Morning');
+  note.open=true;openShifts.open=true;
+  f.run('renderScheduleBrief()');
+  assert.equal(f.nodes.get('#automatic-brief-open').querySelector('details').open,true);
+  assert.equal(f.nodes.get('#automatic-caregiver-briefs').children[0].querySelectorAll('details[data-brief-key]')[0].open,true);
+  f.run('weekStartDateInput.value="2026-10-11";renderScheduleBrief();');
+  assert.notEqual(f.nodes.get('#automatic-brief-open').querySelector('details').open,true);
 });
 
 test('editing a shift preserves horizontal position in the actual #schedule scroller',()=>{
